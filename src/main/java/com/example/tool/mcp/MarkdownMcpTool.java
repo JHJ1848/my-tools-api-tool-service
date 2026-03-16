@@ -1,8 +1,10 @@
 package com.example.tool.mcp;
 
+import com.example.tool.config.ToolServiceProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -21,7 +23,15 @@ public class MarkdownMcpTool {
     @Value("${markdown.base-path:D:\\adas\\项目}")
     private String basePath;
 
+    @Autowired
+    private ToolServiceProperties toolServiceProperties;
+
     public List<Map<String, Object>> getToolDefinitions() {
+        // Markdown功能未启用时，返回空列表
+        if (!toolServiceProperties.getMarkdown().isEnabled()) {
+            return new ArrayList<>();
+        }
+
         List<Map<String, Object>> tools = new ArrayList<>();
 
         Map<String, Object> listFiles = new HashMap<>();
@@ -68,6 +78,11 @@ public class MarkdownMcpTool {
     }
 
     public Object executeTool(String toolName, Map<String, Object> arguments) {
+        // Markdown功能未启用时，返回错误提示
+        if (!toolServiceProperties.getMarkdown().isEnabled()) {
+            return Map.of("success", false, "error", "Markdown预览功能已禁用");
+        }
+
         logger.info("执行MD工具: {}, 参数: {}", toolName, arguments);
 
         try {
@@ -170,7 +185,7 @@ public class MarkdownMcpTool {
             result.put("previewUrl", "/md-view?path=" + path.replace("\\", "/"));
             result.put("downloadUrl", "/md-download?path=" + path.replace("\\", "/"));
             result.put("contentLength", content.length());
-            result.put("message", "访问以下链接预览: http://localhost:8080/md-view?path=" + path.replace("\\", "/"));
+            result.put("message", "访问以下链接预览: http://localhost:" + toolServiceProperties.getServerPort() + "/md-view?path=" + path.replace("\\", "/"));
 
             return result;
         } catch (IOException e) {

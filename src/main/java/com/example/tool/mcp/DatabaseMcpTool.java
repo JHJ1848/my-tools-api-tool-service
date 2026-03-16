@@ -1,5 +1,6 @@
 package com.example.tool.mcp;
 
+import com.example.tool.config.ToolServiceProperties;
 import com.example.tool.service.DatabaseQueryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -18,7 +19,15 @@ public class DatabaseMcpTool {
     @Autowired
     private DatabaseQueryService queryService;
 
+    @Autowired
+    private ToolServiceProperties toolServiceProperties;
+
     public List<Map<String, Object>> getToolDefinitions() {
+        // 达梦数据库功能未启用时，返回空列表
+        if (!toolServiceProperties.getDameng().isEnabled()) {
+            return new ArrayList<>();
+        }
+
         List<Map<String, Object>> tools = new ArrayList<>();
 
         Map<String, Object> query = new HashMap<>();
@@ -119,6 +128,11 @@ public class DatabaseMcpTool {
     }
 
     public Object executeTool(String toolName, Map<String, Object> arguments) {
+        // 达梦数据库功能未启用时，返回错误提示
+        if (!toolServiceProperties.getDameng().isEnabled()) {
+            return Map.of("success", false, "error", "达梦数据库功能已禁用");
+        }
+
         logger.info("执行数据库工具: {}, 参数: {}", toolName, arguments);
 
         try {

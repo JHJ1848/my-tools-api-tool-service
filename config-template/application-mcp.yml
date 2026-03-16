@@ -5,7 +5,20 @@
 # 并填入实际的配置信息
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:9527}
+
+# ============================================
+# 功能模块开关
+# ============================================
+tool-service:
+  # 达梦数据库模块开关 (HTTP + MCP服务)
+  # true: 启用, false: 禁用
+  dameng:
+    enabled: ${TOOL_DAMENG_ENABLED:true}
+  # Markdown预览模块开关
+  # true: 启用, false: 禁用
+  markdown:
+    enabled: ${TOOL_MARKDOWN_ENABLED:true}
 
 mcp:
   # MCP服务配置
