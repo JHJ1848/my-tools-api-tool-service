@@ -28,3 +28,5 @@ Thumbs.db
 
 # Config (local)
 config/local/
+config/*.yml
+!config-template/*.yml

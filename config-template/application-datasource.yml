@@ -1,21 +1,9 @@
-# 达梦数据库外部配置文件模板
-# 将此文件复制到与jar包同级的config目录下
-
-spring:
-  datasource:
-    dynamic:
-      primary: master
-      datasource:
-        master:
-          username: SYSDBA
-          password: mll123!@#
-          driver-class-name: dm.jdbc.driver.DmDriver
-          url: jdbc:dm://127.0.0.1:5236/SOIL_SURVEY_DATA_APPLY?useUnicode=true&characterEncoding=utf-8
-        sso:
-          username: SYSDBA
-          password: mll123!@#
-          driver-class-name: dm.jdbc.driver.DmDriver
-          url: jdbc:dm://127.0.0.1:5236/SOIL_SURVEY_DATA_APPLY?useUnicode=true&characterEncoding=utf-8
-
-server:
-  port: 8080
+# ============================================
+# 此文件已弃用，请使用分模块配置文件
+# ============================================
+# 新的配置方式:
+#   - application-dameng.yml  (达梦数据库配置)
+#   - application-md.yml      (Markdown预览配置)
+#   - application-mcp.yml     (MCP服务配置)
+#
+# 将上述文件复制到运行目录的 config/ 下并填入实际配置
