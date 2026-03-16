@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "tool-service-db": {
+      "url": "http://127.0.0.1:8080/api/mcp/json-rpc",
+      "description": "达梦数据库MCP工具服务（外部数据库配置）",
+      "env": {
+        "DM_DB_ENABLED": "true",
+        "DM_DB_HOST": "127.0.0.1",
+        "DM_DB_PORT": "5236",
+        "DM_DB_NAME": "SOIL_SURVEY_DATA_APPLY",
+        "DM_DB_USERNAME": "SYSDBA",
+        "DM_DB_PASSWORD": "mll123!@#"
+      },
+      "capabilities": {
+        "tools": true,
+        "resources": false
+      }
+    },
+    "tool-service-md": {
+      "url": "http://127.0.0.1:8080/api/mcp/json-rpc",
+      "description": "Markdown预览MCP工具服务"
+    }
+  }
+}

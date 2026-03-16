@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "dm-database-tool-service": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-http",
+        "--url",
+        "http://127.0.0.1:8080/api/mcp"
+      ],
+      "env": {
+        "MCP_SERVER_URL": "http://127.0.0.1:8080/api/mcp",
+        "MCP_SERVER_DESCRIPTION": "达梦数据库 MCP 工具服务",
+        "MCP_SERVER_VERSION": "1.0.0"
+      }
+    }
+  }
+}
+
+// 服务端点说明：
+// 1. GET /api/mcp/tools - 获取可用工具列表
+// 2. POST /api/mcp/execute - 执行工具
+// 3. GET /api/mcp/datasources - 获取可用数据源列表
+// 4. POST /api/mcp/query - 执行 SQL 查询
+
+// 支持的数据库：
+// - master: jdbc:dm://127.0.0.1:5236/SOIL_SURVEY_DATA_APPLY
+// - sso: jdbc:dm://127.0.0.1:5236/SOIL_SURVEY_DATA_APPLY
+// - FARMLAND_ENGINEER_QUALITY_INSPECT: jdbc:dm://127.0.0.1:5236/FARMLAND_ENGINEER_QUALITY_INSPECT
+
+// 使用示例：
+// 1. 启动服务：java -jar target/tool-service-1.0.0.jar
+// 2. 服务运行在：http://127.0.0.1:8080
+// 3. 测试工具列表：curl http://127.0.0.1:8080/api/mcp/tools
+// 4. 测试数据源列表：curl http://127.0.0.1:8080/api/mcp/datasources

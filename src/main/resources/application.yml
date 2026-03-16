@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: tool-service
+
+# 引入各功能模块配置
+  config:
+    import: optional:classpath:application-dameng.yml,optional:classpath:application-md.yml,optional:classpath:application-mcp.yml
+
+# 默认端口
+server:
+  port: 8080

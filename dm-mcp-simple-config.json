@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "dm-database-server": {
+      "url": "http://127.0.0.1:8080/api/mcp",
+      "description": "达梦数据库 MCP 工具服务，提供 SQL 查询功能",
+      "capabilities": {
+        "tools": true,
+        "resources": false
+      }
+    }
+  }
+}
