@@ -414,10 +414,13 @@ public class MarkdownPreviewController {
                 "            background-color: #2d2d2d;\n" +
                 "            border-bottom: 1px solid #333;\n" +
                 "        }\n" +
-                "        .search-box {\n" +
+                "        .search-box {
                 "            padding: 10px;\n" +
                 "            background-color: #252526;\n" +
                 "            border-bottom: 1px solid #333;\n" +
+                "            display: flex;\n" +
+                "            align-items: center;\n" +
+                "            gap: 8px;\n" +
                 "        }\n" +
                 "        .search-input {\n" +
                 "            width: 100%;\n" +
@@ -658,11 +661,12 @@ public class MarkdownPreviewController {
                 "            text-overflow: ellipsis;\n" +
                 "            margin-right: 8px;\n" +
                 "            flex: 1;\n" +
-                "            direction: rtl;\n" +
                 "            text-align: left;\n" +
                 "            font-size: 11px;\n" +
                 "            color: #858585;\n" +
                 "        }\n" +
+                "        .breadcrumb-title { color: #569cd6; margin-left: 8px; font-weight: 500; }\n" +
+                "        .breadcrumb-separator { color: #858585; margin: 0 4px; }\n" +
                 "        /* Tabs Styles */\n" +
                 "        .tabs-bar {\n" +
                 "            display: flex;\n" +
@@ -726,9 +730,11 @@ public class MarkdownPreviewController {
                 "            padding: 6px 16px;\n" +
                 "            background-color: #1e1e1e;\n" +
                 "            border-bottom: 1px solid #333;\n" +
-                "            justify-content: flex-end;\n" +
+                "            justify-content: space-between;\n" +
                 "            gap: 10px;\n" +
                 "        }\n" +
+                "        .toolbar-left { display: flex; align-items: center; flex: 1; overflow: hidden; }\n" +
+                "        .toolbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }\n" +
                 "        .tool-btn {\n" +
                 "            background-color: #2d2d2d;\n" +
                 "            color: #cccccc;\n" +
@@ -1093,10 +1099,15 @@ public class MarkdownPreviewController {
                 "    <main class=\"content\">\n" +
                 "        <div class=\"tabs-bar\"></div>\n" +
                 "        <div class=\"toolbar\">\n" +
-                "            <div class=\"tool-btn active\" id=\"btn-preview\" onclick=\"toggleView('preview')\">预览模式</div>\n" +
-                "            <div class=\"tool-btn\" id=\"btn-raw\" onclick=\"toggleView('raw')\">原文本</div>\n" +
-                "            <div style=\"width: 1px; height: 16px; background: #3e3e42; margin: 0 4px;\"></div>\n" +
-                "            <div class=\"tool-btn\" onclick=\"downloadFile()\">📥 下载</div>\n" +
+                "            <div class=\"toolbar-left\">\n" +
+                "                <div class=\"current-path\" id=\"breadcrumb-path\" title=\"" + safeTitle + "\">" + safeTitle + "</div>\n" +
+                "            </div>\n" +
+                "            <div class=\"toolbar-right\">\n" +
+                "                <div class=\"tool-btn active\" id=\"btn-preview\" onclick=\"toggleView('preview')\">预览模式</div>\n" +
+                "                <div class=\"tool-btn\" id=\"btn-raw\" onclick=\"toggleView('raw')\">原文本</div>\n" +
+                "                <div style=\"width: 1px; height: 16px; background: #3e3e42; margin: 0 4px;\"></div>\n" +
+                "                <div class=\"tool-btn\" onclick=\"downloadFile()\">📥 下载</div>\n" +
+                "            </div>\n" +
                 "        </div>\n" +
                 "        <div class=\"markdown-body\" id=\"markdown-body\">\n" +
                 "                " + htmlContent + "\n" +
@@ -1330,30 +1341,58 @@ public class MarkdownPreviewController {
                 "            function updateActiveHeading() {\n" +
                 "                const contentRect = contentArea.getBoundingClientRect();\n" +
                 "                const threshold = 60;\n" +
-                "                let currentHeading = null;\n" +
+                "                let currentHeadingIndex = -1;\n" +
                 "                \n" +
                 "                for (let i = 0; i < headings.length; i++) {\n" +
                 "                    const headingRect = headings[i].element.getBoundingClientRect();\n" +
                 "                    const relativeTop = headingRect.top - contentRect.top;\n" +
                 "                    \n" +
-                "                    if (relativeTop <= threshold && relativeTop >= -headingRect.height) {\n" +
-                "                        currentHeading = headings[i];\n" +
-                "                        break;\n" +
-                "                    }\n" +
-                "                    \n" +
-                "                    if (relativeTop > threshold && i > 0) {\n" +
-                "                        currentHeading = headings[i - 1];\n" +
+                "                    if (relativeTop <= threshold) {\n" +
+                "                        currentHeadingIndex = i;\n" +
+                "                    } else {\n" +
                 "                        break;\n" +
                 "                    }\n" +
                 "                }\n" +
                 "                \n" +
-                "                if (!currentHeading && headings.length > 0) {\n" +
-                "                    currentHeading = headings[0];\n" +
+                "                if (currentHeadingIndex === -1 && headings.length > 0) {\n" +
+                "                    currentHeadingIndex = 0;\n" +
                 "                }\n" +
                 "                \n" +
+                "                const currentHeading = headings[currentHeadingIndex];\n" +
                 "                document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));\n" +
                 "                if (currentHeading && currentHeading.item) {\n" +
                 "                    currentHeading.item.classList.add('active');\n" +
+                "                    \n" +
+                "                    // 更新面包屑/路径层级结构\n" +
+                "                    const breadcrumbEl = document.getElementById('breadcrumb-path');\n" +
+                "                    if (breadcrumbEl) {\n" +
+                "                        const fullPath = breadcrumbEl.getAttribute('title');\n" +
+                "                        const hierarchy = [];\n" +
+                "                        const currentLevel = parseInt(currentHeading.item.className.match(/toc-level-(\\d+)/)[1]);\n" +
+                "                        \n" +
+                "                        // 查找当前标题及其上层标题\n" +
+                "                        let tempIndex = currentHeadingIndex;\n" +
+                "                        let lastLevel = currentLevel + 1;\n" +
+                "                        \n" +
+                "                        // 只需要 1, 2, 3 级标题\n" +
+                "                        const targetLevels = [1, 2, 3];\n" +
+                "                        const levelTitles = { 1: '', 2: '', 3: '' };\n" +
+                "                        \n" +
+                "                        for (let i = currentHeadingIndex; i >= 0; i--) {\n" +
+                "                            const h = headings[i];\n" +
+                "                            const level = parseInt(h.item.className.match(/toc-level-(\\d+)/)[1]);\n" +
+                "                            if (targetLevels.includes(level) && !levelTitles[level]) {\n" +
+                "                                levelTitles[level] = h.item.textContent;\n" +
+                "                            }\n" +
+                "                        }\n" +
+                "                        \n" +
+                "                        let breadcrumbHtml = fullPath;\n" +
+                "                        if (levelTitles[1]) breadcrumbHtml += ' <span class=\"breadcrumb-separator\">#</span><span class=\"breadcrumb-title\">' + levelTitles[1] + '</span>';\n" +
+                "                        if (levelTitles[2]) breadcrumbHtml += ' <span class=\"breadcrumb-separator\">##</span><span class=\"breadcrumb-title\">' + levelTitles[2] + '</span>';\n" +
+                "                        if (levelTitles[3]) breadcrumbHtml += ' <span class=\"breadcrumb-separator\">###</span><span class=\"breadcrumb-title\">' + levelTitles[3] + '</span>';\n" +
+                "                        \n" +
+                "                        breadcrumbEl.innerHTML = breadcrumbHtml;\n" +
+                "                    }\n" +
                 "                }\n" +
                 "            }\n" +
                 "            \n" +
@@ -1381,7 +1420,7 @@ public class MarkdownPreviewController {
                 "            if (!container) return;\n" +
                 "            container.innerHTML = '';\n" +
                 "            \n" +
-                "            const pathEl = document.querySelector('.current-path');\n" +
+                "            const pathEl = document.getElementById('breadcrumb-path');\n" +
                 "            const currentPath = pathEl ? pathEl.getAttribute('title') : '';\n" +
                 "            \n" +
                 "            tabs.forEach(path => {\n" +
@@ -1426,7 +1465,7 @@ public class MarkdownPreviewController {
                 "        }\n" +
                 "        \n" +
                 "        function downloadFile() {\n" +
-                "            const pathEl = document.querySelector('.current-path');\n" +
+                "            const pathEl = document.getElementById('breadcrumb-path');\n" +
                 "            const currentPath = pathEl ? pathEl.getAttribute('title') : '';\n" +
                 "            if (currentPath) {\n" +
                 "                window.location.href = '/md-download?path=' + encodeURIComponent(currentPath);\n" +
@@ -1451,7 +1490,7 @@ public class MarkdownPreviewController {
                 "                rawBody.style.display = 'block';\n" +
                 "                \n" +
                 "                if (!rawBody.textContent) {\n" +
-                "                    const pathEl = document.querySelector('.current-path');\n" +
+                "                    const pathEl = document.getElementById('breadcrumb-path');\n" +
                 "                    const currentPath = pathEl ? pathEl.getAttribute('title') : '';\n" +
                 "                    if (currentPath) {\n" +
                 "                        try {\n" +
@@ -1477,7 +1516,7 @@ public class MarkdownPreviewController {
                 "        document.addEventListener('keydown', (e) => {\n" +
                 "            if ((e.ctrlKey || e.metaKey) && e.key === 'w') {\n" +
                 "                e.preventDefault();\n" +
-                "                const pathEl = document.querySelector('.current-path');\n" +
+                "                const pathEl = document.getElementById('breadcrumb-path');\n" +
                 "                const currentPath = pathEl ? pathEl.getAttribute('title') : '';\n" +
                 "                if (currentPath) closeTab(currentPath);\n" +
                 "            }\n" +
@@ -1512,7 +1551,7 @@ public class MarkdownPreviewController {
                 "                tabs.splice(index, 1);\n" +
                 "                saveTabs(tabs);\n" +
                 "                \n" +
-                "                const pathEl = document.querySelector('.current-path');\n" +
+                "                const pathEl = document.getElementById('breadcrumb-path');\n" +
                 "                const currentPath = pathEl ? pathEl.getAttribute('title') : '';\n" +
                 "                \n" +
                 "                if (path === currentPath) {\n" +
@@ -1531,7 +1570,7 @@ public class MarkdownPreviewController {
                 "        document.addEventListener('DOMContentLoaded', function() {\n" +
                 "            if (window.hljs) hljs.highlightAll();\n" +
                 "            // Init tabs\n" +
-                "            const pathEl = document.querySelector('.current-path');\n" +
+                "            const pathEl = document.getElementById('breadcrumb-path');\n" +
                 "            const currentPath = pathEl ? pathEl.getAttribute('title') : '';\n" +
                 "            if (currentPath) {\n" +
                 "                addTab(currentPath);\n" +
@@ -2064,11 +2103,10 @@ public class MarkdownPreviewController {
         
         StringBuilder sb = new StringBuilder();
         sb.append("<div class=\"sidebar-header\">Markdown 文件列表</div>");
-        sb.append("<div class=\"current-file-info\">");
-        sb.append("<div class=\"current-path\" title=\"").append(escapeHtml(currentPath)).append("\">").append(escapeHtml(currentPath)).append("</div>");
+        sb.append("<div class=\"search-box\">");
+        sb.append("<input type=\"text\" class=\"search-input\" id=\"search-input\" placeholder=\"搜索...\">");
         sb.append("<button class=\"locate-btn\" id=\"locate-btn\" title=\"定位到当前文件\">🎯</button>");
         sb.append("</div>");
-        sb.append("<div class=\"search-box\"><input type=\"text\" class=\"search-input\" id=\"search-input\" placeholder=\"搜索...\"></div>");
         sb.append("<div class=\"file-list\">");
         buildTreeHtmlRecursive(tree, sb, "", currentPath);
         sb.append("</div>");
