@@ -336,15 +336,12 @@ public class MarkdownPreviewController {
                 "        }\n" +
                 "        /* 标题闪光效果 */\n" +
                 "        @keyframes headingFlash {\n" +
-                "            0% { background: rgba(255,255,255,0.9); }\n" +
-                "            50% { background: rgba(255,255,255,0.4); }\n" +
-                "            100% { background: transparent; }\n" +
+                "            0% { box-shadow: 0 0 20px 10px rgba(255,255,255,0.7); }\n" +
+                "            50% { box-shadow: 0 0 10px 5px rgba(255,255,255,0.3); }\n" +
+                "            100% { box-shadow: none; }\n" +
                 "        }\n" +
                 "        .heading-flash {\n" +
                 "            animation: headingFlash 0.5s ease-out;\n" +
-                "            border-radius: 4px;\n" +
-                "            padding: 2px 4px;\n" +
-                "            margin: -2px -4px;\n" +
                 "        }\n" +
                 "        /* 调用按钮样式 */\n" +
                 "        .invoke-params-btn {\n" +
