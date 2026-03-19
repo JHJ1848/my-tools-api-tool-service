@@ -32,3 +32,17 @@ config/*.yml
 
 # YAML config files
 src/main/resources/*.yml
+
+# AI 开发工具配置
+.trae/
+.claude/
+openspec/
+
+# 环境变量文件
+.env
+.env.*
+*.local
+
+# 临时文件
+*.tmp
+*.bak

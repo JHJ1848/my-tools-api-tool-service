@@ -23,7 +23,7 @@ public class DataSourceConfig {
     private static final Logger logger = LoggerFactory.getLogger(DataSourceConfig.class);
     private final Map<String, DataSource> dataSourceCache = new ConcurrentHashMap<>();
 
-    @Value("${spring.datasource.dynamic.datasource.master.url:jdbc:dm://localhost:5236}")
+    @Value("${spring.datasource.dynamic.datasource.master.url:jdbc:dm://127.0.0.1:5236}")
     private String masterUrl;
 
     @Value("${spring.datasource.dynamic.datasource.master.username:SYSDBA}")
@@ -35,7 +35,7 @@ public class DataSourceConfig {
     @Value("${spring.datasource.dynamic.datasource.master.driver-class-name:dm.jdbc.driver.DmDriver}")
     private String masterDriverClassName;
 
-    @Value("${spring.datasource.dynamic.datasource.sso.url:jdbc:dm://localhost:5236}")
+    @Value("${spring.datasource.dynamic.datasource.sso.url:jdbc:dm://127.0.0.1:5236}")
     private String ssoUrl;
 
     @Value("${spring.datasource.dynamic.datasource.sso.username:SYSDBA}")
