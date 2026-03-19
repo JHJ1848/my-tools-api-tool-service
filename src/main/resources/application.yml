@@ -4,8 +4,9 @@ spring:
 
 # 引入各功能模块配置
 # 外部config目录下的配置文件优先于classpath
+# Spring Boot会自动从 jar 所在目录的 config/ 目录加载 application.yml
   config:
-    import: optional:file:./config/application-dameng.yml,optional:file:./config/application-md.yml,optional:file:./config/application-mcp.yml,optional:classpath:application-dameng.yml,optional:classpath:application-md.yml,optional:classpath:application-mcp.yml
+    import: optional:file:config/application-dameng.yml,optional:file:config/application-md.yml,optional:file:config/application-mcp.yml,optional:classpath:application-dameng.yml,optional:classpath:application-md.yml,optional:classpath:application-mcp.yml
 
 # 默认端口
 server:

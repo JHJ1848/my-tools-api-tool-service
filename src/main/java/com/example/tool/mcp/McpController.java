@@ -3,6 +3,7 @@ package com.example.tool.mcp;
 import com.example.tool.service.DatabaseQueryService;
 import com.example.tool.service.QueryHistoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -11,6 +12,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/mcp")
+@ConditionalOnProperty(name = "tool-service.dameng.enabled", havingValue = "true", matchIfMissing = true)
 public class McpController {
 
     @Autowired

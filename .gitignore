@@ -29,4 +29,6 @@ Thumbs.db
 # Config (local)
 config/local/
 config/*.yml
-!config-template/*.yml
+
+# YAML config files
+src/main/resources/*.yml

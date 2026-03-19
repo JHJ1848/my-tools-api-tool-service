@@ -322,6 +322,9 @@ public class MarkdownPreviewController {
                 "            cursor: pointer;\n" +
                 "            border-left: 2px solid transparent;\n" +
                 "        }\n" +
+                "        /* 目录条纹背景 */\n" +
+                "        .toc-list .toc-item:nth-child(odd) { background-color: #1e1e1e; }\n" +
+                "        .toc-list .toc-item:nth-child(even) { background-color: #252526; }\n" +
                 "        .toc-item:hover {\n" +
                 "            background-color: #2a2d2e;\n" +
                 "            color: #e0e0e0;\n" +
@@ -330,6 +333,69 @@ public class MarkdownPreviewController {
                 "            background-color: #37373d;\n" +
                 "            color: #ffffff;\n" +
                 "            border-left-color: #007fd4;\n" +
+                "        }\n" +
+                "        /* 标题闪光效果 */\n" +
+                "        @keyframes headingFlash {\n" +
+                "            0% { background: rgba(255,255,255,0.9); }\n" +
+                "            50% { background: rgba(255,255,255,0.4); }\n" +
+                "            100% { background: transparent; }\n" +
+                "        }\n" +
+                "        .heading-flash {\n" +
+                "            animation: headingFlash 0.5s ease-out;\n" +
+                "            border-radius: 4px;\n" +
+                "            padding: 2px 4px;\n" +
+                "            margin: -2px -4px;\n" +
+                "        }\n" +
+                "        /* 调用按钮样式 */\n" +
+                "        .invoke-params-btn {\n" +
+                "            padding: 6px 16px;\n" +
+                "            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);\n" +
+                "            color: white;\n" +
+                "            border: none;\n" +
+                "            border-radius: 4px;\n" +
+                "            cursor: pointer;\n" +
+                "            font-size: 13px;\n" +
+                "            font-weight: 500;\n" +
+                "        }\n" +
+                "        .invoke-params-btn:hover {\n" +
+                "            opacity: 0.9;\n" +
+                "            transform: translateY(-1px);\n" +
+                "        }\n" +
+                "        /* 可编辑表格样式 */\n" +
+                "        .editable-params-table {\n" +
+                "            background-color: #f8f8f8;\n" +
+                "        }\n" +
+                "        .editable-params-table td[contenteditable=\"true\"] {\n" +
+                "            transition: background-color 0.2s, outline 0.2s;\n" +
+                "        }\n" +
+                "        .editable-table-header {\n" +
+                "            color: #333;\n" +
+                "            font-weight: 600;\n" +
+                "            font-size: 14px;\n" +
+                "        }\n" +
+                "        .add-row-btn {\n" +
+                "            padding: 4px 12px;\n" +
+                "            background: #2196F3;\n" +
+                "            color: white;\n" +
+                "            border: none;\n" +
+                "            border-radius: 4px;\n" +
+                "            cursor: pointer;\n" +
+                "            font-size: 12px;\n" +
+                "        }\n" +
+                "        .add-row-btn:hover {\n" +
+                "            background: #1976D2;\n" +
+                "        }\n" +
+                "        .delete-row-btn {\n" +
+                "            padding: 2px 6px;\n" +
+                "            background: #f44336;\n" +
+                "            color: white;\n" +
+                "            border: none;\n" +
+                "            border-radius: 3px;\n" +
+                "            cursor: pointer;\n" +
+                "            font-size: 11px;\n" +
+                "        }\n" +
+                "        .delete-row-btn:hover {\n" +
+                "            background: #d32f2f;\n" +
                 "        }\n" +
                 "        .toc-level-1 { font-weight: 600; font-size: 14px; }\n" +
                 "        .toc-level-2 { padding-left: 24px; }\n" +
@@ -371,6 +437,213 @@ public class MarkdownPreviewController {
                 "        }\n" +
                 "        .search-input::placeholder {\n" +
                 "            color: #858585;\n" +
+                "        }\n" +
+                "        /* Ctrl+F 本地搜索样式 */\n" +
+                "        .local-search-wrapper {\n" +
+                "            position: fixed;\n" +
+                "            top: 50px;\n" +
+                "            left: 50%;\n" +
+                "            transform: translateX(-50%);\n" +
+                "            z-index: 1000;\n" +
+                "        }\n" +
+                "        .local-search-box {\n" +
+                "            display: flex;\n" +
+                "            align-items: center;\n" +
+                "            background: #2d2d30;\n" +
+                "            border: 1px solid #3c3c3c;\n" +
+                "            border-radius: 6px;\n" +
+                "            padding: 8px 12px;\n" +
+                "            box-shadow: 0 4px 12px rgba(0,0,0,0.3);\n" +
+                "            gap: 8px;\n" +
+                "        }\n" +
+                "        .local-search-box input {\n" +
+                "            width: 400px;\n" +
+                "            height: 32px;\n" +
+                "            padding: 0 10px;\n" +
+                "            background: #3c3c3c;\n" +
+                "            border: 1px solid #505050;\n" +
+                "            border-radius: 4px;\n" +
+                "            color: #cccccc;\n" +
+                "            font-size: 14px;\n" +
+                "            outline: none;\n" +
+                "        }\n" +
+                "        .local-search-box input:focus {\n" +
+                "            border-color: #007fd4;\n" +
+                "        }\n" +
+                "        .search-controls {\n" +
+                "            display: flex;\n" +
+                "            align-items: center;\n" +
+                "            gap: 6px;\n" +
+                "        }\n" +
+                "        .search-count {\n" +
+                "            color: #858585;\n" +
+                "            font-size: 12px;\n" +
+                "            min-width: 40px;\n" +
+                "        }\n" +
+                "        .search-nav-btn, .search-close-btn {\n" +
+                "            width: 24px;\n" +
+                "            height: 24px;\n" +
+                "            border: none;\n" +
+                "            border-radius: 4px;\n" +
+                "            cursor: pointer;\n" +
+                "            font-size: 12px;\n" +
+                "        }\n" +
+                "        .search-nav-btn {\n" +
+                "            background: #3c3c3c;\n" +
+                "            color: #cccccc;\n" +
+                "        }\n" +
+                "        .search-nav-btn:hover {\n" +
+                "            background: #505050;\n" +
+                "        }\n" +
+                "        .search-close-btn {\n" +
+                "            background: transparent;\n" +
+                "            color: #858585;\n" +
+                "            font-size: 16px;\n" +
+                "        }\n" +
+                "        .search-close-btn:hover {\n" +
+                "            color: #cccccc;\n" +
+                "        }\n" +
+                "        .search-highlight {\n" +
+                "            background: rgba(144, 238, 144, 0.4);\n" +
+                "            border-radius: 2px;\n" +
+                "        }\n" +
+                "        .search-highlight.current {\n" +
+                "            background: rgba(76, 175, 80, 0.6);\n" +
+                "        }\n" +
+                "        /* 双击Shift全局搜索弹窗样式 */\n" +
+                "        .global-search-modal {\n" +
+                "            display: none;\n" +
+                "            position: fixed;\n" +
+                "            top: 0;\n" +
+                "            left: 0;\n" +
+                "            width: 100%;\n" +
+                "            height: 100%;\n" +
+                "            background: rgba(0,0,0,0.5);\n" +
+                "            z-index: 2000;\n" +
+                "            justify-content: center;\n" +
+                "            align-items: flex-start;\n" +
+                "            padding-top: 80px;\n" +
+                "        }\n" +
+                "        .global-search-container {\n" +
+                "            width: 700px;\n" +
+                "            max-height: 70vh;\n" +
+                "            background: #252526;\n" +
+                "            border: 1px solid #3c3c3c;\n" +
+                "            border-radius: 8px;\n" +
+                "            overflow: hidden;\n" +
+                "            box-shadow: 0 8px 32px rgba(0,0,0,0.4);\n" +
+                "        }\n" +
+                "        .global-search-header {\n" +
+                "            display: flex;\n" +
+                "            align-items: center;\n" +
+                "            padding: 12px 16px;\n" +
+                "            border-bottom: 1px solid #3c3c3c;\n" +
+                "            gap: 12px;\n" +
+                "        }\n" +
+                "        .global-search-header input {\n" +
+                "            flex: 1;\n" +
+                "            height: 36px;\n" +
+                "            padding: 0 12px;\n" +
+                "            background: #3c3c3c;\n" +
+                "            border: 1px solid #505050;\n" +
+                "            border-radius: 4px;\n" +
+                "            color: #cccccc;\n" +
+                "            font-size: 14px;\n" +
+                "            outline: none;\n" +
+                "        }\n" +
+                "        .global-search-header input:focus {\n" +
+                "            border-color: #007fd4;\n" +
+                "        }\n" +
+                "        .global-search-close {\n" +
+                "            width: 28px;\n" +
+                "            height: 28px;\n" +
+                "            border: none;\n" +
+                "            background: transparent;\n" +
+                "            color: #858585;\n" +
+                "            font-size: 20px;\n" +
+                "            cursor: pointer;\n" +
+                "            border-radius: 4px;\n" +
+                "        }\n" +
+                "        .global-search-close:hover {\n" +
+                "            background: #3c3c3c;\n" +
+                "            color: #cccccc;\n" +
+                "        }\n" +
+                "        .global-search-count {\n" +
+                "            padding: 8px 16px;\n" +
+                "            border-bottom: 1px solid #3c3c3c;\n" +
+                "            font-size: 12px;\n" +
+                "            color: #858585;\n" +
+                "        }\n" +
+                "        .match-count {\n" +
+                "            color: #4CAF50;\n" +
+                "        }\n" +
+                "        .global-search-results {\n" +
+                "            max-height: calc(70vh - 120px);\n" +
+                "            overflow-y: auto;\n" +
+                "        }\n" +
+                "        .global-result-item {\n" +
+                "            border-bottom: 1px solid #3c3c3c;\n" +
+                "        }\n" +
+                "        .global-result-header {\n" +
+                "            display: flex;\n" +
+                "            justify-content: space-between;\n" +
+                "            align-items: center;\n" +
+                "            padding: 10px 16px;\n" +
+                "            cursor: pointer;\n" +
+                "            background: #2d2d30;\n" +
+                "        }\n" +
+                "        .global-result-header:hover {\n" +
+                "            background: #37373d;\n" +
+                "        }\n" +
+                "        .global-result-name {\n" +
+                "            color: #e0e0e0;\n" +
+                "            font-size: 13px;\n" +
+                "        }\n" +
+                "        .global-result-count {\n" +
+                "            color: #858585;\n" +
+                "            font-size: 12px;\n" +
+                "        }\n" +
+                "        .global-result-content {\n" +
+                "            padding: 8px 0;\n" +
+                "            background: #1e1e1e;\n" +
+                "        }\n" +
+                "        .global-match-line {\n" +
+                "            display: flex;\n" +
+                "            padding: 4px 16px;\n" +
+                "        }\n" +
+                "        .global-match-line:hover {\n" +
+                "            background: #2a2d2e;\n" +
+                "        }\n" +
+                "        .global-match-line .line-number {\n" +
+                "            width: 40px;\n" +
+                "            color: #858585;\n" +
+                "            font-size: 12px;\n" +
+                "            flex-shrink: 0;\n" +
+                "        }\n" +
+                "        .global-match-line .line-content {\n" +
+                "            flex: 1;\n" +
+                "            overflow: hidden;\n" +
+                "        }\n" +
+                "        .global-match-line pre {\n" +
+                "            margin: 0;\n" +
+                "            font-size: 12px;\n" +
+                "            color: #cccccc;\n" +
+                "            white-space: pre-wrap;\n" +
+                "            word-break: break-all;\n" +
+                "        }\n" +
+                "        .global-highlight {\n" +
+                "            background: rgba(255, 235, 59, 0.4);\n" +
+                "            border-radius: 2px;\n" +
+                "        }\n" +
+                "        /* 标题跳转对话框 */\n" +
+                "        .goto-option {\n" +
+                "            padding: 8px 16px;\n" +
+                "            cursor: pointer;\n" +
+                "            font-size: 13px;\n" +
+                "            color: #cccccc;\n" +
+                "        }\n" +
+                "        .goto-option:hover {\n" +
+                "            background: #2a2d2e;\n" +
                 "        }\n" +
                 "        .current-file-info {\n" +
                 "            padding: 8px 16px;\n" +
@@ -567,6 +840,146 @@ public class MarkdownPreviewController {
                 "            line-height: 1.6;\n" +
                 "            width: 100%;\n" +
                 "        }\n" +
+                "        /* 右侧请求面板 */\n" +
+                "        .request-panel {\n" +
+                "            width: 0;\n" +
+                "            overflow: hidden;\n" +
+                "            background-color: #2d2d2d;\n" +
+                "            border-left: 1px solid #404040;\n" +
+                "            display: flex;\n" +
+                "            flex-direction: column;\n" +
+                "            transition: width 0.3s ease;\n" +
+                "        }\n" +
+                "        .request-panel.expanded { width: 450px; }\n" +
+                "        .request-panel-header {\n" +
+                "            padding: 10px 15px;\n" +
+                "            background: #383838;\n" +
+                "            border-bottom: 1px solid #404040;\n" +
+                "            display: flex;\n" +
+                "            align-items: center;\n" +
+                "            justify-content: space-between;\n" +
+                "        }\n" +
+                "        .request-panel-title { color: #e0e0e0; font-size: 14px; font-weight: 500; }\n" +
+                "        .request-panel-close { color: #808080; cursor: pointer; font-size: 18px; }\n" +
+                "        .request-panel-close:hover { color: #ffffff; }\n" +
+                "        .request-config {\n" +
+                "            padding: 15px;\n" +
+                "            background: #333333;\n" +
+                "            border-bottom: 1px solid #404040;\n" +
+                "        }\n" +
+                "        .request-config-row {\n" +
+                "            display: flex;\n" +
+                "            align-items: center;\n" +
+                "            margin-bottom: 10px;\n" +
+                "        }\n" +
+                "        .request-config-row:last-child { margin-bottom: 0; }\n" +
+                "        .request-config-label { color: #b0b0b0; font-size: 13px; width: 60px; flex-shrink: 0; }\n" +
+                "        .request-config-input {\n" +
+                "            flex: 1;\n" +
+                "            background: #1e1e1e;\n" +
+                "            border: 1px solid #505050;\n" +
+                "            border-radius: 6px;\n" +
+                "            color: #e0e0e0;\n" +
+                "            padding: 6px 10px;\n" +
+                "            font-size: 13px;\n" +
+                "        }\n" +
+                "        .request-config-input:focus { outline: none; border-color: #007acc; }\n" +
+                "        .request-method { width: 80px; margin-right: 8px; }\n" +
+                "        .request-url { flex: 1; }\n" +
+                "        .request-buttons {\n" +
+                "            padding: 10px 15px;\n" +
+                "            background: #333333;\n" +
+                "            border-bottom: 1px solid #404040;\n" +
+                "            display: flex;\n" +
+                "            gap: 10px;\n" +
+                "        }\n" +
+                "        .request-btn {\n" +
+                "            padding: 8px 16px;\n" +
+                "            border: none;\n" +
+                "            border-radius: 6px;\n" +
+                "            cursor: pointer;\n" +
+                "            font-size: 13px;\n" +
+                "            transition: all 0.2s;\n" +
+                "        }\n" +
+                "        .request-btn-primary { background: #007acc; color: white; }\n" +
+                "        .request-btn-primary:hover { background: #005a9e; }\n" +
+                "        .request-btn-secondary { background: #505050; color: #e0e0e0; }\n" +
+                "        .request-btn-secondary:hover { background: #606060; }\n" +
+                "        .request-body {\n" +
+                "            flex: 1;\n" +
+                "            display: flex;\n" +
+                "            flex-direction: column;\n" +
+                "            overflow: hidden;\n" +
+                "        }\n" +
+                "        .request-body-label {\n" +
+                "            padding: 8px 15px;\n" +
+                "            background: #333333;\n" +
+                "            color: #b0b0b0;\n" +
+                "            font-size: 12px;\n" +
+                "            border-bottom: 1px solid #404040;\n" +
+                "        }\n" +
+                "        .request-body textarea {\n" +
+                "            flex: 1;\n" +
+                "            background: #1e1e1e;\n" +
+                "            border: none;\n" +
+                "            color: #e0e0e0;\n" +
+                "            padding: 15px;\n" +
+                "            font-family: 'Consolas', 'Monaco', monospace;\n" +
+                "            font-size: 13px;\n" +
+                "            resize: none;\n" +
+                "        }\n" +
+                "        .request-body textarea:focus { outline: none; }\n" +
+                "        .response-body {\n" +
+                "            flex: 1;\n" +
+                "            display: flex;\n" +
+                "            flex-direction: column;\n" +
+                "            overflow: hidden;\n" +
+                "            border-top: 1px solid #404040;\n" +
+                "        }\n" +
+                "        .response-header {\n" +
+                "            padding: 8px 15px;\n" +
+                "            background: #333333;\n" +
+                "            color: #b0b0b0;\n" +
+                "            font-size: 12px;\n" +
+                "            display: flex;\n" +
+                "            justify-content: space-between;\n" +
+                "            align-items: center;\n" +
+                "        }\n" +
+                "        .response-status { color: #4ec9b0; }\n" +
+                "        .response-status.error { color: #f44747; }\n" +
+                "        .response-body-content {\n" +
+                "            flex: 1;\n" +
+                "            overflow: auto;\n" +
+                "            background: #1e1e1e;\n" +
+                "            padding: 15px;\n" +
+                "        }\n" +
+                "        .response-body-content pre {\n" +
+                "            margin: 0;\n" +
+                "            color: #d4d4d4;\n" +
+                "            font-family: 'Consolas', 'Monaco', monospace;\n" +
+                "            font-size: 12px;\n" +
+                "            white-space: pre-wrap;\n" +
+                "            word-break: break-all;\n" +
+                "        }\n" +
+                "        .request-panel-toggle {\n" +
+                "            position: fixed;\n" +
+                "            right: 20px;\n" +
+                "            bottom: 20px;\n" +
+                "            width: 50px;\n" +
+                "            height: 50px;\n" +
+                "            background: #383838;\n" +
+                "            border: 1px solid #505050;\n" +
+                "            border-radius: 50%;\n" +
+                "            display: flex;\n" +
+                "            align-items: center;\n" +
+                "            justify-content: center;\n" +
+                "            cursor: pointer;\n" +
+                "            color: #e0e0e0;\n" +
+                "            font-size: 20px;\n" +
+                "            box-shadow: 0 2px 8px rgba(0,0,0,0.3);\n" +
+                "            z-index: 1000;\n" +
+                "        }\n" +
+                "        .request-panel-toggle:hover { background: #404040; color: #ffffff; }\n" +
                 "        /* Scrollbar styles */\n" +
                 "        ::-webkit-scrollbar {\n" +
                 "            width: 10px;\n" +
@@ -611,6 +1024,11 @@ public class MarkdownPreviewController {
                 "        .front-matter { background: #252525; padding: 10px; border-radius: 4px; margin-bottom: 20px; }\n" +
                 "        .front-matter code { background: transparent; color: #ce9178; }\n" +
                 "        .tree-item { cursor: pointer; }\n" +
+                "        /* 文件树条纹背景 */\n" +
+                "        .tree-children .tree-file:nth-child(odd) { background-color: #1e1e1e; }\n" +
+                "        .tree-children .tree-file:nth-child(even) { background-color: #252526; }\n" +
+                "        .tree-children .tree-folder:nth-child(odd) { background-color: #1e1e1e; }\n" +
+                "        .tree-children .tree-folder:nth-child(even) { background-color: #252526; }\n" +
                 "        .tree-folder { \n" +
                 "            display: flex; \n" +
                 "            align-items: center; \n" +
@@ -688,13 +1106,184 @@ public class MarkdownPreviewController {
                 "            </div>\n" +
                 "        <div class=\"raw-body\" id=\"raw-body\"></div>\n" +
                 "    </main>\n" +
+                "    <!-- 右侧请求面板 -->\n" +
+                "    <aside class=\"request-panel\" id=\"request-panel\">\n" +
+                "        <div class=\"request-panel-header\">\n" +
+                "            <span class=\"request-panel-title\">API 请求工具</span>\n" +
+                "            <span class=\"request-panel-close\" onclick=\"toggleRequestPanel()\">×</span>\n" +
+                "        </div>\n" +
+                "        <div class=\"request-config\">\n" +
+                "            <div class=\"request-config-row\">\n" +
+                "                <span class=\"request-config-label\">IP</span>\n" +
+                "                <input type=\"text\" class=\"request-config-input\" id=\"req-ip\" placeholder=\"127.0.0.1\" value=\"127.0.0.1\">\n" +
+                "            </div>\n" +
+                "            <div class=\"request-config-row\">\n" +
+                "                <span class=\"request-config-label\">Port</span>\n" +
+                "                <input type=\"text\" class=\"request-config-input\" id=\"req-port\" placeholder=\"8080\" value=\"9527\">\n" +
+                "            </div>\n" +
+                "            <div class=\"request-config-row\">\n" +
+                "                <span class=\"request-config-label\">方法</span>\n" +
+                "                <input type=\"text\" class=\"request-config-input request-method\" id=\"req-method\" placeholder=\"GET\" value=\"GET\">\n" +
+                "                <input type=\"text\" class=\"request-config-input request-url\" id=\"req-url\" placeholder=\"/api/path\" value=\"/api/mcp/query\">\n" +
+                "            </div>\n" +
+                "        </div>\n" +
+                "        <div class=\"request-buttons\">\n" +
+                "            <button class=\"request-btn request-btn-primary\" onclick=\"sendRequest()\">发送请求</button>\n" +
+                "            <button class=\"request-btn request-btn-secondary\" onclick=\"clearRequest()\">清空</button>\n" +
+                "        </div>\n" +
+                "        <div class=\"request-body\">\n" +
+                "            <div class=\"request-body-label\">请求体 (JSON)</div>\n" +
+                "            <textarea id=\"req-body\" placeholder='{\"key\": \"value\"}'></textarea>\n" +
+                "        </div>\n" +
+                "        <div class=\"response-body\">\n" +
+                "            <div class=\"response-header\">\n" +
+                "                <span>响应结果</span>\n" +
+                "                <span class=\"response-status\" id=\"res-status\"></span>\n" +
+                "            </div>\n" +
+                "            <div class=\"response-body-content\">\n" +
+                "                <pre id=\"res-content\">点击\"发送请求\"查看结果</pre>\n" +
+                "            </div>\n" +
+                "        </div>\n" +
+                "    </aside>\n" +
+                "    <!-- 请求面板切换按钮 -->\n" +
+                "    <div class=\"request-panel-toggle\" onclick=\"toggleRequestPanel()\" title=\"API请求工具\">🚀</div>\n" +
                 "    </div>\n" +
                 "    <div id=\"tab-context-menu\" class=\"context-menu\">\n" +
                 "        <div class=\"menu-item\" id=\"menu-close-current\">关闭当前 (Ctrl+W)</div>\n" +
                 "        <div class=\"menu-item\" id=\"menu-close-all\">关闭所有</div>\n" +
                 "    </div>\n" +
+                "    <script src=\"/md-search.js\"></script>\n" +
                 "    <script>\n" +
                 "        const TABS_KEY = 'md-preview-open-tabs';\n" +
+                "        \n" +
+                "        // 处理请求参数标题 - 添加调用按钮和可编辑表格\n" +
+                "        function initRequestParams() {\n" +
+                "            // 查找包含\"请求参数\"的标题\n" +
+                "            const headings = document.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6');\n" +
+                "            headings.forEach(heading => {\n" +
+                "                if (heading.textContent.includes('请求参数')) {\n" +
+                "                    // 查找该标题后面的表格\n" +
+                "                    let nextElement = heading.nextElementSibling;\n" +
+                "                    let table = null;\n" +
+                "                    while (nextElement) {\n" +
+                "                        if (nextElement.tagName === 'TABLE') {\n" +
+                "                            table = nextElement;\n" +
+                "                            break;\n" +
+                "                        }\n" +
+                "                        // 跳过空段落\n" +
+                "                        if (nextElement.tagName === 'P' && nextElement.textContent.trim() === '') {\n" +
+                "                            nextElement = nextElement.nextElementSibling;\n" +
+                "                            continue;\n" +
+                "                        }\n" +
+                "                        // 如果遇到下一个标题，说明没有表格\n" +
+                "                        if (nextElement.tagName.match(/^H[1-6]$/i)) {\n" +
+                "                            break;\n" +
+                "                        }\n" +
+                "                        nextElement = nextElement.nextElementSibling;\n" +
+                "                    }\n" +
+                "                    if (table) {\n" +
+                "                        // 添加调用按钮（居右，绿色）\n" +
+                "                        const invokeBtn = document.createElement('div');\n" +
+                "                        invokeBtn.innerHTML = '<button id=\"invokeParamsBtn\" class=\"invoke-params-btn\">📞 调用</button>';\n" +
+                "                        invokeBtn.style.textAlign = 'right';\n" +
+                "                        invokeBtn.style.marginBottom = '10px';\n" +
+                "                        table.parentNode.insertBefore(invokeBtn, table);\n" +
+                "                        // 克隆表格作为可编辑版本\n" +
+                "                        const editableTable = table.cloneNode(true);\n" +
+                "                        editableTable.classList.add('editable-params-table');\n" +
+                "                        editableTable.style.marginTop = '10px';\n" +
+                "                        // 使表格单元格可编辑\n" +
+                "                        const rows = editableTable.querySelectorAll('tr');\n" +
+                "                        rows.forEach((row, rowIndex) => {\n" +
+                "                            if (rowIndex === 0) {\n" +
+                "                                // 表头添加操作列\n" +
+                "                                const th = document.createElement('th');\n" +
+                "                                th.textContent = '操作';\n" +
+                "                                th.style.width = '60px';\n" +
+                "                                row.appendChild(th);\n" +
+                "                            } else {\n" +
+                "                                // 数据行添加操作按钮\n" +
+                "                                const td = document.createElement('td');\n" +
+                "                                td.style.textAlign = 'center';\n" +
+                "                                td.innerHTML = '<button class=\"delete-row-btn\" title=\"删除行\">✕</button>';\n" +
+                "                                row.appendChild(td);\n" +
+                "                                // 使除最后一列外的所有单元格可编辑\n" +
+                "                                const cells = row.querySelectorAll('td');\n" +
+                "                                cells.forEach((cell, cellIndex) => {\n" +
+                "                                    if (cellIndex < cells.length - 1) {\n" +
+                "                                        cell.contentEditable = 'true';\n" +
+                "                                        cell.style.cursor = 'text';\n" +
+                "                                        cell.style.backgroundColor = '#f8f8f8';\n" +
+                "                                        cell.addEventListener('focus', function() {\n" +
+                "                                            this.style.backgroundColor = '#ffffff';\n" +
+                "                                            this.style.outline = '2px solid #4CAF50';\n" +
+                "                                        });\n" +
+                "                                        cell.addEventListener('blur', function() {\n" +
+                "                                            this.style.backgroundColor = '#f8f8f8';\n" +
+                "                                            this.style.outline = 'none';\n" +
+                "                                        });\n" +
+                "                                    }\n" +
+                "                                });\n" +
+                "                            }\n" +
+                "                        });\n" +
+                "                        // 添加表格标题和操作按钮\n" +
+                "                        const tableHeader = document.createElement('div');\n" +
+                "                        tableHeader.className = 'editable-table-header';\n" +
+                "                        tableHeader.innerHTML = '<span>可编辑参数</span><button id=\"addParamRowBtn\" class=\"add-row-btn\">+ 添加行</button>';\n" +
+                "                        tableHeader.style.display = 'flex';\n" +
+                "                        tableHeader.style.justifyContent = 'space-between';\n" +
+                "                        tableHeader.style.alignItems = 'center';\n" +
+                "                        tableHeader.style.marginBottom = '8px';\n" +
+                "                        tableHeader.style.marginTop = '20px';\n" +
+                "                        // 插入可编辑表格\n" +
+                "                        table.parentNode.insertBefore(tableHeader, editableTable);\n" +
+                "                        table.parentNode.insertBefore(editableTable, table.nextSibling);\n" +
+                "                        // 添加行按钮事件\n" +
+                "                        setTimeout(() => {\n" +
+                "                            const addBtn = document.getElementById('addParamRowBtn');\n" +
+                "                            const delBtns = document.querySelectorAll('.delete-row-btn');\n" +
+                "                            if (addBtn) {\n" +
+                "                                addBtn.addEventListener('click', function() {\n" +
+                "                                    const tbody = editableTable.querySelector('tbody');\n" +
+                "                                    if (tbody) {\n" +
+                "                                        const newRow = tbody.insertRow();\n" +
+                "                                        const headerRow = editableTable.querySelector('thead tr');\n" +
+                "                                        const colCount = headerRow.children.length - 1; // 减去操作列\n" +
+                "                                        for (let i = 0; i < colCount; i++) {\n" +
+                "                                            const cell = newRow.insertCell(i);\n" +
+                "                                            cell.contentEditable = 'true';\n" +
+                "                                            cell.style.backgroundColor = '#f8f8f8';\n" +
+                "                                            cell.style.cursor = 'text';\n" +
+                "                                            cell.addEventListener('focus', function() {\n" +
+                "                                                this.style.backgroundColor = '#ffffff';\n" +
+                "                                                this.style.outline = '2px solid #4CAF50';\n" +
+                "                                            });\n" +
+                "                                            cell.addEventListener('blur', function() {\n" +
+                "                                                this.style.backgroundColor = '#f8f8f8';\n" +
+                "                                                this.style.outline = 'none';\n" +
+                "                                            });\n" +
+                "                                        }\n" +
+                "                                        const actionCell = newRow.insertCell(colCount);\n" +
+                "                                        actionCell.style.textAlign = 'center';\n" +
+                "                                        actionCell.innerHTML = '<button class=\"delete-row-btn\" title=\"删除行\">✕</button>';\n" +
+                "                                        // 新行删除按钮事件\n" +
+                "                                        actionCell.querySelector('.delete-row-btn').addEventListener('click', function() {\n" +
+                "                                            newRow.remove();\n" +
+                "                                        });\n" +
+                "                                    }\n" +
+                "                                });\n" +
+                "                            }\n" +
+                "                            // 删除行按钮事件\n" +
+                "                            delBtns.forEach(btn => {\n" +
+                "                                btn.addEventListener('click', function() {\n" +
+                "                                    this.closest('tr').remove();\n" +
+                "                                });\n" +
+                "                            });\n" +
+                "                        }, 100);\n" +
+                "                    }\n" +
+                "                }\n" +
+                "            });\n" +
+                "        }\n" +
                 "        \n" +
                 "        function initToc() {\n" +
                 "            const tocItems = document.querySelectorAll('.toc-item');\n" +
@@ -713,6 +1302,11 @@ public class MarkdownPreviewController {
                 "                        const offset = tabsHeight + toolbarHeight + 20;\n" +
                 "                        const deltaY = targetRect.top - mainRect.top - offset;\n" +
                 "                        contentArea.scrollTop = contentArea.scrollTop + deltaY;\n" +
+                "                        // 闪光效果\n" +
+                "                        setTimeout(() => {\n" +
+                "                            targetElement.classList.add('heading-flash');\n" +
+                "                            setTimeout(() => targetElement.classList.remove('heading-flash'), 600);\n" +
+                "                        }, 100);\n" +
                 "                    }\n" +
                 "                    document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));\n" +
                 "                    this.classList.add('active');\n" +
@@ -949,6 +1543,10 @@ public class MarkdownPreviewController {
                 "            // Init TOC\n" +
                 "            initToc();\n" +
                 "            initTocScrollSpy();\n" +
+                "            // Init Search\n" +
+                "            initLocalSearch();\n" +
+                "            // 处理请求参数 - 添加调用按钮和可编辑表格\n" +
+                "            initRequestParams();\n" +
                 "\n" +
                 "            const searchInput = document.getElementById('search-input');\n" +
                 "            if (searchInput) {\n" +
