@@ -27,8 +27,7 @@ Thumbs.db
 *.war
 
 # Config (local)
-config/local/
-config/*.yml
+*.yml
 
 # YAML config files
 src/main/resources/*.yml

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-MCP Tool Service - 达梦数据库与Markdown预览MCP服务，基于Spring Boot 3.2.0 + Java 17，为AI客户端提供MCP协议服务。
+MCP Tool Service - 工具服务器：提供数据库、Md预览MCP服务，基于Spring Boot 3.2.0 + Java 17，为AI客户端提供MCP协议服务。
 
 ## 常用命令
 
