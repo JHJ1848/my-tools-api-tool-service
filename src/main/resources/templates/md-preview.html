@@ -590,7 +590,7 @@
             flex-direction: column;
             transition: width 0.3s ease;
         }
-        .request-panel.expanded { width: 450px; }
+        .request-panel.expanded { width: 460px; }
         .request-panel-header {
             padding: 10px 15px;
             background: #383838;
@@ -599,9 +599,93 @@
             align-items: center;
             justify-content: space-between;
         }
+        .request-panel-header-text { min-width: 0; }
         .request-panel-title { color: #e0e0e0; font-size: 14px; font-weight: 500; }
-        .request-panel-close { color: #808080; cursor: pointer; font-size: 18px; }
-        .request-panel-close:hover { color: #ffffff; }
+        .request-panel-subtitle { color: #8d95a1; font-size: 11px; margin-top: 2px; }
+        .request-panel-close {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #4b4f56;
+            border-radius: 6px;
+            background: #252a31;
+            color: #d7dde6;
+            cursor: pointer;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .request-panel-close:hover { color: #ffffff; background: #303744; }
+        .request-tabs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: #2d333b;
+            border-bottom: 1px solid #404040;
+            min-height: 44px;
+        }
+        .request-tabs-list {
+            flex: 1;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            min-width: 0;
+        }
+        .request-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 160px;
+            padding: 6px 10px;
+            border: 1px solid #4b5260;
+            border-radius: 999px;
+            background: #242a31;
+            color: #bfc8d4;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .request-tab.active {
+            border-color: #6aa6ff;
+            background: linear-gradient(135deg, #1f3658 0%, #295287 100%);
+            color: #ffffff;
+        }
+        .request-tab-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 12px;
+        }
+        .request-tab-close-btn {
+            width: 18px;
+            height: 18px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.12);
+            color: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+        .request-tab-add {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #4b5260;
+            border-radius: 50%;
+            background: #252a31;
+            color: #d7dde6;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 16px;
+        }
         .request-config {
             padding: 15px;
             background: #333333;
@@ -609,11 +693,12 @@
         }
         .request-config-row {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 10px;
+            gap: 10px;
         }
         .request-config-row:last-child { margin-bottom: 0; }
-        .request-config-label { color: #b0b0b0; font-size: 13px; width: 60px; flex-shrink: 0; }
+        .request-config-label { color: #b0b0b0; font-size: 13px; width: 64px; flex-shrink: 0; line-height: 34px; }
         .request-config-input {
             flex: 1;
             background: #1e1e1e;
@@ -624,8 +709,136 @@
             font-size: 13px;
         }
         .request-config-input:focus { outline: none; border-color: #007acc; }
-        .request-method { width: 80px; margin-right: 8px; }
+        .request-method { width: 90px; flex-shrink: 0; }
         .request-url { flex: 1; }
+        .request-config-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            min-width: 0;
+        }
+        .request-url-editor {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+        }
+        .request-url-prefix {
+            display: inline-flex;
+            align-items: center;
+            padding: 0 10px;
+            min-height: 34px;
+            border: 1px solid #505050;
+            border-radius: 6px;
+            background: #262626;
+            color: #8d95a1;
+            font-size: 12px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .request-full-url {
+            font-size: 11px;
+            color: #8d95a1;
+            background: #262626;
+            border: 1px solid #404040;
+            border-radius: 6px;
+            padding: 8px 10px;
+            line-height: 1.5;
+            word-break: break-all;
+        }
+        .request-full-url strong {
+            color: #c7d0dd;
+            margin-right: 4px;
+        }
+        .request-section {
+            padding: 12px 15px;
+            background: #333333;
+            border-bottom: 1px solid #404040;
+        }
+        .request-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .request-section-title {
+            color: #d7dde6;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .request-section-hint {
+            color: #8d95a1;
+            font-size: 11px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        .request-param-add-btn,
+        .request-param-delete-btn {
+            border: 1px solid #4b5260;
+            border-radius: 6px;
+            background: #252a31;
+            color: #d7dde6;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .request-param-add-btn { padding: 4px 10px; }
+        .request-param-delete-btn {
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .request-param-add-btn:hover,
+        .request-param-delete-btn:hover {
+            color: #ffffff;
+            background: #303744;
+            border-color: #6b7482;
+        }
+        .request-params-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 0;
+        }
+        .request-params-table th,
+        .request-params-table td {
+            border: 1px solid #434b55;
+            padding: 6px;
+            vertical-align: middle;
+        }
+        .request-params-table th {
+            color: #bfc8d4;
+            font-size: 12px;
+            font-weight: 500;
+            background: #2a3038;
+            text-align: left;
+        }
+        .request-params-table td:last-child,
+        .request-params-table th:last-child {
+            width: 42px;
+            text-align: center;
+        }
+        .request-param-input {
+            width: 100%;
+            background: #1e1e1e;
+            border: 1px solid #505050;
+            border-radius: 6px;
+            color: #e0e0e0;
+            padding: 6px 8px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+        .request-param-input:focus { outline: none; border-color: #007acc; }
+        .request-param-input[readonly] { color: #8d95a1; background: #262626; }
+        .request-empty-cell {
+            color: #8d95a1;
+            font-size: 12px;
+            text-align: center;
+        }
         .request-buttons {
             padding: 10px 15px;
             background: #333333;
@@ -646,10 +859,9 @@
         .request-btn-secondary { background: #505050; color: #e0e0e0; }
         .request-btn-secondary:hover { background: #606060; }
         .request-body {
-            flex: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            min-height: 220px;
         }
         .request-body-label {
             padding: 8px 15px;
@@ -658,8 +870,18 @@
             font-size: 12px;
             border-bottom: 1px solid #404040;
         }
+        .request-body-label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .request-body-hint {
+            color: #8d95a1;
+            font-size: 11px;
+        }
         .request-body textarea {
-            flex: 1;
+            min-height: 220px;
             background: #1e1e1e;
             border: none;
             color: #e0e0e0;
@@ -673,7 +895,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            min-height: 180px;
             border-top: 1px solid #404040;
         }
         .response-header {
@@ -766,9 +988,66 @@
         .tree-toggle.expanded { transform: rotate(90deg); }
         .tree-children { display: none; padding-left: 12px; }
         .tree-children.expanded { display: block; }
-        .tree-file { display: block; padding: 5px 16px 5px 32px; color: #969696; text-decoration: none; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tree-file-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-right: 8px;
+        }
+        .tree-file {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+            padding: 5px 10px 5px 32px;
+            color: #969696;
+            text-decoration: none;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tree-file-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .tree-file:hover { background-color: #2a2d2e; color: #e0e0e0; }
         .tree-file.active { background-color: #37373d; color: #ffffff; border-left: 2px solid #007fd4; }
+        .tree-file-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .tree-file-action {
+            width: 22px;
+            height: 22px;
+            border: 1px solid #3f454f;
+            border-radius: 4px;
+            background: #262b33;
+            color: #b8c2cf;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .tree-file-action:hover {
+            background: #2f3742;
+            color: #ffffff;
+            border-color: #556274;
+        }
+        .tree-file-action svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.6;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
     </style>
 </head>
 <body>
@@ -793,30 +1072,76 @@
         </main>
         <aside class="request-panel" id="request-panel">
             <div class="request-panel-header">
-                <span class="request-panel-title">API 请求工具</span>
-                <span class="request-panel-close" onclick="toggleRequestPanel()">×</span>
+                <div class="request-panel-header-text">
+                    <div class="request-panel-title">HTTP 请求工具</div>
+                    <div class="request-panel-subtitle" id="request-panel-subtitle">当前文档单独缓存</div>
+                </div>
+                <button type="button" class="request-panel-close" id="request-panel-toggle-btn" onclick="toggleRequestPanel()">×</button>
+            </div>
+            <div class="request-tabs">
+                <div class="request-tabs-list" id="request-tabs-list"></div>
+                <button type="button" class="request-tab-add" id="request-tab-add-btn" title="新增请求标签">+</button>
             </div>
             <div class="request-config">
                 <div class="request-config-row">
-                    <span class="request-config-label">IP</span>
-                    <input type="text" class="request-config-input" id="req-ip" placeholder="127.0.0.1" value="127.0.0.1">
+                    <span class="request-config-label">请求</span>
+                    <div class="request-config-stack">
+                        <div class="request-url-editor">
+                            <select class="request-config-input request-method" id="req-method">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                            </select>
+                            <span class="request-url-prefix" id="req-prefix">http://192.168.81.163:9527/api</span>
+                            <input type="text" class="request-config-input request-url" id="req-path-query" placeholder="/mobile/example?id=1" value="/mcp/query">
+                        </div>
+                        <div class="request-full-url" id="req-full-url"><strong>完整 URL</strong><span id="req-full-url-value">http://192.168.81.163:9527/api/mcp/query</span></div>
+                    </div>
                 </div>
-                <div class="request-config-row">
-                    <span class="request-config-label">Port</span>
-                    <input type="text" class="request-config-input" id="req-port" placeholder="8080" value="9527">
+            </div>
+            <div class="request-section">
+                <div class="request-section-header">
+                    <div class="request-section-title">路径参数</div>
                 </div>
-                <div class="request-config-row">
-                    <span class="request-config-label">方法</span>
-                    <input type="text" class="request-config-input request-method" id="req-method" placeholder="GET" value="GET">
-                    <input type="text" class="request-config-input request-url" id="req-url" placeholder="/api/path" value="/api/mcp/query">
+                <div class="request-section-hint">根据路径模板中的 <code>{param}</code> 自动识别，修改路径模板后会重新同步。</div>
+                <table class="request-params-table">
+                    <thead>
+                        <tr>
+                            <th>参数名</th>
+                            <th>值</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="req-path-params-body"></tbody>
+                </table>
+            </div>
+            <div class="request-section">
+                <div class="request-section-header">
+                    <div class="request-section-title">查询参数</div>
+                    <button type="button" class="request-param-add-btn" id="req-query-param-add-btn">+ 添加</button>
                 </div>
+                <div class="request-section-hint">支持与 URL 查询字符串双向同步。</div>
+                <table class="request-params-table">
+                    <thead>
+                        <tr>
+                            <th>参数名</th>
+                            <th>值</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="req-query-params-body"></tbody>
+                </table>
             </div>
             <div class="request-buttons">
                 <button class="request-btn request-btn-primary" onclick="sendRequest()">发送请求</button>
                 <button class="request-btn request-btn-secondary" onclick="clearRequest()">清空</button>
             </div>
             <div class="request-body">
-                <div class="request-body-label">请求体 (JSON)</div>
+                <div class="request-body-label">
+                    <div class="request-body-label-row">
+                        <span>请求体 (JSON)</span>
+                        <span class="request-body-hint" id="req-body-hint">POST 时发送请求体，GET 时仅展示不发送</span>
+                    </div>
+                </div>
                 <textarea id="req-body" placeholder='{"key": "value"}'></textarea>
             </div>
             <div class="response-body">
@@ -825,7 +1150,7 @@
                     <span class="response-status" id="res-status"></span>
                 </div>
                 <div class="response-body-content">
-                    <pre id="res-content">点击"发送请求"查看结果</pre>
+                    <pre id="res-content">点击“发送请求”查看结果</pre>
                 </div>
             </div>
         </aside>
@@ -838,8 +1163,31 @@
     <script src="/md-search.js"></script>
     <script>
         const TABS_KEY = 'md-preview-open-tabs';
+        const REQUEST_PANEL_STATE_KEY = 'md-preview-request-panel-state';
+        const REQUEST_TABS_STORAGE_PREFIX = 'md-preview-request-tabs:';
+        const REQUEST_API_PREFIX = 'http://192.168.81.163:9527/api';
+        const REQUEST_EMPTY_RESPONSE_TEXT = '点击“发送请求”查看结果';
         const urlParams = new URLSearchParams(window.location.search);
-        const currentFilePath = urlParams.get('path');
+        let currentFilePath = urlParams.get('path');
+
+        function updatePathUrl(path, replace = false) {
+            const nextUrl = `/md-view?path=${encodeURIComponent(path)}`;
+            if (replace) {
+                window.history.replaceState({ path }, '', nextUrl);
+            } else {
+                window.history.pushState({ path }, '', nextUrl);
+            }
+        }
+
+        async function openFile(path, options = {}) {
+            const nextPath = String(path || '').trim();
+            if (!nextPath || nextPath === currentFilePath) return;
+            const replace = Boolean(options.replaceHistory);
+            currentFilePath = nextPath;
+            updatePathUrl(nextPath, replace);
+            await loadPreviewData();
+        }
+        let currentApiSections = [];
 
         async function loadPreviewData() {
             if (!currentFilePath) {
@@ -857,12 +1205,14 @@
                 document.getElementById('markdown-body').innerHTML = data.content;
                 document.getElementById('breadcrumb-path').innerHTML = data.title;
                 document.getElementById('breadcrumb-path').title = data.title;
+                currentApiSections = normalizeApiSections(data?.apiSections);
 
                 // 初始化交互功能
                 if (window.hljs) hljs.highlightAll();
                 initToc();
                 initTocScrollSpy();
                 initLocalSearch();
+                initRequestPanel();
                 initRequestParams();
                 initTabs();
                 initTreeInteraction();
@@ -871,97 +1221,598 @@
             }
         }
 
-        function initRequestParams() {
-            const headings = document.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6');
-            headings.forEach(heading => {
-                if (heading.textContent.includes('请求参数')) {
-                    let nextElement = heading.nextElementSibling;
-                    let table = null;
-                    while (nextElement) {
-                        if (nextElement.tagName === 'TABLE') { table = nextElement; break; }
-                        if (nextElement.tagName === 'P' && nextElement.textContent.trim() === '') { nextElement = nextElement.nextElementSibling; continue; }
-                        if (nextElement.tagName.match(/^H[1-6]$/i)) break;
-                        nextElement = nextElement.nextElementSibling;
-                    }
-                    if (table) {
-                        const invokeBtn = document.createElement('div');
-                        invokeBtn.innerHTML = '<button id="invokeParamsBtn" class="invoke-params-btn">📞 调用</button>';
-                        invokeBtn.style.textAlign = 'right';
-                        invokeBtn.style.marginBottom = '10px';
-                        table.parentNode.insertBefore(invokeBtn, table);
-                        const editableTable = table.cloneNode(true);
-                        editableTable.classList.add('editable-params-table');
-                        editableTable.style.marginTop = '10px';
-                        const rows = editableTable.querySelectorAll('tr');
-                        rows.forEach((row, rowIndex) => {
-                            if (rowIndex === 0) {
-                                const th = document.createElement('th');
-                                th.textContent = '操作';
-                                th.style.width = '60px';
-                                row.appendChild(th);
-                            } else {
-                                const td = document.createElement('td');
-                                td.style.textAlign = 'center';
-                                td.innerHTML = '<button class="delete-row-btn" title="删除行">✕</button>';
-                                row.appendChild(td);
-                                const cells = row.querySelectorAll('td');
-                                cells.forEach((cell, cellIndex) => {
-                                    if (cellIndex < cells.length - 1) {
-                                        cell.contentEditable = 'true';
-                                        cell.style.cursor = 'text';
-                                        cell.style.backgroundColor = '#f8f8f8';
-                                        cell.addEventListener('focus', function() {
-                                            this.style.backgroundColor = '#ffffff';
-                                            this.style.outline = '2px solid #4CAF50';
-                                        });
-                                        cell.addEventListener('blur', function() {
-                                            this.style.backgroundColor = '#f8f8f8';
-                                            this.style.outline = 'none';
-                                        });
-                                    }
-                                });
-                            }
+        function getRequestStorageKey() {
+            return `${REQUEST_TABS_STORAGE_PREFIX}${currentFilePath || '__global__'}`;
+        }
+
+        function normalizeRequestMethod(value) {
+            return String(value || 'GET').toUpperCase() === 'POST' ? 'POST' : 'GET';
+        }
+
+        function normalizeRequestPath(pathValue, fallback = '/mcp/query') {
+            const value = String(pathValue || '').trim();
+            if (!value) return fallback;
+            if (/^https?:\/\//i.test(value)) {
+                const parsed = new URL(value);
+                return parsed.pathname.replace(/^\/api/, '') + parsed.search;
+            }
+            if (value.startsWith('/api')) {
+                return value.slice(4) || '/';
+            }
+            return value.startsWith('/') ? value : `/${value}`;
+        }
+
+        function parseQueryString(queryString) {
+            const params = new URLSearchParams(String(queryString || '').replace(/^\?/, ''));
+            return Array.from(params.entries()).map(([key, value]) => ({ key, value }));
+        }
+
+        function normalizeParamRows(rows, keepEmpty = false) {
+            return (Array.isArray(rows) ? rows : [])
+                .map(row => ({ key: String(row?.key || '').trim(), value: String(row?.value || '') }))
+                .filter(row => keepEmpty ? (row.key || row.value) : row.key);
+        }
+
+        function extractPathKeys(pathTemplate) {
+            return Array.from(String(pathTemplate || '').matchAll(/\{([^{}\/]+)\}/g)).map(match => match[1]);
+        }
+
+        function mergePathParams(pathTemplate, rows) {
+            const values = new Map(normalizeParamRows(rows, true).map(row => [row.key, row.value]));
+            return extractPathKeys(pathTemplate).map(key => ({ key, value: values.get(key) || '' }));
+        }
+
+        function serializeQueryParams(queryParams) {
+            const params = new URLSearchParams();
+            normalizeParamRows(queryParams).forEach(row => params.append(row.key, row.value));
+            return params.toString();
+        }
+
+        function resolvePath(pathTemplate, pathParams) {
+            const values = new Map(mergePathParams(pathTemplate, pathParams).map(row => [row.key, row.value]));
+            return normalizeRequestPath(pathTemplate).replace(/\{([^{}\/]+)\}/g, (_, key) => {
+                const value = values.get(key);
+                return value ? encodeURIComponent(value) : `{${key}}`;
+            });
+        }
+
+        function buildRequestState(overrides = {}) {
+            const base = Object.assign({
+                id: `request-tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                name: '请求 1',
+                method: 'GET',
+                pathTemplate: '/mcp/query',
+                pathParams: [],
+                queryParams: [],
+                body: '',
+                responseText: REQUEST_EMPTY_RESPONSE_TEXT,
+                responseStatus: '',
+                responseIsError: false
+            }, overrides || {});
+            const pathTemplate = normalizeRequestPath(base.pathTemplate, '/mcp/query').split('?')[0];
+            const pathParams = mergePathParams(pathTemplate, base.pathParams);
+            const queryParams = normalizeParamRows(base.queryParams);
+            const queryString = serializeQueryParams(queryParams);
+            return Object.assign(base, {
+                method: normalizeRequestMethod(base.method),
+                pathTemplate,
+                pathParams,
+                queryParams,
+                resolvedPath: resolvePath(pathTemplate, pathParams),
+                queryString,
+                fullUrl: `${REQUEST_API_PREFIX}${resolvePath(pathTemplate, pathParams)}${queryString ? `?${queryString}` : ''}`
+            });
+        }
+
+        function createDefaultRequestTabsState() {
+            const firstTab = buildRequestState();
+            return { activeTabId: firstTab.id, tabs: [firstTab] };
+        }
+
+        function normalizeRequestTabsState(rawState) {
+            const state = rawState && typeof rawState === 'object' ? rawState : {};
+            const tabs = Array.isArray(state.tabs) && state.tabs.length
+                ? state.tabs.map(tab => {
+                    if (tab && (tab.url || tab.ip || tab.port) && !tab.pathTemplate) {
+                        const normalized = normalizeRequestPath(tab.url || '/api/mcp/query');
+                        const [pathPart, queryPart = ''] = normalized.split('?');
+                        return buildRequestState({
+                            id: tab.id,
+                            name: tab.name,
+                            method: tab.method,
+                            pathTemplate: pathPart,
+                            queryParams: parseQueryString(queryPart),
+                            body: tab.body,
+                            responseText: tab.responseText || REQUEST_EMPTY_RESPONSE_TEXT,
+                            responseStatus: tab.responseStatus || '',
+                            responseIsError: Boolean(tab.responseIsError)
                         });
-                        const tableHeader = document.createElement('div');
-                        tableHeader.className = 'editable-table-header';
-                        tableHeader.innerHTML = '<span>可编辑参数</span><button id="addParamRowBtn" class="add-row-btn">+ 添加行</button>';
-                        tableHeader.style.display = 'flex';
-                        tableHeader.style.justifyContent = 'space-between';
-                        tableHeader.style.alignItems = 'center';
-                        tableHeader.style.marginBottom = '8px';
-                        tableHeader.style.marginTop = '20px';
-                        table.parentNode.insertBefore(tableHeader, editableTable);
-                        table.parentNode.insertBefore(editableTable, table.nextSibling);
-                        setTimeout(() => {
-                            const addBtn = document.getElementById('addParamRowBtn');
-                            if (addBtn) {
-                                addBtn.addEventListener('click', function() {
-                                    const tbody = editableTable.querySelector('tbody');
-                                    if (tbody) {
-                                        const newRow = tbody.insertRow();
-                                        const headerRow = editableTable.querySelector('thead tr');
-                                        const colCount = headerRow.children.length - 1;
-                                        for (let i = 0; i < colCount; i++) {
-                                            const cell = newRow.insertCell(i);
-                                            cell.contentEditable = 'true';
-                                            cell.style.backgroundColor = '#f8f8f8';
-                                            cell.style.cursor = 'text';
-                                            cell.addEventListener('focus', function() { this.style.backgroundColor = '#ffffff'; this.style.outline = '2px solid #4CAF50'; });
-                                            cell.addEventListener('blur', function() { this.style.backgroundColor = '#f8f8f8'; this.style.outline = 'none'; });
-                                        }
-                                        const actionCell = newRow.insertCell(colCount);
-                                        actionCell.style.textAlign = 'center';
-                                        actionCell.innerHTML = '<button class="delete-row-btn" title="删除行">✕</button>';
-                                        actionCell.querySelector('.delete-row-btn').addEventListener('click', function() { newRow.remove(); });
-                                    }
-                                });
-                            }
-                            document.querySelectorAll('.delete-row-btn').forEach(btn => {
-                                btn.addEventListener('click', function() { this.closest('tr').remove(); });
-                            });
-                        }, 100);
                     }
+                    return buildRequestState(tab);
+                })
+                : createDefaultRequestTabsState().tabs;
+            const activeTabId = tabs.some(tab => tab.id === state.activeTabId) ? state.activeTabId : tabs[0].id;
+            return { activeTabId, tabs };
+        }
+
+        function readRequestTabsState() {
+            try {
+                return normalizeRequestTabsState(JSON.parse(localStorage.getItem(getRequestStorageKey()) || 'null'));
+            } catch (error) {
+                return createDefaultRequestTabsState();
+            }
+        }
+
+        function writeRequestTabsState(state) {
+            const normalized = normalizeRequestTabsState(state);
+            localStorage.setItem(getRequestStorageKey(), JSON.stringify(normalized));
+            return normalized;
+        }
+
+        function getActiveRequestTab(state = readRequestTabsState()) {
+            return state.tabs.find(tab => tab.id === state.activeTabId) || state.tabs[0];
+        }
+
+        function buildActivePathQuery(tab) {
+            return `${tab.resolvedPath}${tab.queryString ? `?${tab.queryString}` : ''}`;
+        }
+
+        function renderRequestTabs() {
+            const host = document.getElementById('request-tabs-list');
+            if (!host) return;
+            const state = writeRequestTabsState(readRequestTabsState());
+            host.innerHTML = state.tabs.map(tab => `
+                <div class="request-tab${tab.id === state.activeTabId ? ' active' : ''}" data-tab-id="${tab.id}" title="${tab.name}">
+                    <span class="request-tab-name">${tab.name}</span>
+                    <button type="button" class="request-tab-close-btn" data-close-tab="${tab.id}">×</button>
+                </div>
+            `).join('');
+            host.querySelectorAll('.request-tab').forEach(tabEl => {
+                tabEl.addEventListener('click', (event) => {
+                    if (event.target.closest('[data-close-tab]')) return;
+                    const state = readRequestTabsState();
+                    state.activeTabId = tabEl.dataset.tabId;
+                    writeRequestTabsState(state);
+                    loadRequestFormState();
+                });
+            });
+            host.querySelectorAll('[data-close-tab]').forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    closeRequestTab(btn.dataset.closeTab);
+                });
+            });
+        }
+
+        function renderParamsTable(containerId, rows, allowDelete) {
+            const body = document.getElementById(containerId);
+            if (!body) return;
+            if (!rows.length) {
+                body.innerHTML = `<tr><td colspan="3" class="request-empty-cell">${allowDelete ? '暂无查询参数，可手动添加' : '未识别到路径参数'}</td></tr>`;
+                return;
+            }
+            body.innerHTML = rows.map((row, index) => `
+                <tr data-row-index="${index}">
+                    <td><input class="request-param-input" data-field="key" value="${row.key.replace(/"/g, '&quot;')}"${allowDelete ? '' : ' readonly'}></td>
+                    <td><input class="request-param-input" data-field="value" value="${row.value.replace(/"/g, '&quot;')}"></td>
+                    <td>${allowDelete ? `<button type="button" class="request-param-delete-btn" data-remove-index="${index}">×</button>` : ''}</td>
+                </tr>
+            `).join('');
+        }
+
+        function loadRequestFormState() {
+            const state = buildRequestState(getActiveRequestTab(readRequestTabsState()));
+            renderRequestTabs();
+            document.getElementById('req-method').value = state.method;
+            document.getElementById('req-path-query').value = buildActivePathQuery(state);
+            document.getElementById('req-body').value = state.body;
+            document.getElementById('req-full-url-value').textContent = state.fullUrl;
+            document.getElementById('req-body-hint').textContent = state.method === 'POST'
+                ? 'POST 时发送请求体，GET 时仅展示不发送'
+                : '当前为 GET，请求体仅展示，不会随请求发送';
+            document.getElementById('request-panel-subtitle').textContent = currentFilePath
+                ? `当前文档: ${currentFilePath.split(/[\\/]/).pop()}`
+                : '当前文档单独缓存';
+            renderParamsTable('req-path-params-body', state.pathParams, false);
+            renderParamsTable('req-query-params-body', state.queryParams, true);
+            renderRequestResponse(state.responseText, state.responseStatus, state.responseIsError);
+        }
+
+        function collectParamRows(containerId, keepEmpty = false) {
+            const host = document.getElementById(containerId);
+            if (!host) return [];
+            return normalizeParamRows(Array.from(host.querySelectorAll('tr[data-row-index]')).map(row => ({
+                key: row.querySelector('[data-field="key"]')?.value || '',
+                value: row.querySelector('[data-field="value"]')?.value || ''
+            })), keepEmpty);
+        }
+
+        function patchActiveRequestTab(partial) {
+            const state = readRequestTabsState();
+            state.tabs = state.tabs.map(tab => tab.id === state.activeTabId ? buildRequestState(Object.assign({}, tab, partial || {})) : tab);
+            writeRequestTabsState(state);
+            return buildRequestState(getActiveRequestTab(state));
+        }
+
+        function initRequestPanel() {
+            const addBtn = document.getElementById('request-tab-add-btn');
+            if (addBtn && addBtn.dataset.bound !== 'true') {
+                addBtn.dataset.bound = 'true';
+                addBtn.addEventListener('click', () => {
+                    const state = readRequestTabsState();
+                    const tab = buildRequestState({ name: `请求 ${state.tabs.length + 1}` });
+                    state.tabs.push(tab);
+                    state.activeTabId = tab.id;
+                    writeRequestTabsState(state);
+                    loadRequestFormState();
+                });
+            }
+
+            const methodEl = document.getElementById('req-method');
+            if (methodEl && methodEl.dataset.bound !== 'true') {
+                methodEl.dataset.bound = 'true';
+                methodEl.addEventListener('change', () => {
+                    patchActiveRequestTab({ method: methodEl.value });
+                    loadRequestFormState();
+                });
+            }
+
+            const pathQueryEl = document.getElementById('req-path-query');
+            if (pathQueryEl && pathQueryEl.dataset.bound !== 'true') {
+                pathQueryEl.dataset.bound = 'true';
+                const syncPathQuery = () => {
+                    const raw = normalizeRequestPath(pathQueryEl.value);
+                    const [pathPart, queryPart = ''] = raw.split('?');
+                    patchActiveRequestTab({
+                        pathTemplate: pathPart || '/mcp/query',
+                        pathParams: mergePathParams(pathPart || '/mcp/query', collectParamRows('req-path-params-body', true)),
+                        queryParams: parseQueryString(queryPart)
+                    });
+                    loadRequestFormState();
+                };
+                pathQueryEl.addEventListener('change', syncPathQuery);
+                pathQueryEl.addEventListener('blur', syncPathQuery);
+            }
+
+            const bodyEl = document.getElementById('req-body');
+            if (bodyEl && bodyEl.dataset.bound !== 'true') {
+                bodyEl.dataset.bound = 'true';
+                bodyEl.addEventListener('input', () => {
+                    patchActiveRequestTab({ body: bodyEl.value });
+                });
+            }
+
+            const pathBody = document.getElementById('req-path-params-body');
+            if (pathBody && pathBody.dataset.bound !== 'true') {
+                pathBody.dataset.bound = 'true';
+                pathBody.addEventListener('input', () => {
+                    patchActiveRequestTab({ pathParams: collectParamRows('req-path-params-body', true) });
+                    loadRequestFormState();
+                });
+            }
+
+            const queryBody = document.getElementById('req-query-params-body');
+            if (queryBody && queryBody.dataset.bound !== 'true') {
+                queryBody.dataset.bound = 'true';
+                queryBody.addEventListener('input', () => {
+                    patchActiveRequestTab({ queryParams: collectParamRows('req-query-params-body', true) });
+                    loadRequestFormState();
+                });
+                queryBody.addEventListener('click', (event) => {
+                    const btn = event.target.closest('[data-remove-index]');
+                    if (!btn) return;
+                    const rows = collectParamRows('req-query-params-body', true);
+                    rows.splice(Number(btn.dataset.removeIndex), 1);
+                    patchActiveRequestTab({ queryParams: rows });
+                    loadRequestFormState();
+                });
+            }
+
+            const addQueryBtn = document.getElementById('req-query-param-add-btn');
+            if (addQueryBtn && addQueryBtn.dataset.bound !== 'true') {
+                addQueryBtn.dataset.bound = 'true';
+                addQueryBtn.addEventListener('click', () => {
+                    const rows = collectParamRows('req-query-params-body', true);
+                    rows.push({ key: '', value: '' });
+                    patchActiveRequestTab({ queryParams: rows });
+                    loadRequestFormState();
+                });
+            }
+
+            document.getElementById('request-panel').classList.toggle('expanded', (localStorage.getItem(REQUEST_PANEL_STATE_KEY) || 'collapsed') === 'expanded');
+            loadRequestFormState();
+        }
+
+        function renderRequestResponse(text, statusText = '', isError = false) {
+            document.getElementById('res-status').textContent = statusText || '';
+            document.getElementById('res-status').classList.toggle('error', Boolean(isError));
+            document.getElementById('res-content').textContent = text || '';
+        }
+
+        function toggleRequestPanel() {
+            const panel = document.getElementById('request-panel');
+            panel.classList.toggle('expanded');
+            localStorage.setItem(REQUEST_PANEL_STATE_KEY, panel.classList.contains('expanded') ? 'expanded' : 'collapsed');
+        }
+
+        async function sendRequest() {
+            const state = buildRequestState(getActiveRequestTab(readRequestTabsState()));
+            const options = { method: state.method, headers: {} };
+            if (state.method === 'POST') {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = state.body || '{}';
+            }
+            renderRequestResponse('请求发送中...', 'Pending', false);
+            try {
+                const response = await fetch(state.fullUrl, options);
+                const contentType = response.headers.get('content-type') || '';
+                const resultText = contentType.includes('application/json') ? JSON.stringify(await response.json(), null, 2) : await response.text();
+                patchActiveRequestTab({ responseText: resultText, responseStatus: `${response.status} ${response.statusText}`, responseIsError: !response.ok });
+                renderRequestResponse(resultText, `${response.status} ${response.statusText}`, !response.ok);
+            } catch (error) {
+                const message = `请求失败: ${error.message}`;
+                patchActiveRequestTab({ responseText: message, responseStatus: 'Network Error', responseIsError: true });
+                renderRequestResponse(message, 'Network Error', true);
+            }
+        }
+
+        function clearRequest() {
+            const state = readRequestTabsState();
+            const active = getActiveRequestTab(state);
+            state.tabs = state.tabs.map(tab => tab.id === active.id ? buildRequestState({ id: active.id, name: active.name }) : tab);
+            writeRequestTabsState(state);
+            loadRequestFormState();
+        }
+
+        function closeRequestTab(tabId) {
+            const state = readRequestTabsState();
+            if (state.tabs.length === 1) {
+                writeRequestTabsState(createDefaultRequestTabsState());
+                loadRequestFormState();
+                return;
+            }
+            state.tabs = state.tabs.filter(tab => tab.id !== tabId);
+            if (!state.tabs.some(tab => tab.id === state.activeTabId)) {
+                state.activeTabId = state.tabs[0].id;
+            }
+            writeRequestTabsState(state);
+            loadRequestFormState();
+        }
+
+        function getHeadingText(heading) {
+            const clone = heading.cloneNode(true);
+            clone.querySelectorAll('.invoke-request-btn-wrap').forEach(node => node.remove());
+            return String(clone.textContent || '').trim();
+        }
+
+        function pickFirstString(source, keys) {
+            if (!source || typeof source !== 'object') return '';
+            for (const key of keys) {
+                const value = source[key];
+                if (value === undefined || value === null) continue;
+                const text = String(value).trim();
+                if (text) return text;
+            }
+            return '';
+        }
+
+        function normalizeMetadataParamRows(rawRows) {
+            if (!Array.isArray(rawRows)) return [];
+            return rawRows.map(row => {
+                if (!row) return { key: '', value: '' };
+                if (typeof row === 'string') return { key: row.trim(), value: '' };
+                if (Array.isArray(row)) return { key: String(row[0] || '').trim(), value: '' };
+                return {
+                    key: String(row.key || row.name || row.paramName || row.field || '').trim(),
+                    value: String(row.value || row.defaultValue || '').trim()
+                };
+            }).filter(row => row.key);
+        }
+
+        function normalizeApiSection(raw) {
+            if (!raw || typeof raw !== 'object') return null;
+            const method = normalizeRequestMethod(pickFirstString(raw, ['method', 'requestMethod', 'httpMethod']));
+            const pathTemplate = normalizeRequestPath(
+                pickFirstString(raw, ['pathTemplate', 'interfacePath', 'path', 'url']),
+                ''
+            );
+            return {
+                sectionHeadingId: pickFirstString(raw, ['sectionHeadingId', 'headingId', 'requestHeadingId']),
+                sectionHeadingText: pickFirstString(raw, ['sectionHeadingText', 'headingText', 'requestHeadingText']),
+                interfaceHeadingId: pickFirstString(raw, ['interfaceHeadingId', 'apiHeadingId', 'parentHeadingId']),
+                interfaceTitle: pickFirstString(raw, ['interfaceTitle', 'apiTitle', 'interfaceName', 'name', 'title']),
+                method,
+                pathTemplate,
+                pathParams: normalizeMetadataParamRows(raw.pathParams || raw.requestPathParams || raw.pathParameters),
+                queryParams: normalizeMetadataParamRows(raw.queryParams || raw.requestParams || raw.parameters || raw.params),
+                body: pickFirstString(raw, ['requestBodyJson', 'bodyJson', 'requestBodyExample', 'bodyExample', 'requestBody', 'body'])
+            };
+        }
+
+        function normalizeApiSections(rawSections) {
+            if (!Array.isArray(rawSections)) return [];
+            return rawSections
+                .map(section => normalizeApiSection(section))
+                .filter(section => section && (section.pathTemplate || section.sectionHeadingId || section.sectionHeadingText));
+        }
+
+        function parseTableRows(table) {
+            const rows = Array.from(table?.querySelectorAll('tr') || []);
+            if (rows.length <= 1) return [];
+            return rows.slice(1).map(row => Array.from(row.querySelectorAll('th,td')).map(cell => String(cell.textContent || '').trim())).filter(row => row.some(Boolean));
+        }
+
+        function findSectionNodes(startHeading) {
+            if (!startHeading) return [];
+            const nodes = [];
+            let next = startHeading.nextElementSibling;
+            while (next && !/^H[1-4]$/i.test(next.tagName)) {
+                nodes.push(next);
+                next = next.nextElementSibling;
+            }
+            return nodes;
+        }
+
+        function findSectionHeading(blockStart, label) {
+            let node = blockStart;
+            while (node) {
+                if (node.tagName === 'H4' && getHeadingText(node) === label) return node;
+                node = node.nextElementSibling;
+                if (node && node.tagName === 'H3') break;
+            }
+            return null;
+        }
+
+        function collectInterfaceBlock(sectionHeading) {
+            let h3 = sectionHeading;
+            while (h3 && h3.tagName !== 'H3') h3 = h3.previousElementSibling;
+            return h3 || sectionHeading;
+        }
+
+        function getStructuredMetadata(sectionHeading) {
+            if (!currentApiSections.length) return null;
+            const headingId = String(sectionHeading?.id || '').trim();
+            const headingText = getHeadingText(sectionHeading);
+            const interfaceHeading = collectInterfaceBlock(sectionHeading);
+            const interfaceHeadingId = String(interfaceHeading?.id || '').trim();
+            const interfaceTitle = getHeadingText(interfaceHeading);
+
+            let match = null;
+            if (headingId) {
+                match = currentApiSections.find(section => section.sectionHeadingId === headingId) || null;
+            }
+            if (!match) {
+                match = currentApiSections.find(section =>
+                    section.sectionHeadingText === headingText &&
+                    section.interfaceHeadingId &&
+                    section.interfaceHeadingId === interfaceHeadingId
+                ) || null;
+            }
+            if (!match) {
+                match = currentApiSections.find(section =>
+                    section.sectionHeadingText === headingText &&
+                    section.interfaceTitle &&
+                    section.interfaceTitle === interfaceTitle
+                ) || null;
+            }
+            if (!match) {
+                match = currentApiSections.find(section => section.sectionHeadingText === headingText) || null;
+            }
+            if (!match) return null;
+
+            return {
+                name: match.interfaceTitle || interfaceTitle || headingText,
+                method: match.method,
+                pathTemplate: match.pathTemplate,
+                pathParams: mergePathParams(match.pathTemplate, match.pathParams || []),
+                queryParams: normalizeParamRows(match.queryParams || [], true),
+                body: String(match.body || '')
+            };
+        }
+
+        function parseInterfaceMetadata(sectionHeading) {
+            const structured = getStructuredMetadata(sectionHeading);
+            if (structured && structured.pathTemplate && structured.method) {
+                return structured;
+            }
+            const blockStart = collectInterfaceBlock(sectionHeading);
+            const blockNodes = [];
+            let node = blockStart;
+            while (node) {
+                if (node !== blockStart && node.tagName === 'H3') break;
+                blockNodes.push(node);
+                node = node.nextElementSibling;
+            }
+
+            let pathTemplate = '';
+            let method = '';
+            blockNodes.forEach(item => {
+                const text = String(item.textContent || '').trim();
+                if (!pathTemplate && text.includes('接口路径')) {
+                    const code = item.querySelector('code');
+                    pathTemplate = normalizeRequestPath(code ? code.textContent.trim() : text.split(':').pop().trim(), '');
                 }
+                if (!method && text.includes('请求方式')) {
+                    const match = text.match(/\b(GET|POST)\b/i);
+                    if (match) method = match[1].toUpperCase();
+                }
+            });
+
+            const pathHeading = findSectionHeading(blockStart, '路径参数');
+            const paramsHeading = findSectionHeading(blockStart, '请求参数');
+            const bodyHeading = findSectionHeading(blockStart, '请求体');
+            const pathTable = findSectionNodes(pathHeading).find(node => node.tagName === 'TABLE');
+            const paramsTable = findSectionNodes(paramsHeading).find(node => node.tagName === 'TABLE');
+            const bodyNodes = findSectionNodes(bodyHeading);
+            const bodyTable = bodyNodes.find(node => node.tagName === 'TABLE');
+            const bodyCode = bodyNodes.map(node => node.querySelector('pre code')).find(Boolean);
+
+            const pathParamRows = parseTableRows(pathTable).map(row => ({ key: row[0] || '', value: '' }));
+            const queryParamRows = parseTableRows(paramsTable).map(row => ({ key: row[0] || '', value: '' }));
+            let body = '';
+            if (bodyCode) {
+                body = bodyCode.textContent.trim();
+            } else if (bodyTable) {
+                const payload = {};
+                parseTableRows(bodyTable).forEach(row => {
+                    if (!row[0]) return;
+                    const type = String(row[1] || '').toLowerCase();
+                    payload[row[0]] = type.includes('number') ? 0 : type.includes('bool') ? false : type.includes('string') ? '' : null;
+                });
+                body = Object.keys(payload).length ? JSON.stringify(payload, null, 2) : '';
+            }
+
+            return {
+                name: getHeadingText(blockStart),
+                method,
+                pathTemplate,
+                pathParams: mergePathParams(pathTemplate, pathParamRows),
+                queryParams: queryParamRows,
+                body
+            };
+        }
+
+        function initRequestParams() {
+            document.querySelectorAll('.invoke-request-btn-wrap').forEach(node => node.remove());
+            document.querySelectorAll('.markdown-body h4').forEach(heading => {
+                const label = getHeadingText(heading);
+                if (label !== '请求参数' && label !== '请求体') return;
+                const wrap = document.createElement('span');
+                wrap.className = 'invoke-request-btn-wrap';
+                wrap.style.marginLeft = '10px';
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'invoke-params-btn';
+                button.textContent = '调用';
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const metadata = parseInterfaceMetadata(heading);
+                    if (!metadata.pathTemplate || !metadata.method) {
+                        window.alert(!metadata.pathTemplate ? '未识别接口路径，请检查当前接口文档格式' : '未识别请求方式，请检查当前接口文档格式');
+                        return;
+                    }
+                    const nextName = metadata.name || metadata.pathTemplate.split('/').filter(Boolean).pop() || '请求';
+                    patchActiveRequestTab({
+                        name: nextName,
+                        method: metadata.method,
+                        pathTemplate: metadata.pathTemplate,
+                        pathParams: metadata.pathParams,
+                        queryParams: metadata.queryParams,
+                        body: metadata.body || '',
+                        responseText: REQUEST_EMPTY_RESPONSE_TEXT,
+                        responseStatus: '',
+                        responseIsError: false
+                    });
+                    const panel = document.getElementById('request-panel');
+                    if (panel && !panel.classList.contains('expanded')) {
+                        panel.classList.add('expanded');
+                        localStorage.setItem(REQUEST_PANEL_STATE_KEY, 'expanded');
+                    }
+                    loadRequestFormState();
+                });
+                wrap.appendChild(button);
+                heading.appendChild(wrap);
             });
         }
 
@@ -1077,7 +1928,7 @@
                 const name = path.split(/[\\/]/).pop();
                 const div = document.createElement('div');
                 div.className = 'tab' + (path === currentFilePath ? ' active' : '');
-                div.onclick = () => { if (path !== currentFilePath) window.location.href = '/md-view?path=' + encodeURIComponent(path); };
+                div.onclick = () => { if (path !== currentFilePath) openFile(path); };
                 div.addEventListener('contextmenu', (e) => {
                     e.preventDefault(); targetTabPath = path;
                     const contextMenu = document.getElementById('tab-context-menu');
@@ -1133,6 +1984,15 @@
                         else { const idx = currentPaths.indexOf(path); if (idx > -1) currentPaths.splice(idx, 1); }
                         localStorage.setItem('md-preview-expanded-paths', JSON.stringify(currentPaths));
                     }
+                });
+            });
+
+            document.querySelectorAll('.tree-file').forEach(fileLink => {
+                fileLink.addEventListener('click', async (e) => {
+                    const path = fileLink.getAttribute('data-path');
+                    if (!path) return;
+                    e.preventDefault();
+                    await openFile(path);
                 });
             });
 
@@ -1205,7 +2065,16 @@
         document.addEventListener('click', () => { document.getElementById('tab-context-menu').style.display = 'none'; });
         document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'w') { e.preventDefault(); closeTab(currentFilePath); } });
 
+        window.addEventListener('popstate', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const path = params.get('path');
+            if (!path || path === currentFilePath) return;
+            currentFilePath = path;
+            await loadPreviewData();
+        });
+
         loadPreviewData();
     </script>
 </body>
 </html>
+
