@@ -591,6 +591,12 @@
             transition: width 0.3s ease;
         }
         .request-panel.expanded { width: 460px; }
+        .request-panel-content {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
         .request-panel-header {
             padding: 10px 15px;
             background: #383838;
@@ -738,6 +744,33 @@
             white-space: nowrap;
             flex-shrink: 0;
         }
+        .request-api-config {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .request-api-host {
+            min-width: 180px;
+        }
+        .request-api-port {
+            width: 96px;
+            flex: 0 0 96px;
+        }
+        .request-config-save-btn {
+            height: 34px;
+            padding: 0 12px;
+            border-radius: 6px;
+            border: 1px solid #3f454f;
+            background: #2f3742;
+            color: #d7deea;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+        .request-config-save-btn:hover {
+            background: #3a4554;
+            border-color: #556274;
+        }
         .request-full-url {
             font-size: 11px;
             color: #8d95a1;
@@ -882,6 +915,8 @@
         }
         .request-body textarea {
             min-height: 220px;
+            width: 100%;
+            box-sizing: border-box;
             background: #1e1e1e;
             border: none;
             color: #e0e0e0;
@@ -1082,7 +1117,18 @@
                 <div class="request-tabs-list" id="request-tabs-list"></div>
                 <button type="button" class="request-tab-add" id="request-tab-add-btn" title="新增请求标签">+</button>
             </div>
+            <div class="request-panel-content">
             <div class="request-config">
+                <div class="request-config-row">
+                    <span class="request-config-label">服务</span>
+                    <div class="request-config-stack">
+                        <div class="request-api-config">
+                            <input type="text" class="request-config-input request-api-host" id="req-api-host" placeholder="192.168.81.163" value="192.168.81.163">
+                            <input type="text" class="request-config-input request-api-port" id="req-api-port" placeholder="9527" value="9527">
+                            <button type="button" class="request-config-save-btn" id="req-api-save-btn">保存</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="request-config-row">
                     <span class="request-config-label">请求</span>
                     <div class="request-config-stack">
@@ -1153,6 +1199,7 @@
                     <pre id="res-content">点击“发送请求”查看结果</pre>
                 </div>
             </div>
+            </div>
         </aside>
         <div class="request-panel-toggle" onclick="toggleRequestPanel()" title="API请求工具">🚀</div>
     </div>
@@ -1165,10 +1212,46 @@
         const TABS_KEY = 'md-preview-open-tabs';
         const REQUEST_PANEL_STATE_KEY = 'md-preview-request-panel-state';
         const REQUEST_TABS_STORAGE_PREFIX = 'md-preview-request-tabs:';
-        const REQUEST_API_PREFIX = 'http://192.168.81.163:9527/api';
+        const REQUEST_API_CONFIG_KEY = 'md-preview-request-api-config';
+        const REQUEST_API_DEFAULT_HOST = '192.168.81.163';
+        const REQUEST_API_DEFAULT_PORT = '9527';
         const REQUEST_EMPTY_RESPONSE_TEXT = '点击“发送请求”查看结果';
         const urlParams = new URLSearchParams(window.location.search);
         let currentFilePath = urlParams.get('path');
+
+        function readRequestApiConfig() {
+            try {
+                const raw = localStorage.getItem(REQUEST_API_CONFIG_KEY);
+                const parsed = raw ? JSON.parse(raw) : {};
+                const host = String(parsed?.host || REQUEST_API_DEFAULT_HOST).trim() || REQUEST_API_DEFAULT_HOST;
+                const port = String(parsed?.port || REQUEST_API_DEFAULT_PORT).trim() || REQUEST_API_DEFAULT_PORT;
+                return { host, port };
+            } catch (error) {
+                return { host: REQUEST_API_DEFAULT_HOST, port: REQUEST_API_DEFAULT_PORT };
+            }
+        }
+
+        function writeRequestApiConfig(config) {
+            const host = String(config?.host || '').trim() || REQUEST_API_DEFAULT_HOST;
+            const port = String(config?.port || '').trim() || REQUEST_API_DEFAULT_PORT;
+            localStorage.setItem(REQUEST_API_CONFIG_KEY, JSON.stringify({ host, port }));
+            return { host, port };
+        }
+
+        function getRequestApiPrefix() {
+            const { host, port } = readRequestApiConfig();
+            return `http://${host}:${port}/api`;
+        }
+
+        function syncRequestApiConfigUI() {
+            const { host, port } = readRequestApiConfig();
+            const hostEl = document.getElementById('req-api-host');
+            const portEl = document.getElementById('req-api-port');
+            if (hostEl) hostEl.value = host;
+            if (portEl) portEl.value = port;
+            const prefixEl = document.getElementById('req-prefix');
+            if (prefixEl) prefixEl.textContent = getRequestApiPrefix();
+        }
 
         function updatePathUrl(path, replace = false) {
             const nextUrl = `/md-view?path=${encodeURIComponent(path)}`;
@@ -1177,6 +1260,12 @@
             } else {
                 window.history.pushState({ path }, '', nextUrl);
             }
+        }
+
+        function updateHeadingHash(headingId) {
+            const baseUrl = `/md-view?path=${encodeURIComponent(currentFilePath || '')}`;
+            const hash = headingId ? `#${encodeURIComponent(headingId)}` : '';
+            window.history.replaceState({ path: currentFilePath, headingId: headingId || '' }, '', `${baseUrl}${hash}`);
         }
 
         async function openFile(path, options = {}) {
@@ -1205,6 +1294,14 @@
                 document.getElementById('markdown-body').innerHTML = data.content;
                 document.getElementById('breadcrumb-path').innerHTML = data.title;
                 document.getElementById('breadcrumb-path').title = data.title;
+                const sidebarHeader = document.querySelector('.sidebar-header');
+                if (sidebarHeader && !/[\u{1F300}-\u{1FAFF}]/u.test(sidebarHeader.textContent || '')) {
+                    sidebarHeader.textContent = `📚 ${sidebarHeader.textContent || ''}`.trim();
+                }
+                const tocHeader = document.querySelector('.toc-header');
+                if (tocHeader && !/[\u{1F300}-\u{1FAFF}]/u.test(tocHeader.textContent || '')) {
+                    tocHeader.textContent = `🧭 ${tocHeader.textContent || ''}`.trim();
+                }
                 currentApiSections = normalizeApiSections(data?.apiSections);
 
                 // 初始化交互功能
@@ -1216,6 +1313,10 @@
                 initRequestParams();
                 initTabs();
                 initTreeInteraction();
+                const hashId = decodeURIComponent((window.location.hash || '').replace(/^#/, '').trim());
+                if (hashId) {
+                    setTimeout(() => scrollToHeading(hashId), 0);
+                }
             } catch (error) {
                 document.getElementById('markdown-body').innerHTML = '错误: ' + error.message;
             }
@@ -1300,7 +1401,7 @@
                 queryParams,
                 resolvedPath: resolvePath(pathTemplate, pathParams),
                 queryString,
-                fullUrl: `${REQUEST_API_PREFIX}${resolvePath(pathTemplate, pathParams)}${queryString ? `?${queryString}` : ''}`
+                fullUrl: `${getRequestApiPrefix()}${resolvePath(pathTemplate, pathParams)}${queryString ? `?${queryString}` : ''}`
             });
         }
 
@@ -1403,8 +1504,10 @@
         function loadRequestFormState() {
             const state = buildRequestState(getActiveRequestTab(readRequestTabsState()));
             renderRequestTabs();
+            syncRequestApiConfigUI();
             document.getElementById('req-method').value = state.method;
             document.getElementById('req-path-query').value = buildActivePathQuery(state);
+            document.getElementById('req-prefix').textContent = getRequestApiPrefix();
             document.getElementById('req-body').value = state.body;
             document.getElementById('req-full-url-value').textContent = state.fullUrl;
             document.getElementById('req-body-hint').textContent = state.method === 'POST'
@@ -1435,6 +1538,40 @@
         }
 
         function initRequestPanel() {
+            syncRequestApiConfigUI();
+
+            const saveApiConfig = () => {
+                const hostEl = document.getElementById('req-api-host');
+                const portEl = document.getElementById('req-api-port');
+                const config = writeRequestApiConfig({
+                    host: hostEl ? hostEl.value : '',
+                    port: portEl ? portEl.value : ''
+                });
+                if (hostEl) hostEl.value = config.host;
+                if (portEl) portEl.value = config.port;
+                loadRequestFormState();
+            };
+
+            const apiHostEl = document.getElementById('req-api-host');
+            if (apiHostEl && apiHostEl.dataset.bound !== 'true') {
+                apiHostEl.dataset.bound = 'true';
+                apiHostEl.addEventListener('change', saveApiConfig);
+                apiHostEl.addEventListener('blur', saveApiConfig);
+            }
+
+            const apiPortEl = document.getElementById('req-api-port');
+            if (apiPortEl && apiPortEl.dataset.bound !== 'true') {
+                apiPortEl.dataset.bound = 'true';
+                apiPortEl.addEventListener('change', saveApiConfig);
+                apiPortEl.addEventListener('blur', saveApiConfig);
+            }
+
+            const saveBtn = document.getElementById('req-api-save-btn');
+            if (saveBtn && saveBtn.dataset.bound !== 'true') {
+                saveBtn.dataset.bound = 'true';
+                saveBtn.addEventListener('click', saveApiConfig);
+            }
+
             const addBtn = document.getElementById('request-tab-add-btn');
             if (addBtn && addBtn.dataset.bound !== 'true') {
                 addBtn.dataset.bound = 'true';
@@ -1524,9 +1661,19 @@
         }
 
         function renderRequestResponse(text, statusText = '', isError = false) {
-            document.getElementById('res-status').textContent = statusText || '';
-            document.getElementById('res-status').classList.toggle('error', Boolean(isError));
-            document.getElementById('res-content').textContent = text || '';
+            const statusEl = document.getElementById('res-status');
+            if (statusEl) {
+                statusEl.textContent = statusText || '';
+                statusEl.classList.toggle('error', Boolean(isError));
+            }
+            const contentEl = document.getElementById('res-content');
+            if (contentEl) {
+                contentEl.textContent = text == null ? '' : String(text);
+            }
+            const contentWrap = document.querySelector('.response-body-content');
+            if (contentWrap) {
+                contentWrap.scrollTop = 0;
+            }
         }
 
         function toggleRequestPanel() {
@@ -1537,6 +1684,13 @@
 
         async function sendRequest() {
             const state = buildRequestState(getActiveRequestTab(readRequestTabsState()));
+            const sendBtn = document.querySelector('.request-btn-primary');
+            const originalBtnText = sendBtn ? (sendBtn.dataset.originalText || sendBtn.textContent || '发送请求') : '发送请求';
+            if (sendBtn) {
+                sendBtn.dataset.originalText = originalBtnText;
+                sendBtn.disabled = true;
+                sendBtn.textContent = '请求中...';
+            }
             const options = { method: state.method, headers: {} };
             if (state.method === 'POST') {
                 options.headers['Content-Type'] = 'application/json';
@@ -1546,13 +1700,34 @@
             try {
                 const response = await fetch(state.fullUrl, options);
                 const contentType = response.headers.get('content-type') || '';
-                const resultText = contentType.includes('application/json') ? JSON.stringify(await response.json(), null, 2) : await response.text();
+                const rawText = await response.text();
+                let resultText = rawText;
+                if (contentType.includes('application/json')) {
+                    try {
+                        resultText = JSON.stringify(JSON.parse(rawText || 'null'), null, 2);
+                    } catch (error) {
+                        resultText = rawText;
+                    }
+                }
                 patchActiveRequestTab({ responseText: resultText, responseStatus: `${response.status} ${response.statusText}`, responseIsError: !response.ok });
                 renderRequestResponse(resultText, `${response.status} ${response.statusText}`, !response.ok);
+                if (sendBtn) {
+                    sendBtn.textContent = '请求成功';
+                }
             } catch (error) {
-                const message = `请求失败: ${error.message}`;
+                const message = `请求失败: ${error instanceof Error ? error.message : String(error)}`;
                 patchActiveRequestTab({ responseText: message, responseStatus: 'Network Error', responseIsError: true });
                 renderRequestResponse(message, 'Network Error', true);
+                if (sendBtn) {
+                    sendBtn.textContent = '请求失败';
+                }
+            } finally {
+                if (sendBtn) {
+                    setTimeout(() => {
+                        sendBtn.textContent = originalBtnText;
+                        sendBtn.disabled = false;
+                    }, 900);
+                }
             }
         }
 
@@ -1855,6 +2030,7 @@
                 if (currentHeadingIndex === -1) {
                     document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));
                     breadcrumbEl.innerHTML = fullPath;
+                    updateHeadingHash('');
                     return;
                 }
                 const currentHeading = headings[currentHeadingIndex];
@@ -1877,6 +2053,7 @@
                     if (levelData[2]) breadcrumbHtml += ' <span class="breadcrumb-separator">##</span><span class="breadcrumb-title" onclick="scrollToHeading(\'' + levelData[2].id + '\')">' + levelData[2].text + '</span>';
                     if (levelData[3]) breadcrumbHtml += ' <span class="breadcrumb-separator">###</span><span class="breadcrumb-title" onclick="scrollToHeading(\'' + levelData[3].id + '\')">' + levelData[3].text + '</span>';
                     breadcrumbEl.innerHTML = breadcrumbHtml;
+                    updateHeadingHash(currentHeading.element.id);
                 }
             }
             contentArea.addEventListener('scroll', () => {
@@ -1996,12 +2173,17 @@
                 });
             });
 
-            const activeItem = document.querySelector('.tree-file.active');
-            if (activeItem) {
-                document.getElementById('locate-btn').addEventListener('click', () => {
+            const locateBtn = document.getElementById('locate-btn');
+            if (locateBtn && locateBtn.dataset.bound !== 'true') {
+                locateBtn.dataset.bound = 'true';
+                locateBtn.addEventListener('click', () => {
                     const searchInput = document.getElementById('search-input');
                     if (searchInput && searchInput.value) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
-                    activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    const currentActive = document.querySelector('.tree-file.active') || document.querySelector(`.tree-file[data-path="${CSS.escape(currentFilePath || '')}"]`);
+                    if (currentActive) {
+                        currentActive.classList.add('active');
+                        currentActive.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    }
                 });
             }
 

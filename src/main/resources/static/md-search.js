@@ -1,10 +1,23 @@
-// ========== Ctrl+F 本地搜索功能 ==========
+// ========== Ctrl+F 本地搜索 ==========
 let searchResults = [];
 let currentSearchIndex = -1;
 let searchHighlightElements = [];
+let localSearchInitialized = false;
 
 function initLocalSearch() {
-    // 创建搜索框（放到工具栏容器中）
+    if (!localSearchInitialized) {
+        createLocalSearchUi();
+        bindLocalSearchEvents();
+        localSearchInitialized = true;
+    }
+
+    updateLocalSearchPosition();
+    refreshLocalSearchAfterContentChange();
+}
+
+function createLocalSearchUi() {
+    if (document.querySelector('.local-search-wrapper')) return;
+
     const searchBoxWrapper = document.createElement('div');
     searchBoxWrapper.className = 'local-search-wrapper';
     searchBoxWrapper.style.display = 'none';
@@ -12,184 +25,282 @@ function initLocalSearch() {
     const searchBox = document.createElement('div');
     searchBox.className = 'local-search-box';
     searchBox.innerHTML = `
-        <input type="text" id="localSearchInput" placeholder="在当前文档中搜索..." />
-        <div class="search-controls">
-            <span class="search-count" id="searchCount"></span>
-            <button class="search-nav-btn" id="prevMatch" title="上一个(Shift+Enter)">▲</button>
-            <button class="search-nav-btn" id="nextMatch" title="下一个(Enter)">▼</button>
-            <button class="search-close-btn" id="closeSearch" title="关闭(Esc)">×</button>
+        <div class="local-search-row">
+            <input type="text" id="localSearchInput" placeholder="在当前预览中搜索..." autocomplete="off" />
+            <span class="search-count" id="searchCount">0/0</span>
+            <button type="button" class="search-nav-btn" id="prevMatch" title="上一个匹配 (Shift+Enter)">▲</button>
+            <button type="button" class="search-nav-btn" id="nextMatch" title="下一个匹配 (Enter)">▼</button>
+            <button type="button" class="search-close-btn" id="closeSearch" title="关闭 (Esc)">×</button>
+        </div>
+        <div class="local-search-options">
+            <label class="search-option">
+                <input type="checkbox" id="localSearchCaseSensitive" />
+                <span>区分大小写</span>
+            </label>
+            <label class="search-option">
+                <input type="checkbox" id="localSearchWholeWord" />
+                <span>全字匹配</span>
+            </label>
         </div>
     `;
     searchBoxWrapper.appendChild(searchBox);
+    document.body.appendChild(searchBoxWrapper);
+}
 
-    // 找到工具栏并在其下方插入
-    const toolbar = document.querySelector('.toolbar');
-    if (toolbar) {
-        toolbar.appendChild(searchBoxWrapper);
-    } else {
-        document.body.appendChild(searchBoxWrapper);
-    }
+function bindLocalSearchEvents() {
+    const input = document.getElementById('localSearchInput');
+    const caseSensitive = document.getElementById('localSearchCaseSensitive');
+    const wholeWord = document.getElementById('localSearchWholeWord');
 
-    // 事件绑定
-    document.getElementById('localSearchInput').addEventListener('input', performLocalSearch);
+    input.addEventListener('input', performLocalSearch);
+    caseSensitive.addEventListener('change', performLocalSearch);
+    wholeWord.addEventListener('change', performLocalSearch);
     document.getElementById('prevMatch').addEventListener('click', prevSearchResult);
     document.getElementById('nextMatch').addEventListener('click', nextSearchResult);
     document.getElementById('closeSearch').addEventListener('click', closeLocalSearch);
 
-    // Ctrl+F 打开搜索
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 'f') {
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
             e.preventDefault();
-            document.querySelector('.local-search-wrapper').style.display = 'block';
-            document.getElementById('localSearchInput').focus();
-        }
-        if (e.key === 'Escape') {
+            if (e.shiftKey) prevSearchResult();
+            else nextSearchResult();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
             closeLocalSearch();
         }
-        // 搜索结果导航
-        if (e.key === 'Enter') {
-            if (e.shiftKey) {
-                prevSearchResult();
-            } else {
-                nextSearchResult();
-            }
+    });
+
+    window.addEventListener('resize', updateLocalSearchPosition);
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+            openLocalSearch();
+            return;
+        }
+
+        if (e.key === 'Escape' && isLocalSearchOpen()) {
+            e.preventDefault();
+            closeLocalSearch();
+            return;
+        }
+
+        if (e.key === 'Enter' && isLocalSearchOpen() && document.activeElement !== input) {
+            e.preventDefault();
+            if (e.shiftKey) prevSearchResult();
+            else nextSearchResult();
         }
     });
 }
 
+function openLocalSearch() {
+    const wrapper = document.querySelector('.local-search-wrapper');
+    if (!wrapper) return;
+
+    wrapper.style.display = 'block';
+    updateLocalSearchPosition();
+
+    const input = document.getElementById('localSearchInput');
+    input.focus();
+    input.select();
+
+    if (input.value.trim()) {
+        performLocalSearch();
+    } else {
+        updateSearchCount();
+    }
+}
+
+function isLocalSearchOpen() {
+    const wrapper = document.querySelector('.local-search-wrapper');
+    return !!wrapper && wrapper.style.display !== 'none';
+}
+
+function updateLocalSearchPosition() {
+    const wrapper = document.querySelector('.local-search-wrapper');
+    if (!wrapper) return;
+
+    const toolbar = document.querySelector('.toolbar');
+    const tabsBar = document.querySelector('.tabs-bar');
+    const top = toolbar
+        ? Math.round(toolbar.getBoundingClientRect().bottom + 12)
+        : ((tabsBar ? tabsBar.getBoundingClientRect().bottom : 0) + 12);
+
+    wrapper.style.top = `${Math.max(top, 16)}px`;
+}
+
+function refreshLocalSearchAfterContentChange() {
+    clearSearchHighlights();
+    if (isLocalSearchOpen() && document.getElementById('localSearchInput').value.trim()) {
+        performLocalSearch();
+    } else {
+        updateSearchCount();
+    }
+}
+
 function performLocalSearch() {
-    // 清除之前的高亮
     clearSearchHighlights();
 
     const searchText = document.getElementById('localSearchInput').value.trim();
     if (!searchText) {
-        document.getElementById('searchCount').textContent = '';
+        updateSearchCount();
         return;
     }
 
-    // 只搜索当前显示的内容区域
-    const previewArea = document.getElementById('markdown-body');
-    const rawArea = document.getElementById('raw-body');
-    let contentArea = null;
-
-    if (previewArea && previewArea.style.display !== 'none') {
-        contentArea = previewArea;
-    } else if (rawArea && rawArea.style.display !== 'none') {
-        contentArea = rawArea;
-    }
-
+    const contentArea = getLocalSearchContentArea();
     if (!contentArea) {
-        contentArea = document.querySelector('.markdown-body');
-    }
-    if (!contentArea) return;
-
-    const regex = new RegExp('(' + escapeRegExp(searchText) + ')', 'gi');
-
-    // 获取所有文本节点
-    const walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT, null, false);
-    const textNodes = [];
-    while (walker.nextNode()) {
-        const node = walker.currentNode;
-        // 跳过script和style
-        if (node.parentElement && ['SCRIPT', 'STYLE'].includes(node.parentElement.tagName)) continue;
-        textNodes.push(node);
+        updateSearchCount();
+        return;
     }
 
-    searchResults = [];
-    textNodes.forEach(node => {
-        const text = node.textContent;
-        let match;
-        while ((match = regex.exec(text)) !== null) {
-            searchResults.push({
-                node: node,
-                index: match.index,
-                text: match[0]
-            });
-        }
-    });
+    const matcher = buildLocalSearchMatcher(searchText);
+    const matchGroups = collectSearchMatches(contentArea, matcher);
+    searchResults = matchGroups;
 
-    // 创建高亮（使用更安全的方式）
-    searchResults.forEach((result) => {
-        try {
-            const span = document.createElement('span');
-            span.className = 'search-highlight';
+    if (!matchGroups.length) {
+        updateSearchCount();
+        return;
+    }
 
-            // 检查节点是否可以被分割
-            const node = result.node;
-            const text = node.textContent;
-
-            if (node.nodeType === Node.TEXT_NODE && node.parentNode) {
-                const before = text.substring(0, result.index);
-                const match = result.text;
-                const after = text.substring(result.index + match.length);
-
-                const beforeNode = document.createTextNode(before);
-                const afterNode = document.createTextNode(after);
-
-                span.textContent = match;
-
-                node.parentNode.insertBefore(beforeNode, node);
-                node.parentNode.insertBefore(span, node);
-                node.parentNode.insertBefore(afterNode, node);
-                node.parentNode.removeChild(node);
-
-                searchHighlightElements.push(span);
-            }
-        } catch (e) {
-            console.log('高亮创建失败:', e);
-        }
-    });
-
+    searchHighlightElements = wrapSearchMatches(matchGroups);
     currentSearchIndex = searchHighlightElements.length > 0 ? 0 : -1;
     updateSearchCount();
+
     if (currentSearchIndex >= 0) {
         scrollToSearchResult(currentSearchIndex);
     }
 }
 
+function getLocalSearchContentArea() {
+    const previewArea = document.getElementById('markdown-body');
+    if (!previewArea || previewArea.style.display === 'none') return null;
+    return previewArea;
+}
+
+function buildLocalSearchMatcher(searchText) {
+    const caseSensitive = document.getElementById('localSearchCaseSensitive').checked;
+    const wholeWord = document.getElementById('localSearchWholeWord').checked;
+    const normalizedSearchText = caseSensitive ? searchText : searchText.toLocaleLowerCase();
+
+    return function matcher(text) {
+        const sourceText = caseSensitive ? text : text.toLocaleLowerCase();
+        const matches = [];
+        let startIndex = 0;
+
+        while (startIndex <= sourceText.length) {
+            const foundIndex = sourceText.indexOf(normalizedSearchText, startIndex);
+            if (foundIndex === -1) break;
+
+            const endIndex = foundIndex + searchText.length;
+            if (!wholeWord || isWholeWordBoundary(text, foundIndex, endIndex)) {
+                matches.push({ index: foundIndex, length: searchText.length });
+            }
+
+            startIndex = foundIndex + Math.max(searchText.length, 1);
+        }
+
+        return matches;
+    };
+}
+
+function collectSearchMatches(contentArea, matcher) {
+    const walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            if (!node.textContent || !node.textContent.trim()) {
+                return NodeFilter.FILTER_REJECT;
+            }
+
+            const parent = node.parentElement;
+            if (!parent) return NodeFilter.FILTER_REJECT;
+            if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA'].includes(parent.tagName)) {
+                return NodeFilter.FILTER_REJECT;
+            }
+            if (parent.closest('.search-highlight')) {
+                return NodeFilter.FILTER_REJECT;
+            }
+
+            return NodeFilter.FILTER_ACCEPT;
+        }
+    });
+
+    const groups = [];
+    while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const matches = matcher(node.textContent);
+        if (matches.length) {
+            groups.push({ node, matches });
+        }
+    }
+
+    return groups;
+}
+
+function wrapSearchMatches(matchGroups) {
+    const highlights = [];
+
+    matchGroups.forEach(({ node, matches }) => {
+        const fragment = document.createDocumentFragment();
+        const text = node.textContent;
+        let cursor = 0;
+
+        matches.forEach(match => {
+            if (match.index > cursor) {
+                fragment.appendChild(document.createTextNode(text.slice(cursor, match.index)));
+            }
+
+            const highlight = document.createElement('mark');
+            highlight.className = 'search-highlight';
+            highlight.textContent = text.slice(match.index, match.index + match.length);
+            fragment.appendChild(highlight);
+            highlights.push(highlight);
+            cursor = match.index + match.length;
+        });
+
+        if (cursor < text.length) {
+            fragment.appendChild(document.createTextNode(text.slice(cursor)));
+        }
+
+        node.parentNode.replaceChild(fragment, node);
+    });
+
+    return highlights;
+}
+
 function clearSearchHighlights() {
-    // 移除所有高亮元素
     const highlights = document.querySelectorAll('.search-highlight');
     highlights.forEach(el => {
         const parent = el.parentNode;
-        if (parent) {
-            const text = document.createTextNode(el.textContent);
-            parent.replaceChild(text, el);
-            parent.normalize();
-        }
+        if (!parent) return;
+
+        parent.replaceChild(document.createTextNode(el.textContent), el);
+        parent.normalize();
     });
+
     searchHighlightElements = [];
     searchResults = [];
+    currentSearchIndex = -1;
 }
 
 function updateSearchCount() {
     const countEl = document.getElementById('searchCount');
+    if (!countEl) return;
+
     const total = searchHighlightElements.length;
-    if (total > 0) {
-        countEl.textContent = (currentSearchIndex + 1) + '/' + total;
-    } else {
-        countEl.textContent = '0/' + total;
-    }
+    countEl.textContent = total > 0 ? `${currentSearchIndex + 1}/${total}` : '0/0';
 }
 
 function scrollToSearchResult(index) {
     if (index < 0 || index >= searchHighlightElements.length) return;
 
-    // 清除之前的高亮当前状态
     searchHighlightElements.forEach(el => el.classList.remove('current'));
 
     const currentEl = searchHighlightElements[index];
     currentEl.classList.add('current');
-
-    const contentArea = document.querySelector('.markdown-body');
-    const mainRect = document.querySelector('main').getBoundingClientRect();
-    const targetRect = currentEl.getBoundingClientRect();
-    const tabsHeight = document.querySelector('.tabs-bar').offsetHeight || 0;
-    const toolbarHeight = document.querySelector('.toolbar').offsetHeight || 0;
-    const offset = tabsHeight + toolbarHeight + 20;
-
-    const deltaY = targetRect.top - mainRect.top - offset;
-    contentArea.scrollTop = contentArea.scrollTop + deltaY;
+    currentEl.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: 'smooth'
+    });
 }
 
 function nextSearchResult() {
@@ -208,23 +319,40 @@ function prevSearchResult() {
 
 function closeLocalSearch() {
     clearSearchHighlights();
-    document.getElementById('localSearchInput').value = '';
-    document.getElementById('searchCount').textContent = '';
-    document.querySelector('.local-search-wrapper').style.display = 'none';
+
+    const input = document.getElementById('localSearchInput');
+    const count = document.getElementById('searchCount');
+    const wrapper = document.querySelector('.local-search-wrapper');
+
+    if (input) input.value = '';
+    if (count) count.textContent = '0/0';
+    if (wrapper) wrapper.style.display = 'none';
+}
+
+function isWholeWordBoundary(text, start, end) {
+    const previousChar = start > 0 ? text[start - 1] : '';
+    const nextChar = end < text.length ? text[end] : '';
+    return !isWordCharacter(previousChar) && !isWordCharacter(nextChar);
+}
+
+function isWordCharacter(char) {
+    return !!char && /[\p{L}\p{N}_]/u.test(char);
 }
 
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// ========== 两下Shift全局搜索功能 ==========
+// ========== 双击 Shift 全局搜索 ==========
 let shiftPressCount = 0;
 let shiftPressTimer = null;
 let globalSearchResults = [];
 let allMdFiles = [];
+let globalSearchInitialized = false;
 
 function initGlobalSearch() {
-    // 创建全局搜索弹窗
+    if (globalSearchInitialized) return;
+
     const searchModal = document.createElement('div');
     searchModal.id = 'globalSearchModal';
     searchModal.className = 'global-search-modal';
@@ -240,42 +368,44 @@ function initGlobalSearch() {
     `;
     document.body.appendChild(searchModal);
 
-    // 关闭按钮
     document.getElementById('globalSearchClose').addEventListener('click', closeGlobalSearch);
     searchModal.addEventListener('click', function(e) {
         if (e.target === searchModal) closeGlobalSearch();
     });
 
-    // 监听Shift键
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Shift') {
-            shiftPressCount++;
+        if (e.key !== 'Shift') return;
 
-            if (shiftPressCount === 1) {
-                shiftPressTimer = setTimeout(() => {
-                    shiftPressCount = 0;
-                }, 500);
-            } else if (shiftPressCount === 2) {
-                clearTimeout(shiftPressTimer);
+        shiftPressCount += 1;
+        if (shiftPressCount === 1) {
+            shiftPressTimer = setTimeout(() => {
                 shiftPressCount = 0;
-                openGlobalSearch();
-            }
+            }, 500);
+        } else if (shiftPressCount === 2) {
+            clearTimeout(shiftPressTimer);
+            shiftPressCount = 0;
+            openGlobalSearch();
         }
     });
 
-    // 搜索输入
     document.getElementById('globalSearchInput').addEventListener('input', performGlobalSearch);
+    globalSearchInitialized = true;
 }
 
 function openGlobalSearch() {
-    document.getElementById('globalSearchModal').style.display = 'flex';
+    const modal = document.getElementById('globalSearchModal');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
     document.getElementById('globalSearchInput').focus();
-    // 加载所有MD文件列表
     loadAllMdFiles();
 }
 
 function closeGlobalSearch() {
-    document.getElementById('globalSearchModal').style.display = 'none';
+    const modal = document.getElementById('globalSearchModal');
+    if (!modal) return;
+
+    modal.style.display = 'none';
     document.getElementById('globalSearchInput').value = '';
     document.getElementById('globalSearchCount').textContent = '';
     document.getElementById('globalSearchResults').innerHTML = '';
@@ -328,18 +458,16 @@ function performGlobalSearch() {
     });
 
     Promise.all(searchPromises).then(() => {
-        // 统计总匹配数
         const totalMatches = globalSearchResults.reduce((sum, r) => sum + r.count, 0);
-        countContainer.innerHTML = `<span class="match-count">${totalMatches}个匹配</span>`;
+        countContainer.innerHTML = `<span class="match-count">${totalMatches} 个匹配</span>`;
 
-        // 渲染结果
         resultsContainer.innerHTML = globalSearchResults.map(result => {
             const fileName = result.file.split(/[\\/]/).pop();
             return `
                 <div class="global-result-item">
                     <div class="global-result-header" onclick="toggleGlobalResult(this)">
-                        <span class="global-result-name">${fileName}</span>
-                        <span class="global-result-count">${result.count}个匹配</span>
+                        <span class="global-result-name">${escapeHtml(fileName)}</span>
+                        <span class="global-result-count">${result.count} 个匹配</span>
                     </div>
                     <div class="global-result-content" style="display:none;">
                         ${result.matches.map(m => {
@@ -348,7 +476,7 @@ function performGlobalSearch() {
                                 <div class="global-match-line">
                                     <div class="line-number">${m.lineNumber}</div>
                                     <div class="line-content">
-                                        <pre>${escapeHtml(contextLines.before + highlightMatch(m.content, searchText) + contextLines.after)}</pre>
+                                        <pre>${highlightMatch(escapeHtml(contextLines.before + m.content + contextLines.after), searchText)}</pre>
                                     </div>
                                 </div>
                             `;
@@ -369,6 +497,7 @@ function getContextLines(allLines, lineNum) {
         if (idx - i >= 0) beforeLines.unshift(allLines[idx - i]);
         if (idx + i < allLines.length) afterLines.push(allLines[idx + i]);
     }
+
     return {
         before: beforeLines.join('\n'),
         after: afterLines.join('\n')
@@ -380,6 +509,15 @@ function highlightMatch(text, searchText) {
     return text.replace(regex, '<span class="global-highlight">$1</span>');
 }
 
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function toggleGlobalResult(header) {
     const content = header.nextElementSibling;
     content.style.display = content.style.display === 'none' ? 'block' : 'none';
@@ -387,7 +525,6 @@ function toggleGlobalResult(header) {
 
 // 标题跳转对话框
 function showGotoDialog() {
-    // 检查是否已有对话框
     let dialog = document.getElementById('gotoDialog');
     if (dialog) {
         dialog.style.display = 'flex';
@@ -398,7 +535,6 @@ function showGotoDialog() {
     dialog.id = 'gotoDialog';
     dialog.className = 'global-search-modal';
 
-    // 获取所有标题
     const tocItems = document.querySelectorAll('.toc-item');
     let optionsHtml = '';
     tocItems.forEach(item => {
@@ -406,7 +542,7 @@ function showGotoDialog() {
         const text = item.textContent;
         const id = item.getAttribute('data-id');
         const paddingLeft = (level - 1) * 16;
-        optionsHtml += `<div class="goto-option" style="padding-left:${paddingLeft}px" data-id="${id}">${text}</div>`;
+        optionsHtml += `<div class="goto-option" style="padding-left:${paddingLeft}px" data-id="${escapeHtml(id)}">${escapeHtml(text)}</div>`;
     });
 
     dialog.innerHTML = `
@@ -430,34 +566,21 @@ function showGotoDialog() {
         if (e.target === dialog) dialog.style.display = 'none';
     });
 
-    // 搜索过滤
     document.getElementById('gotoSearchInput').addEventListener('input', function(e) {
         const term = e.target.value.toLowerCase();
         const options = document.querySelectorAll('.goto-option');
         options.forEach(opt => {
-            if (opt.textContent.toLowerCase().includes(term)) {
-                opt.style.display = '';
-            } else {
-                opt.style.display = 'none';
-            }
+            opt.style.display = opt.textContent.toLowerCase().includes(term) ? '' : 'none';
         });
     });
 
-    // 点击跳转
     document.querySelectorAll('.goto-option').forEach(opt => {
         opt.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
             const targetElement = document.getElementById(id);
             const contentArea = document.querySelector('.markdown-body');
             if (targetElement && contentArea) {
-                const mainRect = document.querySelector('main').getBoundingClientRect();
-                const targetRect = targetElement.getBoundingClientRect();
-                const tabsHeight = document.querySelector('.tabs-bar').offsetHeight || 0;
-                const toolbarHeight = document.querySelector('.toolbar').offsetHeight || 0;
-                const offset = tabsHeight + toolbarHeight + 20;
-                const deltaY = targetRect.top - mainRect.top - offset;
-                contentArea.scrollTop = contentArea.scrollTop + deltaY;
-                // 高亮
+                targetElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
                 targetElement.classList.add('flash');
                 setTimeout(() => targetElement.classList.remove('flash'), 600);
             }

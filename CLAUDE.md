@@ -26,6 +26,9 @@ mvn package -DskipTests
 
 # 启动（已编译的jar）
 java -jar target/tool-service-1.0.0.jar
+
+# 先停止再启动（重新打包）
+call port.bat & mvn clean spring-boot:run
 ```
 
 ## 技术架构
