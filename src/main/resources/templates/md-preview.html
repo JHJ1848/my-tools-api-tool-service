@@ -189,7 +189,8 @@
         }
         .local-search-box {
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            align-items: stretch;
             background: #2d2d30;
             border: 1px solid #3c3c3c;
             border-radius: 6px;
@@ -197,7 +198,12 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             gap: 8px;
         }
-        .local-search-box input {
+        .local-search-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .local-search-box #localSearchInput {
             width: 400px;
             height: 32px;
             padding: 0 10px;
@@ -208,8 +214,27 @@
             font-size: 14px;
             outline: none;
         }
-        .local-search-box input:focus {
+        .local-search-box #localSearchInput:focus {
             border-color: #007fd4;
+        }
+        .local-search-options {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding-left: 2px;
+        }
+        .search-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #a6adbb;
+            font-size: 12px;
+        }
+        .search-option input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            accent-color: #007fd4;
         }
         .search-controls {
             display: flex;
@@ -604,8 +629,49 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 10px;
         }
         .request-panel-header-text { min-width: 0; }
+        .request-panel-header-right {
+            min-width: 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            flex: 1;
+            justify-content: flex-end;
+        }
+        .request-msg-list {
+            max-height: 54px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+            flex: 1;
+        }
+        .request-msg-item {
+            font-size: 11px;
+            line-height: 1.4;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: #2b313a;
+            color: #c7d0dd;
+            border: 1px solid #424b57;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .request-msg-item.success {
+            background: #17352f;
+            color: #9ce3cf;
+            border-color: #2b6b5d;
+        }
+        .request-msg-item.error {
+            background: #3b1f24;
+            color: #ffb7c0;
+            border-color: #7d3d49;
+        }
         .request-panel-title { color: #e0e0e0; font-size: 14px; font-weight: 500; }
         .request-panel-subtitle { color: #8d95a1; font-size: 11px; margin-top: 2px; }
         .request-panel-close {
@@ -790,6 +856,39 @@
             background: #333333;
             border-bottom: 1px solid #404040;
         }
+        .request-collapsible-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .request-collapse-toggle {
+            width: 22px;
+            height: 22px;
+            border: 1px solid #4b5260;
+            border-radius: 4px;
+            background: #252a31;
+            color: #d7dde6;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .request-collapse-toggle::before {
+            content: '▾';
+        }
+        .request-collapsible.collapsed .request-collapse-toggle::before {
+            content: '▸';
+        }
+        .request-collapsible-body {
+            margin-top: 8px;
+        }
+        .request-collapsible.collapsed .request-collapsible-body {
+            display: none;
+        }
         .request-section-header {
             display: flex;
             align-items: center;
@@ -887,6 +986,28 @@
             font-size: 13px;
             transition: all 0.2s;
         }
+        .request-btn[disabled] {
+            cursor: not-allowed;
+            opacity: 0.85;
+        }
+        .request-btn.is-loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .request-btn-spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: reqBtnSpin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes reqBtnSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
         .request-btn-primary { background: #007acc; color: white; }
         .request-btn-primary:hover { background: #005a9e; }
         .request-btn-secondary { background: #505050; color: #e0e0e0; }
@@ -941,6 +1062,32 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
+        }
+        .response-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .response-view-switch {
+            display: none;
+            align-items: center;
+            gap: 4px;
+        }
+        .response-view-btn {
+            height: 22px;
+            padding: 0 8px;
+            border: 1px solid #4b5260;
+            border-radius: 4px;
+            background: #252a31;
+            color: #d7dde6;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .response-view-btn.active {
+            background: #1f3658;
+            border-color: #6aa6ff;
+            color: #ffffff;
         }
         .response-status { color: #4ec9b0; }
         .response-status.error { color: #f44747; }
@@ -957,6 +1104,48 @@
             font-size: 12px;
             white-space: pre-wrap;
             word-break: break-all;
+        }
+        .json-preview {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #d4d4d4;
+            display: none;
+        }
+        .json-preview.visible {
+            display: block;
+        }
+        .json-node {
+            padding-left: 14px;
+            border-left: 1px dashed #3f4550;
+            margin-left: 6px;
+        }
+        .json-line {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 20px;
+            white-space: nowrap;
+        }
+        .json-toggle {
+            width: 14px;
+            display: inline-flex;
+            justify-content: center;
+            color: #8fa3c0;
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .json-toggle::before { content: '▾'; }
+        .json-node.collapsed > .json-line .json-toggle::before { content: '▸'; }
+        .json-key { color: #9cdcfe; }
+        .json-string { color: #ce9178; }
+        .json-number { color: #b5cea8; }
+        .json-boolean { color: #4ec9b0; }
+        .json-null { color: #808080; }
+        .json-brace { color: #d4d4d4; }
+        .json-node.collapsed > .json-children {
+            display: none;
         }
         .request-panel-toggle {
             position: fixed;
@@ -1111,7 +1300,10 @@
                     <div class="request-panel-title">HTTP 请求工具</div>
                     <div class="request-panel-subtitle" id="request-panel-subtitle">当前文档单独缓存</div>
                 </div>
-                <button type="button" class="request-panel-close" id="request-panel-toggle-btn" onclick="toggleRequestPanel()">×</button>
+                <div class="request-panel-header-right">
+                    <div class="request-msg-list" id="request-msg-list"></div>
+                    <button type="button" class="request-panel-close" id="request-panel-toggle-btn" onclick="toggleRequestPanel()">×</button>
+                </div>
             </div>
             <div class="request-tabs">
                 <div class="request-tabs-list" id="request-tabs-list"></div>
@@ -1144,59 +1336,70 @@
                     </div>
                 </div>
             </div>
-            <div class="request-section">
-                <div class="request-section-header">
-                    <div class="request-section-title">路径参数</div>
+            <div class="request-section request-collapsible" data-collapse-key="request-params">
+                <div class="request-section-header request-collapsible-header">
+                    <div class="request-section-title">请求参数</div>
+                    <span class="request-collapse-toggle" aria-hidden="true"></span>
                 </div>
-                <div class="request-section-hint">根据路径模板中的 <code>{param}</code> 自动识别，修改路径模板后会重新同步。</div>
-                <table class="request-params-table">
-                    <thead>
-                        <tr>
-                            <th>参数名</th>
-                            <th>值</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="req-path-params-body"></tbody>
-                </table>
-            </div>
-            <div class="request-section">
-                <div class="request-section-header">
-                    <div class="request-section-title">查询参数</div>
-                    <button type="button" class="request-param-add-btn" id="req-query-param-add-btn">+ 添加</button>
+                <div class="request-collapsible-body">
+                    <div class="request-section-hint">根据路径模板中的 <code>{param}</code> 自动识别，修改路径模板后会重新同步。</div>
+                    <table class="request-params-table">
+                        <thead>
+                            <tr>
+                                <th>参数名</th>
+                                <th>值</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="req-path-params-body"></tbody>
+                    </table>
+                    <div class="request-section-hint" style="margin-top: 8px;">查询参数支持与 URL 查询字符串双向同步。</div>
+                    <table class="request-params-table">
+                        <thead>
+                            <tr>
+                                <th>参数名</th>
+                                <th>值</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="req-query-params-body"></tbody>
+                    </table>
+                    <div style="margin-top: 8px;">
+                        <button type="button" class="request-param-add-btn" id="req-query-param-add-btn">+ 添加查询参数</button>
+                    </div>
                 </div>
-                <div class="request-section-hint">支持与 URL 查询字符串双向同步。</div>
-                <table class="request-params-table">
-                    <thead>
-                        <tr>
-                            <th>参数名</th>
-                            <th>值</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="req-query-params-body"></tbody>
-                </table>
             </div>
             <div class="request-buttons">
                 <button class="request-btn request-btn-primary" onclick="sendRequest()">发送请求</button>
                 <button class="request-btn request-btn-secondary" onclick="clearRequest()">清空</button>
             </div>
-            <div class="request-body">
-                <div class="request-body-label">
+            <div class="request-body request-collapsible" data-collapse-key="request-body">
+                <div class="request-body-label request-collapsible-header">
                     <div class="request-body-label-row">
                         <span>请求体 (JSON)</span>
                         <span class="request-body-hint" id="req-body-hint">POST 时发送请求体，GET 时仅展示不发送</span>
                     </div>
+                    <span class="request-collapse-toggle" aria-hidden="true"></span>
                 </div>
-                <textarea id="req-body" placeholder='{"key": "value"}'></textarea>
+                <div class="request-collapsible-body">
+                    <textarea id="req-body" placeholder='{"key": "value"}'></textarea>
+                </div>
             </div>
-            <div class="response-body">
-                <div class="response-header">
+            <div class="response-body request-collapsible" data-collapse-key="response-body">
+                <div class="response-header request-collapsible-header">
                     <span>响应结果</span>
-                    <span class="response-status" id="res-status"></span>
+                    <div class="response-header-right">
+                        <div class="response-view-switch" id="response-view-switch">
+                            <button type="button" class="response-view-btn active" id="response-view-raw">raw</button>
+                            <button type="button" class="response-view-btn" id="response-view-preview">preview</button>
+                        </div>
+                        <span class="response-status" id="res-status"></span>
+                        <span class="request-collapse-toggle" aria-hidden="true"></span>
+                    </div>
                 </div>
-                <div class="response-body-content">
+                <div class="request-collapsible-body response-body-content">
                     <pre id="res-content">点击“发送请求”查看结果</pre>
+                    <div class="json-preview" id="res-json-preview"></div>
                 </div>
             </div>
             </div>
@@ -1537,6 +1740,13 @@
             return buildRequestState(getActiveRequestTab(state));
         }
 
+        function patchRequestTabById(tabId, partial) {
+            const state = readRequestTabsState();
+            state.tabs = state.tabs.map(tab => tab.id === tabId ? buildRequestState(Object.assign({}, tab, partial || {})) : tab);
+            writeRequestTabsState(state);
+            return buildRequestState(getActiveRequestTab(state));
+        }
+
         function initRequestPanel() {
             syncRequestApiConfigUI();
 
@@ -1676,6 +1886,33 @@
             }
         }
 
+        function pushRequestMessage(message, type = 'info') {
+            const listEl = document.getElementById('request-msg-list');
+            if (!listEl) return;
+            const item = document.createElement('div');
+            item.className = `request-msg-item${type === 'success' ? ' success' : (type === 'error' ? ' error' : '')}`;
+            item.title = message;
+            item.textContent = message;
+            listEl.prepend(item);
+            while (listEl.children.length > 30) {
+                listEl.removeChild(listEl.lastChild);
+            }
+            listEl.scrollTop = 0;
+        }
+
+        function setRequestButtonLoading(buttonEl, isLoading, baseText = '发送请求') {
+            if (!buttonEl) return;
+            if (isLoading) {
+                buttonEl.disabled = true;
+                buttonEl.classList.add('is-loading');
+                buttonEl.innerHTML = '<span class="request-btn-spinner" aria-hidden="true"></span><span>请求中...</span>';
+                return;
+            }
+            buttonEl.disabled = false;
+            buttonEl.classList.remove('is-loading');
+            buttonEl.textContent = baseText;
+        }
+
         function toggleRequestPanel() {
             const panel = document.getElementById('request-panel');
             panel.classList.toggle('expanded');
@@ -1684,12 +1921,12 @@
 
         async function sendRequest() {
             const state = buildRequestState(getActiveRequestTab(readRequestTabsState()));
+            const requestTabId = state.id;
             const sendBtn = document.querySelector('.request-btn-primary');
             const originalBtnText = sendBtn ? (sendBtn.dataset.originalText || sendBtn.textContent || '发送请求') : '发送请求';
             if (sendBtn) {
                 sendBtn.dataset.originalText = originalBtnText;
-                sendBtn.disabled = true;
-                sendBtn.textContent = '请求中...';
+                setRequestButtonLoading(sendBtn, true, originalBtnText);
             }
             const options = { method: state.method, headers: {} };
             if (state.method === 'POST') {
@@ -1709,24 +1946,26 @@
                         resultText = rawText;
                     }
                 }
-                patchActiveRequestTab({ responseText: resultText, responseStatus: `${response.status} ${response.statusText}`, responseIsError: !response.ok });
-                renderRequestResponse(resultText, `${response.status} ${response.statusText}`, !response.ok);
-                if (sendBtn) {
-                    sendBtn.textContent = '请求成功';
+                patchRequestTabById(requestTabId, { responseText: resultText, responseStatus: `${response.status} ${response.statusText}`, responseIsError: !response.ok });
+                if (getActiveRequestTab(readRequestTabsState()).id === requestTabId) {
+                    renderRequestResponse(resultText, `${response.status} ${response.statusText}`, !response.ok);
                 }
+                pushRequestMessage(
+                    !response.ok
+                        ? `请求失败 ${response.status} ${response.statusText}`
+                        : `请求成功 ${response.status} ${response.statusText}`,
+                    response.ok ? 'success' : 'error'
+                );
             } catch (error) {
                 const message = `请求失败: ${error instanceof Error ? error.message : String(error)}`;
-                patchActiveRequestTab({ responseText: message, responseStatus: 'Network Error', responseIsError: true });
-                renderRequestResponse(message, 'Network Error', true);
-                if (sendBtn) {
-                    sendBtn.textContent = '请求失败';
+                patchRequestTabById(requestTabId, { responseText: message, responseStatus: 'Network Error', responseIsError: true });
+                if (getActiveRequestTab(readRequestTabsState()).id === requestTabId) {
+                    renderRequestResponse(message, 'Network Error', true);
                 }
+                pushRequestMessage(message, 'error');
             } finally {
                 if (sendBtn) {
-                    setTimeout(() => {
-                        sendBtn.textContent = originalBtnText;
-                        sendBtn.disabled = false;
-                    }, 900);
+                    setRequestButtonLoading(sendBtn, false, originalBtnText);
                 }
             }
         }
