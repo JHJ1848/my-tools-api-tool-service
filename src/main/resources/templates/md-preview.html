@@ -62,11 +62,13 @@
             color: #969696;
             text-decoration: none;
             font-size: 13px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            word-break: break-word;
             cursor: pointer;
             border-left: 2px solid transparent;
+            line-height: 1.45;
         }
         .toc-list .toc-item:nth-child(odd) { background-color: #1e1e1e; }
         .toc-list .toc-item:nth-child(even) { background-color: #252526; }
@@ -1214,28 +1216,32 @@
         .tree-children.expanded { display: block; }
         .tree-file-row {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 6px;
             padding-right: 8px;
         }
         .tree-file {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             flex: 1;
             min-width: 0;
             padding: 5px 10px 5px 32px;
             color: #969696;
             text-decoration: none;
             font-size: 13px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            word-break: break-word;
+            line-height: 1.45;
         }
         .tree-file-name {
             min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.45;
         }
         .tree-file:hover { background-color: #2a2d2e; color: #e0e0e0; }
         .tree-file.active { background-color: #37373d; color: #ffffff; border-left: 2px solid #007fd4; }
@@ -1424,6 +1430,8 @@
         const REQUEST_PANEL_STATE_KEY = 'md-preview-request-panel-state';
         const REQUEST_TABS_STORAGE_PREFIX = 'md-preview-request-tabs:';
         const REQUEST_API_CONFIG_KEY = 'md-preview-request-api-config';
+        const REQUEST_COLLAPSE_STATE_KEY = 'md-preview-request-collapse-state';
+        const REQUEST_RESPONSE_VIEW_KEY = 'md-preview-response-view';
         const REQUEST_API_DEFAULT_HOST = '192.168.81.163';
         const REQUEST_API_DEFAULT_PORT = '9527';
         const REQUEST_EMPTY_RESPONSE_TEXT = '点击“发送请求”查看结果';
@@ -1447,6 +1455,29 @@
             const port = String(config?.port || '').trim() || REQUEST_API_DEFAULT_PORT;
             localStorage.setItem(REQUEST_API_CONFIG_KEY, JSON.stringify({ host, port }));
             return { host, port };
+        }
+
+        function readCollapseState() {
+            try {
+                return JSON.parse(localStorage.getItem(REQUEST_COLLAPSE_STATE_KEY) || '{}') || {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function writeCollapseState(state) {
+            localStorage.setItem(REQUEST_COLLAPSE_STATE_KEY, JSON.stringify(state || {}));
+        }
+
+        function getResponseViewMode() {
+            const mode = localStorage.getItem(REQUEST_RESPONSE_VIEW_KEY) || 'raw';
+            return mode === 'preview' ? 'preview' : 'raw';
+        }
+
+        function setResponseViewMode(mode) {
+            const nextMode = mode === 'preview' ? 'preview' : 'raw';
+            localStorage.setItem(REQUEST_RESPONSE_VIEW_KEY, nextMode);
+            return nextMode;
         }
 
         function getRequestApiPrefix() {
@@ -1790,6 +1821,42 @@
                 saveBtn.addEventListener('click', saveApiConfig);
             }
 
+            document.querySelectorAll('.request-collapsible').forEach(section => {
+                const header = section.querySelector('.request-collapsible-header');
+                const collapseKey = section.getAttribute('data-collapse-key');
+                if (!header || !collapseKey) return;
+                const state = readCollapseState();
+                section.classList.toggle('collapsed', Boolean(state[collapseKey]));
+                if (header.dataset.bound !== 'true') {
+                    header.dataset.bound = 'true';
+                    header.addEventListener('click', (event) => {
+                        if (event.target.closest('button, input, textarea, select, label')) return;
+                        section.classList.toggle('collapsed');
+                        const nextState = readCollapseState();
+                        nextState[collapseKey] = section.classList.contains('collapsed');
+                        writeCollapseState(nextState);
+                    });
+                }
+            });
+
+            const rawViewBtn = document.getElementById('response-view-raw');
+            if (rawViewBtn && rawViewBtn.dataset.bound !== 'true') {
+                rawViewBtn.dataset.bound = 'true';
+                rawViewBtn.addEventListener('click', () => {
+                    setResponseViewMode('raw');
+                    applyResponseViewMode(Boolean(document.getElementById('res-json-preview')?.childElementCount));
+                });
+            }
+
+            const previewViewBtn = document.getElementById('response-view-preview');
+            if (previewViewBtn && previewViewBtn.dataset.bound !== 'true') {
+                previewViewBtn.dataset.bound = 'true';
+                previewViewBtn.addEventListener('click', () => {
+                    setResponseViewMode('preview');
+                    applyResponseViewMode(Boolean(document.getElementById('res-json-preview')?.childElementCount));
+                });
+            }
+
             const addBtn = document.getElementById('request-tab-add-btn');
             if (addBtn && addBtn.dataset.bound !== 'true') {
                 addBtn.dataset.bound = 'true';
@@ -1888,10 +1955,114 @@
             if (contentEl) {
                 contentEl.textContent = text == null ? '' : String(text);
             }
+            const previewEl = document.getElementById('res-json-preview');
+            const rawEl = document.getElementById('res-content');
+            const switchEl = document.getElementById('response-view-switch');
+            let parsedJson = null;
+            try {
+                parsedJson = JSON.parse(String(text || ''));
+            } catch (error) {
+                parsedJson = null;
+            }
+            if (switchEl) {
+                switchEl.style.display = parsedJson && typeof parsedJson === 'object' ? 'inline-flex' : 'none';
+            }
+            if (previewEl) {
+                previewEl.innerHTML = '';
+                previewEl.classList.remove('visible');
+                if (parsedJson && typeof parsedJson === 'object') {
+                    previewEl.appendChild(buildJsonPreviewNode(parsedJson, '$'));
+                }
+            }
+            applyResponseViewMode(parsedJson && typeof parsedJson === 'object');
             const contentWrap = document.querySelector('.response-body-content');
             if (contentWrap) {
                 contentWrap.scrollTop = 0;
             }
+        }
+
+        function buildJsonValueSpan(value) {
+            const span = document.createElement('span');
+            if (value === null) {
+                span.className = 'json-null';
+                span.textContent = 'null';
+            } else if (typeof value === 'string') {
+                span.className = 'json-string';
+                span.textContent = `"${value}"`;
+            } else if (typeof value === 'number') {
+                span.className = 'json-number';
+                span.textContent = String(value);
+            } else if (typeof value === 'boolean') {
+                span.className = 'json-boolean';
+                span.textContent = String(value);
+            } else {
+                span.className = 'json-brace';
+                span.textContent = Array.isArray(value) ? '[ ]' : '{ }';
+            }
+            return span;
+        }
+
+        function buildJsonPreviewNode(value, label = '') {
+            const isComplex = value && typeof value === 'object';
+            if (!isComplex) {
+                const row = document.createElement('div');
+                row.className = 'json-line';
+                if (label) {
+                    const key = document.createElement('span');
+                    key.className = 'json-key';
+                    key.textContent = `${label}:`;
+                    row.appendChild(key);
+                }
+                row.appendChild(buildJsonValueSpan(value));
+                return row;
+            }
+
+            const node = document.createElement('div');
+            node.className = 'json-node';
+            const line = document.createElement('div');
+            line.className = 'json-line';
+
+            const toggle = document.createElement('span');
+            toggle.className = 'json-toggle';
+            line.appendChild(toggle);
+
+            if (label) {
+                const key = document.createElement('span');
+                key.className = 'json-key';
+                key.textContent = `${label}:`;
+                line.appendChild(key);
+            }
+
+            const brace = document.createElement('span');
+            brace.className = 'json-brace';
+            brace.textContent = Array.isArray(value) ? `[${value.length}]` : '{...}';
+            line.appendChild(brace);
+            node.appendChild(line);
+
+            const children = document.createElement('div');
+            children.className = 'json-children';
+            const entries = Array.isArray(value) ? value.map((item, index) => [index, item]) : Object.entries(value);
+            entries.forEach(([key, childValue]) => {
+                children.appendChild(buildJsonPreviewNode(childValue, String(key)));
+            });
+            node.appendChild(children);
+
+            line.addEventListener('click', () => {
+                node.classList.toggle('collapsed');
+            });
+            return node;
+        }
+
+        function applyResponseViewMode(hasJsonPreview) {
+            const rawBtn = document.getElementById('response-view-raw');
+            const previewBtn = document.getElementById('response-view-preview');
+            const rawEl = document.getElementById('res-content');
+            const previewEl = document.getElementById('res-json-preview');
+            const mode = hasJsonPreview ? getResponseViewMode() : 'raw';
+            if (rawBtn) rawBtn.classList.toggle('active', mode === 'raw');
+            if (previewBtn) previewBtn.classList.toggle('active', mode === 'preview');
+            if (rawEl) rawEl.style.display = mode === 'preview' ? 'none' : 'block';
+            if (previewEl) previewEl.classList.toggle('visible', mode === 'preview' && hasJsonPreview);
         }
 
         function pushRequestMessage(message, type = 'info') {
