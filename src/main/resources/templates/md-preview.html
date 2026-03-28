@@ -633,44 +633,9 @@
         }
         .request-panel-header-text { min-width: 0; }
         .request-panel-header-right {
-            min-width: 0;
             display: flex;
             align-items: flex-start;
-            gap: 8px;
-            flex: 1;
             justify-content: flex-end;
-        }
-        .request-msg-list {
-            max-height: 54px;
-            overflow-y: auto;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            min-width: 0;
-            flex: 1;
-        }
-        .request-msg-item {
-            font-size: 11px;
-            line-height: 1.4;
-            padding: 3px 8px;
-            border-radius: 6px;
-            background: #2b313a;
-            color: #c7d0dd;
-            border: 1px solid #424b57;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .request-msg-item.success {
-            background: #17352f;
-            color: #9ce3cf;
-            border-color: #2b6b5d;
-        }
-        .request-msg-item.error {
-            background: #3b1f24;
-            color: #ffb7c0;
-            border-color: #7d3d49;
         }
         .request-panel-title { color: #e0e0e0; font-size: 14px; font-weight: 500; }
         .request-panel-subtitle { color: #8d95a1; font-size: 11px; margin-top: 2px; }
@@ -1166,6 +1131,41 @@
             z-index: 1000;
         }
         .request-panel-toggle:hover { background: #404040; color: #ffffff; }
+        .global-message-stack {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: min(360px, calc(100vw - 40px));
+            max-height: 220px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1400;
+            pointer-events: none;
+        }
+        .global-message-item {
+            pointer-events: auto;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(43, 49, 58, 0.96);
+            color: #d7deea;
+            border: 1px solid #424b57;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+            font-size: 12px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+        .global-message-item.success {
+            background: rgba(23, 53, 47, 0.96);
+            color: #9ce3cf;
+            border-color: #2b6b5d;
+        }
+        .global-message-item.error {
+            background: rgba(59, 31, 36, 0.96);
+            color: #ffb7c0;
+            border-color: #7d3d49;
+        }
         ::-webkit-scrollbar { width: 10px; height: 10px; }
         ::-webkit-scrollbar-thumb { background: #424242; border-radius: 5px; }
         ::-webkit-scrollbar-track { background: #1e1e1e; }
@@ -1239,6 +1239,14 @@
         }
         .tree-file:hover { background-color: #2a2d2e; color: #e0e0e0; }
         .tree-file.active { background-color: #37373d; color: #ffffff; border-left: 2px solid #007fd4; }
+        @keyframes treeLocateFlash {
+            0% { background-color: #5b4720; box-shadow: 0 0 0 0 rgba(255, 196, 77, 0.65); }
+            50% { background-color: #7b5e27; box-shadow: 0 0 0 6px rgba(255, 196, 77, 0.12); }
+            100% { background-color: #37373d; box-shadow: none; }
+        }
+        .tree-file.locate-flash {
+            animation: treeLocateFlash 1.1s ease-out;
+        }
         .tree-file-actions {
             display: inline-flex;
             align-items: center;
@@ -1301,7 +1309,6 @@
                     <div class="request-panel-subtitle" id="request-panel-subtitle">当前文档单独缓存</div>
                 </div>
                 <div class="request-panel-header-right">
-                    <div class="request-msg-list" id="request-msg-list"></div>
                     <button type="button" class="request-panel-close" id="request-panel-toggle-btn" onclick="toggleRequestPanel()">×</button>
                 </div>
             </div>
@@ -1410,6 +1417,7 @@
         <div class="menu-item" id="menu-close-current">关闭当前 (Ctrl+W)</div>
         <div class="menu-item" id="menu-close-all">关闭所有</div>
     </div>
+    <div class="global-message-stack" id="global-message-stack"></div>
     <script src="/md-search.js"></script>
     <script>
         const TABS_KEY = 'md-preview-open-tabs';
@@ -1887,17 +1895,29 @@
         }
 
         function pushRequestMessage(message, type = 'info') {
-            const listEl = document.getElementById('request-msg-list');
+            const listEl = document.getElementById('global-message-stack');
             if (!listEl) return;
+            const searchWrapper = document.querySelector('.local-search-wrapper');
+            if (searchWrapper && searchWrapper.offsetParent !== null) {
+                const rect = searchWrapper.getBoundingClientRect();
+                listEl.style.top = `${Math.max(20, Math.ceil(rect.bottom + 12))}px`;
+            } else {
+                listEl.style.top = '20px';
+            }
             const item = document.createElement('div');
-            item.className = `request-msg-item${type === 'success' ? ' success' : (type === 'error' ? ' error' : '')}`;
+            item.className = `global-message-item${type === 'success' ? ' success' : (type === 'error' ? ' error' : '')}`;
             item.title = message;
             item.textContent = message;
             listEl.prepend(item);
-            while (listEl.children.length > 30) {
+            while (listEl.children.length > 8) {
                 listEl.removeChild(listEl.lastChild);
             }
             listEl.scrollTop = 0;
+            window.setTimeout(() => {
+                if (item.parentNode === listEl) {
+                    item.remove();
+                }
+            }, 5000);
         }
 
         function setRequestButtonLoading(buttonEl, isLoading, baseText = '发送请求') {
@@ -2418,11 +2438,33 @@
                 locateBtn.addEventListener('click', () => {
                     const searchInput = document.getElementById('search-input');
                     if (searchInput && searchInput.value) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
-                    const currentActive = document.querySelector('.tree-file.active') || document.querySelector(`.tree-file[data-path="${CSS.escape(currentFilePath || '')}"]`);
-                    if (currentActive) {
-                        currentActive.classList.add('active');
-                        currentActive.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    const currentActive = document.querySelector(`.tree-file[data-path="${CSS.escape(currentFilePath || '')}"]`) || document.querySelector('.tree-file.active');
+                    if (!currentActive) return;
+                    let parent = currentActive.parentElement;
+                    const nextExpandedPaths = new Set(JSON.parse(localStorage.getItem('md-preview-expanded-paths') || '[]'));
+                    while (parent) {
+                        if (parent.classList && parent.classList.contains('tree-children')) {
+                            parent.style.display = '';
+                            parent.classList.add('expanded');
+                            const path = parent.getAttribute('data-path');
+                            if (path) nextExpandedPaths.add(path);
+                            const folder = parent.previousElementSibling;
+                            if (folder && folder.classList && folder.classList.contains('tree-folder')) {
+                                folder.style.display = '';
+                                const toggle = folder.querySelector('.tree-toggle');
+                                if (toggle) toggle.classList.add('expanded');
+                            }
+                        }
+                        parent = parent.parentElement;
                     }
+                    localStorage.setItem('md-preview-expanded-paths', JSON.stringify(Array.from(nextExpandedPaths)));
+                    document.querySelectorAll('.tree-file.locate-flash').forEach(el => el.classList.remove('locate-flash'));
+                    currentActive.classList.add('active');
+                    currentActive.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    currentActive.classList.remove('locate-flash');
+                    void currentActive.offsetWidth;
+                    currentActive.classList.add('locate-flash');
+                    window.setTimeout(() => currentActive.classList.remove('locate-flash'), 1200);
                 });
             }
 
