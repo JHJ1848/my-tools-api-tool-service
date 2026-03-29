@@ -165,6 +165,18 @@
             color: #ffffff;
             border-left-color: #007fd4;
         }
+        .toc-item.toc-active-l3 {
+            background: linear-gradient(90deg, rgba(46, 121, 196, 0.88) 0%, rgba(35, 93, 151, 0.82) 100%);
+            color: #f7fbff;
+            border-left-color: #8cc8ff;
+            box-shadow: inset 0 0 0 1px rgba(140, 200, 255, 0.18);
+        }
+        .toc-item.toc-active-l3 .toc-label {
+            color: inherit;
+        }
+        .toc-item.toc-active-l3 .toc-toggle-btn {
+            filter: saturate(1.08) brightness(1.04);
+        }
         @keyframes tocLocateFlash {
             0% { box-shadow: 0 0 0 0 rgba(255, 198, 95, 0.8); background-color: #6c5526; }
             50% { box-shadow: 0 0 0 8px rgba(255, 198, 95, 0.18); background-color: #8b6a2b; }
@@ -3028,21 +3040,30 @@
                 const fullPath = breadcrumbEl.getAttribute('title') || '';
                 if (currentHeadingIndex === -1) {
                     document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));
+                    document.querySelectorAll('.toc-item.toc-active-l3').forEach(el => el.classList.remove('toc-active-l3'));
+                    lastActiveId = '';
                     breadcrumbEl.innerHTML = fullPath;
                     updateHeadingHash('');
                     return;
                 }
                 const currentHeading = headings[currentHeadingIndex];
-                document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));
                 if (currentHeading && currentHeading.item) {
                     const activeTocItem = resolveScrollSpyActiveTocItem(headings, currentHeadingIndex) || currentHeading.item;
                     expandTocAncestorsForItem(activeTocItem);
-                    activeTocItem.classList.add('active');
                     const currentId = String(activeTocItem.getAttribute('data-id') || '');
-                    if (currentId && currentId !== lastActiveId) {
-                        revealTocItemFeedback(activeTocItem, { flash: true });
-                        lastActiveId = currentId;
+                    const changedActive = currentId !== lastActiveId;
+                    if (changedActive) {
+                        document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));
+                        document.querySelectorAll('.toc-item.toc-active-l3').forEach(el => el.classList.remove('toc-active-l3'));
                     }
+                    activeTocItem.classList.add('active');
+                    if (getTocLevel(activeTocItem) === 3) {
+                        activeTocItem.classList.add('toc-active-l3');
+                    }
+                    if (currentId && changedActive) {
+                        revealTocItemFeedback(activeTocItem, { flash: true });
+                    }
+                    lastActiveId = currentId;
                     const targetLevels = [1, 2, 3];
                     const levelData = { 1: null, 2: null, 3: null };
                     for (let i = currentHeadingIndex; i >= 0; i--) {
