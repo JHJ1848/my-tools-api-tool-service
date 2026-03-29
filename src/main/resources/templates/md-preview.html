@@ -1214,6 +1214,71 @@
         h1 { border-bottom: 1px solid #404040; padding-bottom: 8px; }
         h2 { border-bottom: 1px solid #30363d; padding-bottom: 6px; }
         h3 { border-bottom: 1px solid #30363d; padding-bottom: 4px; }
+        .markdown-body h1.md-collapsible-heading,
+        .markdown-body h2.md-collapsible-heading,
+        .markdown-body h3.md-collapsible-heading,
+        .markdown-body h4.md-collapsible-heading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 4px;
+        }
+        .markdown-body h1.md-collapsible-heading::before,
+        .markdown-body h2.md-collapsible-heading::before,
+        .markdown-body h3.md-collapsible-heading::before,
+        .markdown-body h4.md-collapsible-heading::before {
+            content: '\25BE';
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+            text-align: center;
+            color: #9aa4b1;
+            font-size: 12px;
+            transition: color 0.15s ease;
+            flex: 0 0 auto;
+            opacity: 0.9;
+        }
+        .markdown-body h1.md-collapsible-heading.md-collapsed::before,
+        .markdown-body h2.md-collapsible-heading.md-collapsed::before,
+        .markdown-body h3.md-collapsible-heading.md-collapsed::before,
+        .markdown-body h4.md-collapsible-heading.md-collapsed::before {
+            content: '\25B8';
+        }
+        .markdown-body h1.md-collapsible-heading.is-collapsed::before,
+        .markdown-body h2.md-collapsible-heading.is-collapsed::before,
+        .markdown-body h3.md-collapsible-heading.is-collapsed::before,
+        .markdown-body h4.md-collapsible-heading.is-collapsed::before {
+            content: '\25B8';
+        }
+        .markdown-body h1.md-collapsible-heading:hover,
+        .markdown-body h2.md-collapsible-heading:hover,
+        .markdown-body h3.md-collapsible-heading:hover,
+        .markdown-body h4.md-collapsible-heading:hover {
+            color: #7ec8ff;
+        }
+        .markdown-body h1.md-collapsible-heading:focus-visible,
+        .markdown-body h2.md-collapsible-heading:focus-visible,
+        .markdown-body h3.md-collapsible-heading:focus-visible,
+        .markdown-body h4.md-collapsible-heading:focus-visible {
+            outline: 1px solid #569cd6;
+            outline-offset: 3px;
+        }
+        .md-collapsible-anim {
+            transition: opacity 0.16s ease, transform 0.16s ease;
+        }
+        .md-section-collapsing,
+        .md-section-revealing {
+            opacity: 0;
+            transform: translateY(-2px);
+        }
+        .md-section-hidden {
+            display: none !important;
+        }
+        .markdown-body .md-collapsed-content {
+            pointer-events: none;
+        }
         a { color: #4ec9b0; text-decoration: none; }
         a:hover { text-decoration: underline; }
         code { background: #2d2d2d; color: #ce9178; padding: 2px 6px; border-radius: 3px; font-family: Consolas, 'Courier New', monospace; }
@@ -1538,11 +1603,55 @@
             return nodes;
         }
 
-        function setHeadingCollapsed(heading, collapsed) {
+        function animateSectionNode(node, collapse, immediate = false) {
+            if (!node) return;
+            if (node.__mdCollapseTimer) {
+                clearTimeout(node.__mdCollapseTimer);
+                node.__mdCollapseTimer = null;
+            }
+            if (immediate) {
+                node.classList.remove('md-section-collapsing');
+                node.classList.remove('md-section-revealing');
+                if (collapse) {
+                    node.classList.add('md-section-hidden');
+                    node.classList.add('md-collapsed-content');
+                } else {
+                    node.classList.remove('md-section-hidden');
+                    node.classList.remove('md-collapsed-content');
+                }
+                return;
+            }
+            node.classList.add('md-collapsible-anim');
+            if (collapse) {
+                if (node.classList.contains('md-section-hidden')) return;
+                node.classList.remove('md-section-revealing');
+                node.classList.add('md-section-collapsing');
+                node.__mdCollapseTimer = setTimeout(() => {
+                    node.classList.add('md-section-hidden');
+                    node.classList.add('md-collapsed-content');
+                    node.classList.remove('md-section-collapsing');
+                    node.__mdCollapseTimer = null;
+                }, 170);
+                return;
+            }
+            const wasHidden = node.classList.contains('md-section-hidden') || node.classList.contains('md-collapsed-content');
+            node.classList.remove('md-section-hidden');
+            node.classList.remove('md-collapsed-content');
+            if (!wasHidden) return;
+            node.classList.add('md-section-revealing');
+            requestAnimationFrame(() => {
+                node.classList.remove('md-section-revealing');
+            });
+        }
+
+        function setHeadingCollapsed(heading, collapsed, options = {}) {
             const shouldCollapse = Boolean(collapsed);
+            const immediate = Boolean(options.immediate);
             heading.classList.toggle('md-collapsed', shouldCollapse);
+            heading.classList.toggle('is-collapsed', shouldCollapse);
+            heading.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
             getSectionNodesForHeading(heading).forEach(node => {
-                node.classList.toggle('md-collapsed-content', shouldCollapse);
+                animateSectionNode(node, shouldCollapse, immediate);
             });
         }
 
@@ -1566,8 +1675,8 @@
             }
             let changed = false;
             stack.forEach(item => {
-                if (!item.heading.classList.contains('md-collapsed')) return;
-                setHeadingCollapsed(item.heading, false);
+                if (!item.heading.classList.contains('md-collapsed') && !item.heading.classList.contains('is-collapsed')) return;
+                setHeadingCollapsed(item.heading, false, { immediate: true });
                 if (collapseState[item.id]) {
                     delete collapseState[item.id];
                     changed = true;
@@ -1586,12 +1695,24 @@
                 heading.classList.add('md-collapsible-heading');
                 const collapseId = getHeadingCollapseId(heading, index);
                 heading.dataset.collapseId = collapseId;
-                setHeadingCollapsed(heading, Boolean(collapseState[collapseId]));
+                heading.setAttribute('role', 'button');
+                heading.setAttribute('tabindex', '0');
+                setHeadingCollapsed(heading, Boolean(collapseState[collapseId]), { immediate: true });
                 if (heading.dataset.collapseBound === 'true') return;
                 heading.dataset.collapseBound = 'true';
                 heading.addEventListener('click', (event) => {
-                    if (event.target.closest('.invoke-request-btn-wrap')) return;
-                    const nextCollapsed = !heading.classList.contains('md-collapsed');
+                    if (event.target.closest('.invoke-request-btn-wrap,button,a,input,textarea,select,label')) return;
+                    const nextCollapsed = !heading.classList.contains('md-collapsed') && !heading.classList.contains('is-collapsed');
+                    setHeadingCollapsed(heading, nextCollapsed);
+                    const nextState = readHeadingCollapseState();
+                    if (nextCollapsed) nextState[collapseId] = true;
+                    else delete nextState[collapseId];
+                    writeHeadingCollapseState(nextState);
+                });
+                heading.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    const nextCollapsed = !heading.classList.contains('md-collapsed') && !heading.classList.contains('is-collapsed');
                     setHeadingCollapsed(heading, nextCollapsed);
                     const nextState = readHeadingCollapseState();
                     if (nextCollapsed) nextState[collapseId] = true;
@@ -1712,11 +1833,11 @@
                 // 初始化交互功能
                 if (window.hljs) hljs.highlightAll();
                 initToc();
-                initTocScrollSpy();
                 initLocalSearch();
                 initRequestPanel();
                 initRequestParams();
                 initHeadingCollapse();
+                initTocScrollSpy();
                 initTabs();
                 initTreeInteraction();
                 const hashId = decodeURIComponent((window.location.hash || '').replace(/^#/, '').trim());
