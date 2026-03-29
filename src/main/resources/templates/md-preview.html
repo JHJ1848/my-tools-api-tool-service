@@ -2860,7 +2860,7 @@
         function revealTocItemFeedback(item, options = {}) {
             if (!item) return;
             const flash = options.flash !== false;
-            item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            item.scrollIntoView({ block: 'nearest', behavior: 'auto' });
             if (!flash) return;
             const itemId = String(item.getAttribute('data-id') || '');
             const now = Date.now();
@@ -3192,7 +3192,7 @@
             }
             localStorage.setItem('md-preview-expanded-paths', JSON.stringify(Array.from(nextExpandedPaths)));
             fileLink.classList.add('active');
-            fileLink.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            fileLink.scrollIntoView({ block: 'center', behavior: 'auto' });
             if (!flash) return true;
             const row = fileLink.closest('.tree-file-row');
             document.querySelectorAll('.tree-file.locate-flash').forEach(el => el.classList.remove('locate-flash'));
