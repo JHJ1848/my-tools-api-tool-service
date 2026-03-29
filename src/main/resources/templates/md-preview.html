@@ -1201,8 +1201,8 @@
         .front-matter { background: #252525; padding: 10px; border-radius: 4px; margin-bottom: 20px; }
         .front-matter code { background: transparent; color: #ce9178; }
         .tree-item { cursor: pointer; }
-        .tree-children .tree-file:nth-child(odd) { background-color: #1e1e1e; }
-        .tree-children .tree-file:nth-child(even) { background-color: #252526; }
+        .tree-children > .tree-file-row:nth-child(odd) { background-color: #1e1e1e; }
+        .tree-children > .tree-file-row:nth-child(even) { background-color: #252526; }
         .tree-children .tree-folder:nth-child(odd) { background-color: #1e1e1e; }
         .tree-children .tree-folder:nth-child(even) { background-color: #252526; }
         .tree-folder { display: flex; align-items: center; padding: 5px 16px; color: #969696; font-size: 13px; user-select: none; }
@@ -1216,32 +1216,33 @@
         .tree-children.expanded { display: block; }
         .tree-file-row {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             gap: 6px;
             padding-right: 8px;
+            min-width: 0;
         }
         .tree-file {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             flex: 1;
             min-width: 0;
             padding: 5px 10px 5px 32px;
             color: #969696;
             text-decoration: none;
             font-size: 13px;
-            white-space: normal;
-            overflow: visible;
-            text-overflow: clip;
-            word-break: break-word;
-            line-height: 1.45;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.4;
+            background: transparent;
         }
         .tree-file-name {
             min-width: 0;
-            overflow: visible;
-            text-overflow: clip;
-            white-space: normal;
-            word-break: break-word;
-            line-height: 1.45;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.4;
         }
         .tree-file:hover { background-color: #2a2d2e; color: #e0e0e0; }
         .tree-file.active { background-color: #37373d; color: #ffffff; border-left: 2px solid #007fd4; }
@@ -1262,6 +1263,7 @@
             align-items: center;
             gap: 4px;
             flex-shrink: 0;
+            background: transparent;
         }
         .tree-file-action {
             width: 22px;
@@ -2633,20 +2635,32 @@
 
         async function copyTextToClipboard(text) {
             const value = String(text || '');
+            const fallbackCopy = () => {
+                const helper = document.createElement('textarea');
+                helper.value = value;
+                helper.setAttribute('readonly', 'readonly');
+                helper.style.position = 'fixed';
+                helper.style.opacity = '0';
+                helper.style.pointerEvents = 'none';
+                document.body.appendChild(helper);
+                helper.focus();
+                helper.select();
+                const copied = document.execCommand('copy');
+                helper.remove();
+                if (!copied) {
+                    throw new Error('浏览器不支持复制');
+                }
+            };
             if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-                await navigator.clipboard.writeText(value);
-                return;
+                try {
+                    await navigator.clipboard.writeText(value);
+                    return;
+                } catch (error) {
+                    fallbackCopy();
+                    return;
+                }
             }
-            const helper = document.createElement('textarea');
-            helper.value = value;
-            helper.setAttribute('readonly', 'readonly');
-            helper.style.position = 'fixed';
-            helper.style.opacity = '0';
-            document.body.appendChild(helper);
-            helper.focus();
-            helper.select();
-            document.execCommand('copy');
-            helper.remove();
+            fallbackCopy();
         }
 
         function initTreeInteraction() {
