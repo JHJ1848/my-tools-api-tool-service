@@ -2876,6 +2876,22 @@
             window.setTimeout(() => item.classList.remove('toc-locate-flash'), 900);
         }
 
+        function resolveScrollSpyActiveTocItem(headings, currentHeadingIndex) {
+            const current = headings[currentHeadingIndex];
+            if (!current || !current.item) return null;
+            const currentLevel = getTocLevel(current.item);
+            if (currentLevel === 3) return current.item;
+            if (currentLevel >= 4) {
+                for (let i = currentHeadingIndex - 1; i >= 0; i--) {
+                    const candidate = headings[i]?.item;
+                    if (candidate && getTocLevel(candidate) === 3) {
+                        return candidate;
+                    }
+                }
+            }
+            return current.item;
+        }
+
         function toggleOnlyLevel4UnderCurrentLevel3(clickedLevel3Item, tocItems) {
             if (!clickedLevel3Item || getTocLevel(clickedLevel3Item) !== 3) return;
             const clickedId = String(clickedLevel3Item.getAttribute('data-id') || '').trim();
@@ -3019,11 +3035,12 @@
                 const currentHeading = headings[currentHeadingIndex];
                 document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));
                 if (currentHeading && currentHeading.item) {
-                    expandTocAncestorsForItem(currentHeading.item);
-                    currentHeading.item.classList.add('active');
-                    const currentId = String(currentHeading.item.getAttribute('data-id') || '');
+                    const activeTocItem = resolveScrollSpyActiveTocItem(headings, currentHeadingIndex) || currentHeading.item;
+                    expandTocAncestorsForItem(activeTocItem);
+                    activeTocItem.classList.add('active');
+                    const currentId = String(activeTocItem.getAttribute('data-id') || '');
                     if (currentId && currentId !== lastActiveId) {
-                        revealTocItemFeedback(currentHeading.item, { flash: true });
+                        revealTocItemFeedback(activeTocItem, { flash: true });
                         lastActiveId = currentId;
                     }
                     const targetLevels = [1, 2, 3];
