@@ -76,29 +76,32 @@
             content: '';
             flex: 0 0 auto;
             display: inline-block;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
+            width: 0;
+            height: 0;
         }
         .toc-circle-h1::before {
-            width: 14px;
-            height: 14px;
-            filter: drop-shadow(0 0 6px rgba(78, 201, 176, 0.35));
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234ec9b0' d='M12 2l7.5 4.2v8.4L12 22l-7.5-7.4V6.2z'/%3E%3Cpath fill='%231d3d38' d='M12 5.1l4.8 2.7v5.4L12 17.9l-4.8-4.7V7.8z'/%3E%3C/svg%3E");
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            background: #f14c4c;
+            box-shadow: 0 0 0 1px rgba(241, 76, 76, 0.4), 0 0 8px rgba(241, 76, 76, 0.28);
         }
         .toc-circle-h2::before {
             width: 12px;
             height: 12px;
             border-radius: 999px;
-            background-image: radial-gradient(circle at center, #dcdcaa 0 48%, rgba(220, 220, 170, 0.18) 49% 100%);
-            box-shadow: 0 0 0 1px rgba(220, 220, 170, 0.4);
+            background: #4fc1ff;
+            box-shadow: 0 0 0 1px rgba(79, 193, 255, 0.4), 0 0 8px rgba(79, 193, 255, 0.24);
         }
         .toc-circle-h3::before {
-            width: 11px;
-            height: 11px;
-            border-radius: 3px;
-            background-image: linear-gradient(135deg, #9cdcfe 0%, #519aba 100%);
-            box-shadow: inset 0 0 0 1px rgba(18, 35, 48, 0.45);
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            background: #6ccb5f;
+            box-shadow: 0 0 0 1px rgba(108, 203, 95, 0.4), 0 0 8px rgba(108, 203, 95, 0.24);
+        }
+        .toc-level-4::before {
+            content: none;
         }
         .toc-list .toc-item:nth-child(odd) { background-color: #1e1e1e; }
         .toc-list .toc-item:nth-child(even) { background-color: #252526; }
