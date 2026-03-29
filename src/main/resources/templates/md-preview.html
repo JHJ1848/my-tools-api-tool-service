@@ -73,38 +73,77 @@
             line-height: 1.45;
         }
         .toc-item::before {
-            content: '';
-            flex: 0 0 auto;
-            display: inline-block;
-            width: 0;
-            height: 0;
+            content: none;
         }
-        .toc-circle-h1::before {
+        .toc-toggle-btn {
             width: 12px;
             height: 12px;
+            min-width: 12px;
             border-radius: 999px;
+            border: none;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            display: inline-block;
+            transition: transform 0.16s ease, filter 0.16s ease, opacity 0.16s ease;
+        }
+        .toc-toggle-btn:focus-visible {
+            outline: 1px solid #9cdcfe;
+            outline-offset: 2px;
+        }
+        .toc-toggle-btn.is-leaf {
+            cursor: default;
+            opacity: 0.62;
+            filter: saturate(0.35);
+        }
+        .toc-item.toc-collapsed .toc-toggle-btn {
+            transform: scale(0.82);
+            filter: grayscale(0.45) brightness(0.85);
+            opacity: 0.85;
+        }
+        .toc-circle-h1.toc-collapsed .toc-toggle-btn {
+            background: transparent;
+            box-shadow: inset 0 0 0 2px rgba(241, 76, 76, 0.9);
+        }
+        .toc-circle-h2.toc-collapsed .toc-toggle-btn {
+            background: transparent;
+            box-shadow: inset 0 0 0 2px rgba(79, 193, 255, 0.9);
+        }
+        .toc-circle-h3.toc-collapsed .toc-toggle-btn {
+            background: transparent;
+            box-shadow: inset 0 0 0 2px rgba(108, 203, 95, 0.9);
+        }
+        .toc-level-4.toc-collapsed .toc-toggle-btn,
+        .toc-level-5.toc-collapsed .toc-toggle-btn,
+        .toc-level-6.toc-collapsed .toc-toggle-btn {
+            background: transparent;
+            box-shadow: inset 0 0 0 2px rgba(243, 243, 243, 0.9);
+        }
+        .toc-item:not(.toc-collapsed):hover .toc-toggle-btn {
+            transform: scale(1.08);
+        }
+        .toc-label {
+            flex: 1;
+            min-width: 0;
+        }
+        .toc-item.toc-collapsed-hidden {
+            display: none !important;
+        }
+        .toc-circle-h1 .toc-toggle-btn {
             background: #f14c4c;
             box-shadow: 0 0 0 1px rgba(241, 76, 76, 0.4), 0 0 8px rgba(241, 76, 76, 0.28);
         }
-        .toc-circle-h2::before {
-            width: 12px;
-            height: 12px;
-            border-radius: 999px;
+        .toc-circle-h2 .toc-toggle-btn {
             background: #4fc1ff;
             box-shadow: 0 0 0 1px rgba(79, 193, 255, 0.4), 0 0 8px rgba(79, 193, 255, 0.24);
         }
-        .toc-circle-h3::before {
-            width: 12px;
-            height: 12px;
-            border-radius: 999px;
+        .toc-circle-h3 .toc-toggle-btn {
             background: #6ccb5f;
             box-shadow: 0 0 0 1px rgba(108, 203, 95, 0.4), 0 0 8px rgba(108, 203, 95, 0.24);
         }
-        .toc-level-4::before {
-            content: '';
-            width: 12px;
-            height: 12px;
-            border-radius: 999px;
+        .toc-level-4 .toc-toggle-btn,
+        .toc-level-5 .toc-toggle-btn,
+        .toc-level-6 .toc-toggle-btn {
             background: #f3f3f3;
             box-shadow: 0 0 0 1px rgba(243, 243, 243, 0.35);
         }
@@ -1553,6 +1592,7 @@
         const REQUEST_API_CONFIG_KEY = 'md-preview-request-api-config';
         const REQUEST_COLLAPSE_STATE_KEY = 'md-preview-request-collapse-state';
         const REQUEST_RESPONSE_VIEW_KEY = 'md-preview-response-view';
+        const TOC_COLLAPSE_STORAGE_PREFIX = 'md-preview-toc-collapse:';
         const HEADING_COLLAPSE_STORAGE_PREFIX = 'md-preview-heading-collapse:';
         const REQUEST_API_DEFAULT_HOST = '192.168.81.163';
         const REQUEST_API_DEFAULT_PORT = '9527';
@@ -2706,17 +2746,140 @@
             });
         }
 
-        function initToc() {
-            const tocItems = document.querySelectorAll('.toc-item');
+        function getTocCollapseStorageKey() {
+            return `${TOC_COLLAPSE_STORAGE_PREFIX}${currentFilePath || '__global__'}`;
+        }
+
+        function readTocCollapseState() {
+            try {
+                const raw = localStorage.getItem(getTocCollapseStorageKey());
+                const parsed = raw ? JSON.parse(raw) : {};
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function writeTocCollapseState(state) {
+            localStorage.setItem(getTocCollapseStorageKey(), JSON.stringify(state || {}));
+        }
+
+        function getTocLevel(item) {
+            const match = String(item?.className || '').match(/toc-level-(\d+)/);
+            return match ? Number(match[1]) : 1;
+        }
+
+        function getDefaultTocCollapsed(item) {
+            return item.dataset.hasChildren === 'true' && getTocLevel(item) >= 4;
+        }
+
+        function resolveTocCollapseState(tocItems, savedState) {
+            const resolved = {};
             tocItems.forEach(item => {
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href').substring(1);
+                const id = String(item.getAttribute('data-id') || '').trim();
+                if (!id || item.dataset.hasChildren !== 'true') return;
+                if (Object.prototype.hasOwnProperty.call(savedState, id)) {
+                    resolved[id] = Boolean(savedState[id]);
+                } else {
+                    resolved[id] = getDefaultTocCollapsed(item);
+                }
+            });
+            return resolved;
+        }
+
+        function applyTocCollapseState(tocItems, resolvedState) {
+            const collapsedLevels = [];
+            tocItems.forEach(item => {
+                const level = getTocLevel(item);
+                while (collapsedLevels.length && level <= collapsedLevels[collapsedLevels.length - 1]) {
+                    collapsedLevels.pop();
+                }
+                const hidden = collapsedLevels.length > 0;
+                item.classList.toggle('toc-collapsed-hidden', hidden);
+                const id = String(item.getAttribute('data-id') || '').trim();
+                const hasChildren = item.dataset.hasChildren === 'true';
+                const collapsed = hasChildren && Boolean(resolvedState[id]);
+                item.classList.toggle('toc-collapsed', collapsed);
+                const toggleBtn = item.querySelector('.toc-toggle-btn');
+                if (toggleBtn) {
+                    toggleBtn.classList.toggle('is-leaf', !hasChildren);
+                    toggleBtn.setAttribute('aria-expanded', hasChildren ? String(!collapsed) : 'true');
+                    toggleBtn.setAttribute('aria-disabled', hasChildren ? 'false' : 'true');
+                }
+                if (collapsed) collapsedLevels.push(level);
+            });
+        }
+
+        function initToc() {
+            const tocList = document.querySelector('.toc-list');
+            if (!tocList) return;
+            const tocItems = Array.from(tocList.querySelectorAll('.toc-item'));
+            if (!tocItems.length) return;
+
+            const levels = tocItems.map(item => getTocLevel(item));
+            tocItems.forEach((item, index) => {
+                const hasChildren = index < tocItems.length - 1 && levels[index + 1] > levels[index];
+                item.dataset.hasChildren = hasChildren ? 'true' : 'false';
+                let label = item.querySelector('.toc-label');
+                if (!label) {
+                    const text = String(item.textContent || '').trim();
+                    item.textContent = '';
+                    const toggleBtn = document.createElement('button');
+                    toggleBtn.type = 'button';
+                    toggleBtn.className = 'toc-toggle-btn';
+                    toggleBtn.setAttribute('aria-label', '切换目录展开状态');
+                    label = document.createElement('span');
+                    label.className = 'toc-label';
+                    label.textContent = text;
+                    item.appendChild(toggleBtn);
+                    item.appendChild(label);
+                } else if (!item.querySelector('.toc-toggle-btn')) {
+                    const toggleBtn = document.createElement('button');
+                    toggleBtn.type = 'button';
+                    toggleBtn.className = 'toc-toggle-btn';
+                    toggleBtn.setAttribute('aria-label', '切换目录展开状态');
+                    item.prepend(toggleBtn);
+                }
+            });
+
+            const savedState = readTocCollapseState();
+            const resolvedState = resolveTocCollapseState(tocItems, savedState);
+            applyTocCollapseState(tocItems, resolvedState);
+
+            if (tocList.dataset.bound !== 'true') {
+                tocList.dataset.bound = 'true';
+                tocList.addEventListener('click', (event) => {
+                    const toggleBtn = event.target.closest('.toc-toggle-btn');
+                    const tocItem = event.target.closest('.toc-item');
+                    if (!tocItem) return;
+                    if (toggleBtn) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (tocItem.dataset.hasChildren !== 'true') return;
+                        const id = String(tocItem.getAttribute('data-id') || '').trim();
+                        if (!id) return;
+                        const nextSaved = readTocCollapseState();
+                        const currentlyCollapsed = tocItem.classList.contains('toc-collapsed');
+                        const nextCollapsed = !currentlyCollapsed;
+                        const isDefault = getDefaultTocCollapsed(tocItem) === nextCollapsed;
+                        if (isDefault) delete nextSaved[id];
+                        else nextSaved[id] = nextCollapsed;
+                        writeTocCollapseState(nextSaved);
+                        const nextResolved = resolveTocCollapseState(Array.from(tocList.querySelectorAll('.toc-item')), nextSaved);
+                        applyTocCollapseState(Array.from(tocList.querySelectorAll('.toc-item')), nextResolved);
+                        return;
+                    }
+                    const label = event.target.closest('.toc-label');
+                    if (!label) return;
+                    event.preventDefault();
+                    const href = String(tocItem.getAttribute('href') || '');
+                    if (!href.startsWith('#')) return;
+                    const targetId = href.substring(1);
                     scrollToHeading(targetId);
                     document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));
-                    this.classList.add('active');
+                    tocItem.classList.add('active');
                 });
-            });
+            }
         }
 
         function initTocScrollSpy() {
