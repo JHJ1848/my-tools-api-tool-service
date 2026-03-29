@@ -873,7 +873,9 @@ public class MarkdownPreviewController {
                 sb.append("</div>");
             } else {
                 String filePath = (String) value;
-                String activeClass = filePath.replace("\\", "/").equals(currentPath.replace("\\", "/")) ? " active" : "";
+                String normalizedFilePath = filePath.replace("\\", "/");
+                String normalizedCurrentPath = currentPath == null ? "" : currentPath.replace("\\", "/");
+                String activeClass = normalizedFilePath.equalsIgnoreCase(normalizedCurrentPath) ? " active" : "";
                 try {
                     String encodedPath = java.net.URLEncoder.encode(filePath, "UTF-8").replace("+", "%20");
                     sb.append("<div class=\"tree-file-row").append(activeClass).append("\" data-path=\"").append(escapeHtml(filePath)).append("\" data-name=\"").append(escapeHtml(key)).append("\">")

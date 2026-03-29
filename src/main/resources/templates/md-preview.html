@@ -1253,6 +1253,10 @@
         .tree-file.locate-flash {
             animation: treeLocateFlash 1.1s ease-out;
         }
+        .tree-file-row.locate-flash .tree-file,
+        .tree-file-row.locate-flash .tree-file-actions {
+            animation: treeLocateFlash 1.1s ease-out;
+        }
         .tree-file-actions {
             display: inline-flex;
             align-items: center;
@@ -2565,11 +2569,73 @@
             }
         }
 
+        function escapeSelectorValue(value) {
+            const source = String(value || '');
+            if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(source);
+            return source.replace(/["\\]/g, '\\$&');
+        }
+
+        function normalizeTreePath(path) {
+            return String(path || '').replace(/\\/g, '/').toLowerCase();
+        }
+
+        function findTreeFileLinkByPath(path) {
+            const rawPath = String(path || '').trim();
+            if (!rawPath) return null;
+            const bySelector = document.querySelector(`.tree-file[data-path="${escapeSelectorValue(rawPath)}"]`);
+            if (bySelector) return bySelector;
+            const target = normalizeTreePath(rawPath);
+            const allLinks = document.querySelectorAll('.tree-file[data-path]');
+            for (const link of allLinks) {
+                if (normalizeTreePath(link.getAttribute('data-path')) === target) return link;
+            }
+            return null;
+        }
+
+        function revealTreeFile(fileLink, options = {}) {
+            if (!fileLink) return false;
+            const flash = options.flash !== false;
+            const nextExpandedPaths = new Set(JSON.parse(localStorage.getItem('md-preview-expanded-paths') || '[]'));
+            let parent = fileLink.parentElement;
+            while (parent) {
+                if (parent.classList && parent.classList.contains('tree-children')) {
+                    parent.style.display = '';
+                    parent.classList.add('expanded');
+                    const path = parent.getAttribute('data-path');
+                    if (path) nextExpandedPaths.add(path);
+                    const folder = parent.previousElementSibling;
+                    if (folder && folder.classList && folder.classList.contains('tree-folder')) {
+                        folder.style.display = '';
+                        const toggle = folder.querySelector('.tree-toggle');
+                        if (toggle) toggle.classList.add('expanded');
+                    }
+                }
+                parent = parent.parentElement;
+            }
+            localStorage.setItem('md-preview-expanded-paths', JSON.stringify(Array.from(nextExpandedPaths)));
+            fileLink.classList.add('active');
+            fileLink.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            if (!flash) return true;
+            const row = fileLink.closest('.tree-file-row');
+            document.querySelectorAll('.tree-file.locate-flash').forEach(el => el.classList.remove('locate-flash'));
+            document.querySelectorAll('.tree-file-row.locate-flash').forEach(el => el.classList.remove('locate-flash'));
+            fileLink.classList.remove('locate-flash');
+            if (row) row.classList.remove('locate-flash');
+            void fileLink.offsetWidth;
+            fileLink.classList.add('locate-flash');
+            if (row) row.classList.add('locate-flash');
+            window.setTimeout(() => {
+                fileLink.classList.remove('locate-flash');
+                if (row) row.classList.remove('locate-flash');
+            }, 1200);
+            return true;
+        }
+
         function initTreeInteraction() {
             const expandedPaths = JSON.parse(localStorage.getItem('md-preview-expanded-paths') || '[]');
             expandedPaths.forEach(path => {
-                const folder = document.querySelector(`.tree-folder[data-path="${CSS.escape(path)}"]`);
-                const children = document.querySelector(`.tree-children[data-path="${CSS.escape(path)}"]`);
+                const folder = document.querySelector(`.tree-folder[data-path="${escapeSelectorValue(path)}"]`);
+                const children = document.querySelector(`.tree-children[data-path="${escapeSelectorValue(path)}"]`);
                 if (folder && children) {
                     children.classList.add('expanded');
                     const toggle = folder.querySelector('.tree-toggle');
@@ -2609,35 +2675,11 @@
                 locateBtn.addEventListener('click', () => {
                     const searchInput = document.getElementById('search-input');
                     if (searchInput && searchInput.value) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
-                    const currentActive = document.querySelector(`.tree-file[data-path="${CSS.escape(currentFilePath || '')}"]`) || document.querySelector('.tree-file.active');
-                    if (!currentActive) return;
-                    let parent = currentActive.parentElement;
-                    const nextExpandedPaths = new Set(JSON.parse(localStorage.getItem('md-preview-expanded-paths') || '[]'));
-                    while (parent) {
-                        if (parent.classList && parent.classList.contains('tree-children')) {
-                            parent.style.display = '';
-                            parent.classList.add('expanded');
-                            const path = parent.getAttribute('data-path');
-                            if (path) nextExpandedPaths.add(path);
-                            const folder = parent.previousElementSibling;
-                            if (folder && folder.classList && folder.classList.contains('tree-folder')) {
-                                folder.style.display = '';
-                                const toggle = folder.querySelector('.tree-toggle');
-                                if (toggle) toggle.classList.add('expanded');
-                            }
-                        }
-                        parent = parent.parentElement;
-                    }
-                    localStorage.setItem('md-preview-expanded-paths', JSON.stringify(Array.from(nextExpandedPaths)));
-                    document.querySelectorAll('.tree-file.locate-flash').forEach(el => el.classList.remove('locate-flash'));
-                    currentActive.classList.add('active');
-                    currentActive.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                    currentActive.classList.remove('locate-flash');
-                    void currentActive.offsetWidth;
-                    currentActive.classList.add('locate-flash');
-                    window.setTimeout(() => currentActive.classList.remove('locate-flash'), 1200);
+                    const currentActive = findTreeFileLinkByPath(currentFilePath) || document.querySelector('.tree-file.active');
+                    revealTreeFile(currentActive, { flash: true });
                 });
             }
+            revealTreeFile(findTreeFileLinkByPath(currentFilePath), { flash: false });
 
             const searchInput = document.getElementById('search-input');
             if (searchInput) {
