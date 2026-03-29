@@ -1264,6 +1264,18 @@
             gap: 4px;
             flex-shrink: 0;
             background: transparent;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateX(4px);
+            transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+        }
+        .tree-file-row:hover .tree-file-actions,
+        .tree-file-row:focus-within .tree-file-actions {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateX(0);
         }
         .tree-file-action {
             width: 22px;
@@ -2842,4 +2854,3 @@
     </script>
 </body>
 </html>
-
