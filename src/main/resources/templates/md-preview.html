@@ -2813,6 +2813,38 @@
             });
         }
 
+        function expandTocAncestorsForItem(targetItem) {
+            if (!targetItem) return;
+            const tocList = document.querySelector('.toc-list');
+            if (!tocList) return;
+            const tocItems = Array.from(tocList.querySelectorAll('.toc-item'));
+            const targetIndex = tocItems.indexOf(targetItem);
+            if (targetIndex < 0) return;
+            const targetLevel = getTocLevel(targetItem);
+            if (targetLevel <= 1) return;
+
+            const savedState = readTocCollapseState();
+            let changed = false;
+            let needLevel = targetLevel - 1;
+            for (let i = targetIndex - 1; i >= 0 && needLevel >= 1; i--) {
+                const item = tocItems[i];
+                const level = getTocLevel(item);
+                if (level !== needLevel) continue;
+                if (item.dataset.hasChildren === 'true') {
+                    const id = String(item.getAttribute('data-id') || '').trim();
+                    if (id && savedState[id]) {
+                        delete savedState[id];
+                        changed = true;
+                    }
+                }
+                needLevel -= 1;
+            }
+            if (!changed) return;
+            writeTocCollapseState(savedState);
+            const resolvedState = resolveTocCollapseState(tocItems, savedState);
+            applyTocCollapseState(tocItems, resolvedState);
+        }
+
         function initToc() {
             const tocList = document.querySelector('.toc-list');
             if (!tocList) return;
@@ -2917,6 +2949,7 @@
                 const currentHeading = headings[currentHeadingIndex];
                 document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));
                 if (currentHeading && currentHeading.item) {
+                    expandTocAncestorsForItem(currentHeading.item);
                     currentHeading.item.classList.add('active');
                     const targetLevels = [1, 2, 3];
                     const levelData = { 1: null, 2: null, 3: null };
@@ -2947,6 +2980,10 @@
         window.scrollToHeading = function(id) {
             const target = document.getElementById(id);
             const contentArea = document.querySelector('.markdown-body');
+            const tocItem = document.querySelector(`.toc-item[data-id="${escapeSelectorValue(id)}"]`);
+            if (tocItem) {
+                expandTocAncestorsForItem(tocItem);
+            }
             if (target && contentArea) {
                 expandCollapsedAncestorsForHeading(target);
                 const mainRect = document.querySelector('main').getBoundingClientRect();
