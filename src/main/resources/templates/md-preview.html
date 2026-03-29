@@ -128,6 +128,10 @@
         .toc-label {
             flex: 1;
             min-width: 0;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .toc-item.toc-collapsed-hidden {
             display: none !important;
@@ -2872,6 +2876,41 @@
             window.setTimeout(() => item.classList.remove('toc-locate-flash'), 900);
         }
 
+        function toggleOnlyLevel4UnderCurrentLevel3(clickedLevel3Item, tocItems) {
+            if (!clickedLevel3Item || getTocLevel(clickedLevel3Item) !== 3) return;
+            const clickedId = String(clickedLevel3Item.getAttribute('data-id') || '').trim();
+            if (!clickedId) return;
+            const nextSaved = readTocCollapseState();
+            let changed = false;
+            tocItems.forEach(item => {
+                if (getTocLevel(item) !== 3 || item.dataset.hasChildren !== 'true') return;
+                const id = String(item.getAttribute('data-id') || '').trim();
+                if (!id) return;
+                if (id === clickedId) {
+                    if (nextSaved[id] !== false) {
+                        nextSaved[id] = false;
+                        changed = true;
+                    }
+                } else {
+                    const nextCollapsed = true;
+                    const isDefault = getDefaultTocCollapsed(item) === nextCollapsed;
+                    if (isDefault) {
+                        if (Object.prototype.hasOwnProperty.call(nextSaved, id)) {
+                            delete nextSaved[id];
+                            changed = true;
+                        }
+                    } else if (nextSaved[id] !== nextCollapsed) {
+                        nextSaved[id] = nextCollapsed;
+                        changed = true;
+                    }
+                }
+            });
+            if (!changed) return;
+            writeTocCollapseState(nextSaved);
+            const resolvedState = resolveTocCollapseState(tocItems, nextSaved);
+            applyTocCollapseState(tocItems, resolvedState);
+        }
+
         function initToc() {
             const tocList = document.querySelector('.toc-list');
             if (!tocList) return;
@@ -2934,6 +2973,9 @@
                     const label = event.target.closest('.toc-label');
                     if (!label) return;
                     event.preventDefault();
+                    if (getTocLevel(tocItem) === 3) {
+                        toggleOnlyLevel4UnderCurrentLevel3(tocItem, Array.from(tocList.querySelectorAll('.toc-item')));
+                    }
                     const href = String(tocItem.getAttribute('href') || '');
                     if (!href.startsWith('#')) return;
                     const targetId = href.substring(1);
