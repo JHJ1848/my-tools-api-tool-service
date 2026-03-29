@@ -2631,6 +2631,24 @@
             return true;
         }
 
+        async function copyTextToClipboard(text) {
+            const value = String(text || '');
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(value);
+                return;
+            }
+            const helper = document.createElement('textarea');
+            helper.value = value;
+            helper.setAttribute('readonly', 'readonly');
+            helper.style.position = 'fixed';
+            helper.style.opacity = '0';
+            document.body.appendChild(helper);
+            helper.focus();
+            helper.select();
+            document.execCommand('copy');
+            helper.remove();
+        }
+
         function initTreeInteraction() {
             const expandedPaths = JSON.parse(localStorage.getItem('md-preview-expanded-paths') || '[]');
             expandedPaths.forEach(path => {
@@ -2669,6 +2687,35 @@
                 });
             });
 
+            document.querySelectorAll('.tree-copy-name').forEach(copyBtn => {
+                copyBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const fileName = String(copyBtn.getAttribute('data-name') || '').trim();
+                    try {
+                        await navigator.clipboard.writeText(fileName);
+                        pushRequestMessage('已复制文件名', 'success');
+                    } catch (error) {
+                        pushRequestMessage(`复制失败: ${error instanceof Error ? error.message : String(error)}`, 'error');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.tree-copy-url').forEach(copyBtn => {
+                copyBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const filePath = String(copyBtn.getAttribute('data-path') || '').trim();
+                    const url = `${window.location.origin}/md-view?path=${encodeURIComponent(filePath)}`;
+                    try {
+                        await navigator.clipboard.writeText(url);
+                        pushRequestMessage('已复制链接', 'success');
+                    } catch (error) {
+                        pushRequestMessage(`复制失败: ${error instanceof Error ? error.message : String(error)}`, 'error');
+                    }
+                });
+            });
+
             const locateBtn = document.getElementById('locate-btn');
             if (locateBtn && locateBtn.dataset.bound !== 'true') {
                 locateBtn.dataset.bound = 'true';
@@ -2677,6 +2724,34 @@
                     if (searchInput && searchInput.value) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
                     const currentActive = findTreeFileLinkByPath(currentFilePath) || document.querySelector('.tree-file.active');
                     revealTreeFile(currentActive, { flash: true });
+                });
+            }
+
+            const fileList = document.querySelector('.file-list');
+            if (fileList && fileList.dataset.copyBound !== 'true') {
+                fileList.dataset.copyBound = 'true';
+                fileList.addEventListener('click', async (event) => {
+                    const copyNameBtn = event.target.closest('.tree-copy-name');
+                    const copyUrlBtn = event.target.closest('.tree-copy-url');
+                    const trigger = copyNameBtn || copyUrlBtn;
+                    if (!trigger) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const rawPath = String(trigger.getAttribute('data-path') || '').trim();
+                    const fileName = String(trigger.getAttribute('data-name') || '').trim() || rawPath.split(/[\\/]/).pop() || '文件';
+                    if (!rawPath) {
+                        pushRequestMessage('复制失败：未找到文件路径', 'error');
+                        return;
+                    }
+                    try {
+                        const text = copyNameBtn
+                            ? fileName
+                            : `${window.location.origin}/md-view?path=${encodeURIComponent(rawPath)}`;
+                        await copyTextToClipboard(text);
+                        pushRequestMessage(copyNameBtn ? `已复制文件名：${fileName}` : `已复制链接：${fileName}`, 'success');
+                    } catch (error) {
+                        pushRequestMessage(`复制失败：${error instanceof Error ? error.message : String(error)}`, 'error');
+                    }
                 });
             }
             revealTreeFile(findTreeFileLinkByPath(currentFilePath), { flash: false });
