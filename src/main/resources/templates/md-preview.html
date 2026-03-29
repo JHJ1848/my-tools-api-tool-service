@@ -161,6 +161,14 @@
             color: #ffffff;
             border-left-color: #007fd4;
         }
+        @keyframes tocLocateFlash {
+            0% { box-shadow: 0 0 0 0 rgba(255, 198, 95, 0.8); background-color: #6c5526; }
+            50% { box-shadow: 0 0 0 8px rgba(255, 198, 95, 0.18); background-color: #8b6a2b; }
+            100% { box-shadow: none; background-color: inherit; }
+        }
+        .toc-item.toc-locate-flash {
+            animation: tocLocateFlash 0.85s ease-out;
+        }
         @keyframes headingFlash {
             0% { box-shadow: 0 0 20px 10px rgba(255,255,255,0.7); }
             50% { box-shadow: 0 0 10px 5px rgba(255,255,255,0.3); }
@@ -2845,6 +2853,25 @@
             applyTocCollapseState(tocItems, resolvedState);
         }
 
+        function revealTocItemFeedback(item, options = {}) {
+            if (!item) return;
+            const flash = options.flash !== false;
+            item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            if (!flash) return;
+            const itemId = String(item.getAttribute('data-id') || '');
+            const now = Date.now();
+            if (options.force !== true && window.lastTocFeedbackId === itemId && (now - (window.lastTocFeedbackAt || 0)) < 420) {
+                return;
+            }
+            window.lastTocFeedbackId = itemId;
+            window.lastTocFeedbackAt = now;
+            document.querySelectorAll('.toc-item.toc-locate-flash').forEach(el => el.classList.remove('toc-locate-flash'));
+            item.classList.remove('toc-locate-flash');
+            void item.offsetWidth;
+            item.classList.add('toc-locate-flash');
+            window.setTimeout(() => item.classList.remove('toc-locate-flash'), 900);
+        }
+
         function initToc() {
             const tocList = document.querySelector('.toc-list');
             if (!tocList) return;
@@ -2928,6 +2955,7 @@
                 if (heading) headings.push({ element: heading, item: item });
             });
             if (headings.length === 0) return;
+            let lastActiveId = '';
             function updateActiveHeading() {
                 const contentRect = contentArea.getBoundingClientRect();
                 const threshold = 60;
@@ -2951,6 +2979,11 @@
                 if (currentHeading && currentHeading.item) {
                     expandTocAncestorsForItem(currentHeading.item);
                     currentHeading.item.classList.add('active');
+                    const currentId = String(currentHeading.item.getAttribute('data-id') || '');
+                    if (currentId && currentId !== lastActiveId) {
+                        revealTocItemFeedback(currentHeading.item, { flash: true });
+                        lastActiveId = currentId;
+                    }
                     const targetLevels = [1, 2, 3];
                     const levelData = { 1: null, 2: null, 3: null };
                     for (let i = currentHeadingIndex; i >= 0; i--) {
@@ -2983,6 +3016,7 @@
             const tocItem = document.querySelector(`.toc-item[data-id="${escapeSelectorValue(id)}"]`);
             if (tocItem) {
                 expandTocAncestorsForItem(tocItem);
+                revealTocItemFeedback(tocItem, { flash: true, force: true });
             }
             if (target && contentArea) {
                 expandCollapsedAncestorsForHeading(target);
