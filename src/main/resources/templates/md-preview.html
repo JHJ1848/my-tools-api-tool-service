@@ -1488,11 +1488,118 @@
         const REQUEST_API_CONFIG_KEY = 'md-preview-request-api-config';
         const REQUEST_COLLAPSE_STATE_KEY = 'md-preview-request-collapse-state';
         const REQUEST_RESPONSE_VIEW_KEY = 'md-preview-response-view';
+        const HEADING_COLLAPSE_STORAGE_PREFIX = 'md-preview-heading-collapse:';
         const REQUEST_API_DEFAULT_HOST = '192.168.81.163';
         const REQUEST_API_DEFAULT_PORT = '9527';
         const REQUEST_EMPTY_RESPONSE_TEXT = '点击“发送请求”查看结果';
         const urlParams = new URLSearchParams(window.location.search);
         let currentFilePath = urlParams.get('path');
+
+        function getHeadingCollapseStorageKey() {
+            return `${HEADING_COLLAPSE_STORAGE_PREFIX}${currentFilePath || '__global__'}`;
+        }
+
+        function readHeadingCollapseState() {
+            try {
+                const raw = localStorage.getItem(getHeadingCollapseStorageKey());
+                const parsed = raw ? JSON.parse(raw) : {};
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function writeHeadingCollapseState(state) {
+            localStorage.setItem(getHeadingCollapseStorageKey(), JSON.stringify(state || {}));
+        }
+
+        function getHeadingLevel(node) {
+            const match = String(node?.tagName || '').match(/^H([1-4])$/i);
+            return match ? Number(match[1]) : 0;
+        }
+
+        function getHeadingCollapseId(heading, index = 0) {
+            if (!heading) return '';
+            if (heading.id) return heading.id;
+            const text = String(heading.textContent || '').trim().toLowerCase().replace(/\s+/g, '-');
+            return text ? `heading-${text}-${index}` : `heading-${index}`;
+        }
+
+        function getSectionNodesForHeading(heading) {
+            const nodes = [];
+            const level = getHeadingLevel(heading);
+            let next = heading ? heading.nextElementSibling : null;
+            while (next) {
+                const nextLevel = getHeadingLevel(next);
+                if (nextLevel > 0 && nextLevel <= level) break;
+                nodes.push(next);
+                next = next.nextElementSibling;
+            }
+            return nodes;
+        }
+
+        function setHeadingCollapsed(heading, collapsed) {
+            const shouldCollapse = Boolean(collapsed);
+            heading.classList.toggle('md-collapsed', shouldCollapse);
+            getSectionNodesForHeading(heading).forEach(node => {
+                node.classList.toggle('md-collapsed-content', shouldCollapse);
+            });
+        }
+
+        function expandCollapsedAncestorsForHeading(targetHeading) {
+            const contentArea = document.querySelector('.markdown-body');
+            if (!contentArea || !targetHeading) return;
+            const headings = Array.from(contentArea.querySelectorAll('h1, h2, h3, h4'));
+            const targetIndex = headings.indexOf(targetHeading);
+            if (targetIndex < 0) return;
+            const collapseState = readHeadingCollapseState();
+            const stack = [];
+            for (let i = 0; i <= targetIndex; i++) {
+                const heading = headings[i];
+                const level = getHeadingLevel(heading);
+                while (stack.length && stack[stack.length - 1].level >= level) {
+                    stack.pop();
+                }
+                if (i < targetIndex) {
+                    stack.push({ heading, level, id: getHeadingCollapseId(heading, i) });
+                }
+            }
+            let changed = false;
+            stack.forEach(item => {
+                if (!item.heading.classList.contains('md-collapsed')) return;
+                setHeadingCollapsed(item.heading, false);
+                if (collapseState[item.id]) {
+                    delete collapseState[item.id];
+                    changed = true;
+                }
+            });
+            if (changed) writeHeadingCollapseState(collapseState);
+        }
+
+        function initHeadingCollapse() {
+            const contentArea = document.querySelector('.markdown-body');
+            if (!contentArea) return;
+            const headings = Array.from(contentArea.querySelectorAll('h1, h2, h3, h4'));
+            if (!headings.length) return;
+            const collapseState = readHeadingCollapseState();
+            headings.forEach((heading, index) => {
+                heading.classList.add('md-collapsible-heading');
+                const collapseId = getHeadingCollapseId(heading, index);
+                heading.dataset.collapseId = collapseId;
+                setHeadingCollapsed(heading, Boolean(collapseState[collapseId]));
+                if (heading.dataset.collapseBound === 'true') return;
+                heading.dataset.collapseBound = 'true';
+                heading.addEventListener('click', (event) => {
+                    if (event.target.closest('.invoke-request-btn-wrap')) return;
+                    const nextCollapsed = !heading.classList.contains('md-collapsed');
+                    setHeadingCollapsed(heading, nextCollapsed);
+                    const nextState = readHeadingCollapseState();
+                    if (nextCollapsed) nextState[collapseId] = true;
+                    else delete nextState[collapseId];
+                    writeHeadingCollapseState(nextState);
+                });
+            });
+        }
 
         function readRequestApiConfig() {
             try {
@@ -1609,6 +1716,7 @@
                 initLocalSearch();
                 initRequestPanel();
                 initRequestParams();
+                initHeadingCollapse();
                 initTabs();
                 initTreeInteraction();
                 const hashId = decodeURIComponent((window.location.hash || '').replace(/^#/, '').trim());
@@ -2553,6 +2661,7 @@
             const target = document.getElementById(id);
             const contentArea = document.querySelector('.markdown-body');
             if (target && contentArea) {
+                expandCollapsedAncestorsForHeading(target);
                 const mainRect = document.querySelector('main').getBoundingClientRect();
                 const targetRect = target.getBoundingClientRect();
                 const tabsHeight = document.querySelector('.tabs-bar').offsetHeight || 0;
