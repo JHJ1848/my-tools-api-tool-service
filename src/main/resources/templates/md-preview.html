@@ -2707,7 +2707,7 @@
                     e.stopPropagation();
                     const fileName = String(copyBtn.getAttribute('data-name') || '').trim();
                     try {
-                        await navigator.clipboard.writeText(fileName);
+                        await copyTextToClipboard(fileName);
                         pushRequestMessage('已复制文件名', 'success');
                     } catch (error) {
                         pushRequestMessage(`复制失败: ${error instanceof Error ? error.message : String(error)}`, 'error');
@@ -2722,7 +2722,7 @@
                     const filePath = String(copyBtn.getAttribute('data-path') || '').trim();
                     const url = `${window.location.origin}/md-view?path=${encodeURIComponent(filePath)}`;
                     try {
-                        await navigator.clipboard.writeText(url);
+                        await copyTextToClipboard(url);
                         pushRequestMessage('已复制链接', 'success');
                     } catch (error) {
                         pushRequestMessage(`复制失败: ${error instanceof Error ? error.message : String(error)}`, 'error');
