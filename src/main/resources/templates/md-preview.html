@@ -244,11 +244,11 @@
             background: #d32f2f;
         }
         .toc-level-1 { font-weight: 600; font-size: 14px; }
-        .toc-level-2 { padding-left: 24px; }
-        .toc-level-3 { padding-left: 32px; font-size: 12px; }
-        .toc-level-4 { padding-left: 40px; font-size: 12px; }
-        .toc-level-5 { padding-left: 48px; font-size: 12px; }
-        .toc-level-6 { padding-left: 56px; font-size: 12px; }
+        .toc-level-2 { padding-left: 48px; }
+        .toc-level-3 { padding-left: 64px; font-size: 12px; }
+        .toc-level-4 { padding-left: 80px; font-size: 12px; }
+        .toc-level-5 { padding-left: 96px; font-size: 12px; }
+        .toc-level-6 { padding-left: 112px; font-size: 12px; }
         .toc-empty {
             padding: 20px;
             color: #858585;
@@ -382,6 +382,17 @@
         }
         .search-highlight.current {
             background: rgba(76, 175, 80, 0.6);
+        }
+        .file-search-empty {
+            display: none;
+            padding: 12px 16px;
+            color: #8b949e;
+            font-size: 12px;
+            border-top: 1px solid #333;
+            background: #252526;
+        }
+        .file-search-empty.visible {
+            display: block;
         }
         .global-search-modal {
             display: none;
@@ -527,18 +538,88 @@
             color: #858585;
         }
         .current-path {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
             margin-right: 8px;
             flex: 1;
+            min-width: 0;
             text-align: left;
             font-size: 11px;
             color: #858585;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            overflow: hidden;
         }
-        .breadcrumb-title { color: #569cd6; margin-left: 8px; font-weight: 500; cursor: pointer; font-size: 11px; text-decoration: none; }
-        .breadcrumb-title:hover { text-decoration: underline; color: #4ec9b0; }
-        .breadcrumb-separator { color: #858585; margin: 0 4px; font-size: 11px; }
+        .breadcrumb-separator {
+            color: #858585;
+            font-size: 11px;
+            flex: 0 0 auto;
+        }
+        .breadcrumb-segment {
+            display: inline-block;
+            min-width: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            text-overflow: clip;
+            white-space: nowrap;
+            flex: 0 0 auto;
+            user-select: text;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            cursor: text;
+        }
+        .breadcrumb-segment::-webkit-scrollbar { display: none; }
+        .breadcrumb-segment-path {
+            width: 360px;
+            color: #858585;
+        }
+        .breadcrumb-segment-level1 {
+            width: 220px;
+            color: #569cd6;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .breadcrumb-segment-level2 {
+            width: 180px;
+            color: #63cdda;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .breadcrumb-segment-level3 {
+            width: 160px;
+            color: #7ee787;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .breadcrumb-segment-clickable:hover {
+            text-decoration: underline;
+            color: #4ec9b0;
+        }
+        .delayed-tooltip {
+            position: fixed;
+            z-index: 9999;
+            max-width: min(520px, calc(100vw - 24px));
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: rgba(24, 24, 28, 0.96);
+            border: 1px solid rgba(112, 119, 128, 0.7);
+            color: #e6edf3;
+            font-size: 12px;
+            line-height: 1.45;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 0.14s ease, transform 0.14s ease;
+            visibility: hidden;
+            white-space: normal;
+            word-break: break-word;
+        }
+        .delayed-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+            visibility: visible;
+        }
         .tabs-bar {
             display: flex;
             background-color: #252526;
@@ -636,6 +717,7 @@
             color: #d4d4d4;
             background-color: #1e1e1e;
             font-size: 13px;
+            line-height: 1.6;
         }
         .context-menu {
             display: none;
@@ -1609,12 +1691,15 @@
     </div>
     <div id="tab-context-menu" class="context-menu">
         <div class="menu-item" id="menu-close-current">关闭当前 (Ctrl+W)</div>
+        <div class="menu-item" id="menu-close-others">关闭其他标签页</div>
         <div class="menu-item" id="menu-close-all">关闭所有</div>
     </div>
     <div class="global-message-stack" id="global-message-stack"></div>
     <script src="/md-search.js"></script>
     <script>
         const TABS_KEY = 'md-preview-open-tabs';
+        const TAB_HISTORY_KEY = 'md-preview-tab-history';
+        const MAX_OPEN_TABS = 9;
         const REQUEST_PANEL_STATE_KEY = 'md-preview-request-panel-state';
         const REQUEST_TABS_STORAGE_PREFIX = 'md-preview-request-tabs:';
         const REQUEST_API_CONFIG_KEY = 'md-preview-request-api-config';
@@ -1627,6 +1712,296 @@
         const REQUEST_EMPTY_RESPONSE_TEXT = '点击“发送请求”查看结果';
         const urlParams = new URLSearchParams(window.location.search);
         let currentFilePath = urlParams.get('path');
+        const TOOLTIP_DELAY_MS = 600;
+        let tooltipTimer = null;
+        let tooltipTarget = null;
+        let tooltipVisibleTarget = null;
+        let lastPreviewScrollSnapshot = null;
+        let lastRawScrollSnapshot = null;
+
+        function ensureDelayedTooltip() {
+            let tooltipEl = document.getElementById('delayed-tooltip');
+            if (!tooltipEl) {
+                tooltipEl = document.createElement('div');
+                tooltipEl.id = 'delayed-tooltip';
+                tooltipEl.className = 'delayed-tooltip';
+                document.body.appendChild(tooltipEl);
+            }
+            return tooltipEl;
+        }
+
+        function clearTooltipTimer() {
+            if (tooltipTimer) {
+                window.clearTimeout(tooltipTimer);
+                tooltipTimer = null;
+            }
+        }
+
+        function hideDelayedTooltip() {
+            clearTooltipTimer();
+            const tooltipEl = document.getElementById('delayed-tooltip');
+            if (tooltipEl) {
+                tooltipEl.classList.remove('visible');
+                tooltipEl.textContent = '';
+            }
+            tooltipTarget = null;
+            tooltipVisibleTarget = null;
+        }
+
+        function positionDelayedTooltip(target) {
+            const tooltipEl = document.getElementById('delayed-tooltip');
+            if (!tooltipEl || !target) return;
+            const targetRect = target.getBoundingClientRect();
+            const tooltipRect = tooltipEl.getBoundingClientRect();
+            const margin = 12;
+            let left = targetRect.left;
+            let top = targetRect.bottom + 10;
+            if (left + tooltipRect.width > window.innerWidth - margin) {
+                left = window.innerWidth - tooltipRect.width - margin;
+            }
+            if (left < margin) {
+                left = margin;
+            }
+            if (top + tooltipRect.height > window.innerHeight - margin) {
+                top = targetRect.top - tooltipRect.height - 10;
+            }
+            if (top < margin) {
+                top = margin;
+            }
+            tooltipEl.style.left = `${left}px`;
+            tooltipEl.style.top = `${top}px`;
+        }
+
+        function showDelayedTooltip(target) {
+            const text = String(target?.dataset?.tooltip || '').trim();
+            if (!text) return;
+            const tooltipEl = ensureDelayedTooltip();
+            tooltipEl.textContent = text;
+            tooltipEl.classList.add('visible');
+            tooltipVisibleTarget = target;
+            positionDelayedTooltip(target);
+        }
+
+        function scheduleDelayedTooltip(target) {
+            const text = String(target?.dataset?.tooltip || '').trim();
+            if (!text) return;
+            if (tooltipVisibleTarget === target) {
+                positionDelayedTooltip(target);
+                return;
+            }
+            clearTooltipTimer();
+            tooltipTarget = target;
+            tooltipTimer = window.setTimeout(() => {
+                if (tooltipTarget === target) {
+                    showDelayedTooltip(target);
+                }
+            }, TOOLTIP_DELAY_MS);
+        }
+
+        function initTooltipSystem() {
+            if (document.body.dataset.tooltipBound === 'true') return;
+            document.body.dataset.tooltipBound = 'true';
+
+            document.addEventListener('mouseover', (event) => {
+                const target = event.target.closest('[data-tooltip]');
+                if (!target) {
+                    hideDelayedTooltip();
+                    return;
+                }
+                if (target === tooltipVisibleTarget) {
+                    positionDelayedTooltip(target);
+                    return;
+                }
+                scheduleDelayedTooltip(target);
+            });
+
+            document.addEventListener('mouseout', (event) => {
+                const currentTarget = event.target.closest('[data-tooltip]');
+                if (!currentTarget) return;
+                const nextTarget = event.relatedTarget?.closest?.('[data-tooltip]') || null;
+                if (currentTarget === nextTarget) return;
+                hideDelayedTooltip();
+            });
+
+            window.addEventListener('scroll', hideDelayedTooltip, true);
+            window.addEventListener('resize', hideDelayedTooltip);
+            document.addEventListener('click', hideDelayedTooltip);
+        }
+
+        function applyOverflowTooltips() {
+            document.querySelectorAll('.tree-file').forEach(fileLink => {
+                const rawPath = String(fileLink.getAttribute('data-path') || '').trim();
+                const fileName = String(fileLink.getAttribute('data-name') || '').trim();
+                const tooltipText = rawPath || fileName;
+                if (!tooltipText) return;
+                fileLink.dataset.tooltip = tooltipText;
+                const fileNameEl = fileLink.querySelector('.tree-file-name');
+                if (fileNameEl) {
+                    fileNameEl.dataset.tooltip = tooltipText;
+                }
+            });
+        }
+
+        function escapeHtmlText(text) {
+            return String(text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function highlightSearchText(text, term) {
+            const source = String(text || '');
+            const keyword = String(term || '').trim();
+            if (!keyword) return escapeHtmlText(source);
+            const lowerSource = source.toLowerCase();
+            const lowerKeyword = keyword.toLowerCase();
+            let index = 0;
+            let html = '';
+            while (index < source.length) {
+                const matchIndex = lowerSource.indexOf(lowerKeyword, index);
+                if (matchIndex < 0) {
+                    html += escapeHtmlText(source.slice(index));
+                    break;
+                }
+                html += escapeHtmlText(source.slice(index, matchIndex));
+                html += `<span class="search-highlight">${escapeHtmlText(source.slice(matchIndex, matchIndex + keyword.length))}</span>`;
+                index = matchIndex + keyword.length;
+            }
+            return html;
+        }
+
+        function createBreadcrumbSegment(text, className, options = {}) {
+            const segment = document.createElement('span');
+            segment.className = `breadcrumb-segment ${className}`.trim();
+            segment.textContent = text;
+            segment.dataset.tooltip = text;
+            if (typeof options.onClick === 'function') {
+                segment.classList.add('breadcrumb-segment-clickable');
+                segment.addEventListener('click', options.onClick);
+            }
+            return segment;
+        }
+
+        function getScrollProgress(element) {
+            if (!element) return 0;
+            const maxScroll = Math.max(element.scrollHeight - element.clientHeight, 0);
+            if (maxScroll <= 0) return 0;
+            return element.scrollTop / maxScroll;
+        }
+
+        function getRawLineHeight(rawBody) {
+            if (!rawBody) return 20.8;
+            const computed = window.getComputedStyle(rawBody);
+            const lineHeight = parseFloat(computed.lineHeight);
+            if (Number.isFinite(lineHeight)) return lineHeight;
+            const fontSize = parseFloat(computed.fontSize);
+            return Number.isFinite(fontSize) ? fontSize * 1.6 : 20.8;
+        }
+
+        function normalizeCompareText(text) {
+            return String(text || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function capturePreviewScrollSnapshot() {
+            const markdownBody = document.getElementById('markdown-body');
+            const activeItem = document.querySelector('.toc-item.active') || document.querySelector('.toc-item.toc-active-l3');
+            return {
+                progress: getScrollProgress(markdownBody),
+                headingId: String(activeItem?.getAttribute('data-id') || '').trim(),
+                headingLevel: activeItem ? getTocLevel(activeItem) : 0,
+                headingText: normalizeCompareText(activeItem?.querySelector('.toc-label')?.textContent || activeItem?.textContent || '')
+            };
+        }
+
+        function captureRawScrollSnapshot() {
+            const rawBody = document.getElementById('raw-body');
+            const lineHeight = getRawLineHeight(rawBody);
+            return {
+                progress: getScrollProgress(rawBody),
+                topLine: Math.max(Math.round((rawBody?.scrollTop || 0) / lineHeight), 0)
+            };
+        }
+
+        function findRawHeadingLine(rawText, level, headingText) {
+            if (!rawText || !level || !headingText) return -1;
+            const targetText = normalizeCompareText(headingText);
+            const lines = String(rawText || '').split(/\r?\n/);
+            for (let i = 0; i < lines.length; i++) {
+                const match = lines[i].match(/^\s*(#{1,6})\s+(.+?)\s*$/);
+                if (!match) continue;
+                if (match[1].length !== level) continue;
+                if (normalizeCompareText(match[2]) === targetText) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function syncRawScrollFromPreview(snapshot) {
+            const rawBody = document.getElementById('raw-body');
+            if (!rawBody || !snapshot) return;
+            const maxScroll = Math.max(rawBody.scrollHeight - rawBody.clientHeight, 0);
+            rawBody.scrollTop = maxScroll * Math.max(Math.min(snapshot.progress || 0, 1), 0);
+            if (rawBody.scrollTop > 0) return;
+            const lineHeight = getRawLineHeight(rawBody);
+            const headingLineIndex = findRawHeadingLine(rawBody.textContent || '', snapshot.headingLevel, snapshot.headingText);
+            if (headingLineIndex >= 0) {
+                rawBody.scrollTop = Math.max(headingLineIndex * lineHeight, 0);
+            }
+        }
+
+        function syncPreviewScrollFromRaw(snapshot) {
+            const markdownBody = document.getElementById('markdown-body');
+            if (!markdownBody || !snapshot) return;
+            requestAnimationFrame(() => {
+                const maxScroll = Math.max(markdownBody.scrollHeight - markdownBody.clientHeight, 0);
+                markdownBody.scrollTop = maxScroll * Math.max(Math.min(snapshot.progress || 0, 1), 0);
+            });
+        }
+
+        function renderBreadcrumb(levelData = {}) {
+            const breadcrumbEl = document.getElementById('breadcrumb-path');
+            if (!breadcrumbEl) return;
+            const fullPath = String(breadcrumbEl.dataset.fullPath || currentFilePath || '').trim();
+            breadcrumbEl.innerHTML = '';
+            if (fullPath) {
+                breadcrumbEl.appendChild(createBreadcrumbSegment(fullPath, 'breadcrumb-segment-path'));
+            }
+            [1, 2, 3].forEach((level) => {
+                const item = levelData[level];
+                if (!item || !item.text || !item.id) return;
+                const separator = document.createElement('span');
+                separator.className = 'breadcrumb-separator';
+                separator.textContent = '>';
+                breadcrumbEl.appendChild(separator);
+                breadcrumbEl.appendChild(createBreadcrumbSegment(
+                    `${'#'.repeat(level)}${item.text}`,
+                    `breadcrumb-segment-level${level}`,
+                    { onClick: () => scrollToHeading(item.id) }
+                ));
+            });
+        }
+
+        async function loadRawContent(force = false) {
+            const rawBody = document.getElementById('raw-body');
+            if (!rawBody || !currentFilePath) return;
+            if (!force && rawBody.dataset.loadedPath === currentFilePath && rawBody.textContent) {
+                return;
+            }
+            rawBody.dataset.loadedPath = '';
+            rawBody.textContent = '正在加载原文本...';
+            try {
+                const response = await fetch(`/md-content?path=${encodeURIComponent(currentFilePath)}`);
+                rawBody.textContent = response.ok ? await response.text() : '无法加载内容';
+                if (response.ok) {
+                    rawBody.dataset.loadedPath = currentFilePath;
+                }
+            } catch (error) {
+                rawBody.textContent = '无法加载内容';
+            }
+        }
 
         function getHeadingCollapseStorageKey() {
             return `${HEADING_COLLAPSE_STORAGE_PREFIX}${currentFilePath || '__global__'}`;
@@ -1867,6 +2242,7 @@
             if (!nextPath || nextPath === currentFilePath) return;
             const replace = Boolean(options.replaceHistory);
             currentFilePath = nextPath;
+            hideDelayedTooltip();
             updatePathUrl(nextPath, replace);
             await loadPreviewData();
         }
@@ -1878,6 +2254,11 @@
                 return;
             }
             try {
+                const rawBody = document.getElementById('raw-body');
+                if (rawBody) {
+                    rawBody.textContent = '';
+                    rawBody.dataset.loadedPath = '';
+                }
                 const response = await fetch(`/api/md/preview-data?path=${encodeURIComponent(currentFilePath)}`);
                 if (!response.ok) throw new Error('加载数据失败');
                 const data = await response.json();
@@ -1886,8 +2267,11 @@
                 document.getElementById('sidebar-container').innerHTML = data.sidebar;
                 document.getElementById('toc-container').innerHTML = data.toc;
                 document.getElementById('markdown-body').innerHTML = data.content;
-                document.getElementById('breadcrumb-path').innerHTML = data.title;
-                document.getElementById('breadcrumb-path').title = data.title;
+                const breadcrumbEl = document.getElementById('breadcrumb-path');
+                if (breadcrumbEl) {
+                    breadcrumbEl.dataset.fullPath = data.path || currentFilePath;
+                    renderBreadcrumb();
+                }
                 const sidebarHeader = document.querySelector('.sidebar-header');
                 if (sidebarHeader && !/[\u{1F300}-\u{1FAFF}]/u.test(sidebarHeader.textContent || '')) {
                     sidebarHeader.textContent = `📚 ${sidebarHeader.textContent || ''}`.trim();
@@ -1908,6 +2292,11 @@
                 initTocScrollSpy();
                 initTabs();
                 initTreeInteraction();
+                initTooltipSystem();
+                applyOverflowTooltips();
+                if (document.getElementById('btn-raw')?.classList.contains('active')) {
+                    await loadRawContent(true);
+                }
                 const hashId = decodeURIComponent((window.location.hash || '').replace(/^#/, '').trim());
                 if (hashId) {
                     setTimeout(() => scrollToHeading(hashId), 0);
@@ -2970,6 +3359,9 @@
                     toggleBtn.setAttribute('aria-label', '切换目录展开状态');
                     item.prepend(toggleBtn);
                 }
+                if (label) {
+                    label.dataset.tooltip = String(label.textContent || '').trim();
+                }
             });
 
             const savedState = readTocCollapseState();
@@ -3038,12 +3430,11 @@
                     else break;
                 }
                 const breadcrumbEl = document.getElementById('breadcrumb-path');
-                const fullPath = breadcrumbEl.getAttribute('title') || '';
                 if (currentHeadingIndex === -1) {
                     document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));
                     document.querySelectorAll('.toc-item.toc-active-l3').forEach(el => el.classList.remove('toc-active-l3'));
                     lastActiveId = '';
-                    breadcrumbEl.innerHTML = fullPath;
+                    renderBreadcrumb();
                     updateHeadingHash('');
                     return;
                 }
@@ -3073,14 +3464,11 @@
                         if (!levelMatch) continue;
                         const level = parseInt(levelMatch[1]);
                         if (targetLevels.includes(level) && !levelData[level]) {
-                            levelData[level] = { text: h.item.textContent, id: h.element.id };
+                            const labelText = String(h.item.querySelector('.toc-label')?.textContent || h.item.textContent || '').trim();
+                            levelData[level] = { text: labelText, id: h.element.id };
                         }
                     }
-                    let breadcrumbHtml = fullPath;
-                    if (levelData[1]) breadcrumbHtml += ' <span class="breadcrumb-separator">#</span><span class="breadcrumb-title" onclick="scrollToHeading(\'' + levelData[1].id + '\')">' + levelData[1].text + '</span>';
-                    if (levelData[2]) breadcrumbHtml += ' <span class="breadcrumb-separator">##</span><span class="breadcrumb-title" onclick="scrollToHeading(\'' + levelData[2].id + '\')">' + levelData[2].text + '</span>';
-                    if (levelData[3]) breadcrumbHtml += ' <span class="breadcrumb-separator">###</span><span class="breadcrumb-title" onclick="scrollToHeading(\'' + levelData[3].id + '\')">' + levelData[3].text + '</span>';
-                    breadcrumbEl.innerHTML = breadcrumbHtml;
+                    renderBreadcrumb(levelData);
                     updateHeadingHash(currentHeading.element.id);
                 }
             }
@@ -3115,16 +3503,93 @@
             }
         };
 
-        function getTabs() { return JSON.parse(localStorage.getItem(TABS_KEY) || '[]'); }
-        function saveTabs(tabs) { localStorage.setItem(TABS_KEY, JSON.stringify(tabs)); }
+        function getTabs() {
+            try {
+                const tabs = JSON.parse(localStorage.getItem(TABS_KEY) || '[]');
+                return Array.isArray(tabs) ? tabs : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function saveTabs(tabs) {
+            localStorage.setItem(TABS_KEY, JSON.stringify(Array.from(new Set((tabs || []).filter(Boolean)))));
+        }
+
+        function getTabHistory() {
+            try {
+                const history = JSON.parse(localStorage.getItem(TAB_HISTORY_KEY) || '[]');
+                return Array.isArray(history) ? history : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function saveTabHistory(history) {
+            localStorage.setItem(TAB_HISTORY_KEY, JSON.stringify(Array.from(new Set((history || []).filter(Boolean)))));
+        }
+
+        function touchTabHistory(path) {
+            const target = String(path || '').trim();
+            if (!target) return;
+            const history = getTabHistory().filter(item => item !== target);
+            history.push(target);
+            saveTabHistory(history);
+        }
+
+        function syncTabHistoryWithTabs(tabs) {
+            const validTabs = Array.from(new Set((tabs || []).filter(Boolean)));
+            const validSet = new Set(validTabs);
+            const history = getTabHistory().filter(item => validSet.has(item));
+            validTabs.forEach(item => {
+                if (!history.includes(item)) history.push(item);
+            });
+            saveTabHistory(history);
+            return history;
+        }
+
+        function enforceTabLimit(preferredPath = currentFilePath) {
+            let tabs = getTabs();
+            let history = syncTabHistoryWithTabs(tabs);
+            while (tabs.length > MAX_OPEN_TABS) {
+                const candidate = history.find(path => path !== preferredPath && tabs.includes(path));
+                const victim = candidate || history.find(path => tabs.includes(path));
+                if (!victim) break;
+                tabs = tabs.filter(path => path !== victim);
+                history = history.filter(path => path !== victim);
+            }
+            saveTabs(tabs);
+            saveTabHistory(history);
+            return tabs;
+        }
+
+        function registerTab(path) {
+            const target = String(path || '').trim();
+            if (!target) return;
+            const tabs = getTabs();
+            if (!tabs.includes(target)) {
+                tabs.push(target);
+                saveTabs(tabs);
+            }
+            touchTabHistory(target);
+            enforceTabLimit(target);
+        }
+
+        function closeOtherTabs(path) {
+            const keepPath = String(path || currentFilePath || '').trim();
+            if (!keepPath) return;
+            saveTabs([keepPath]);
+            saveTabHistory([keepPath]);
+            if (keepPath === currentFilePath) {
+                renderTabs();
+                return;
+            }
+            window.location.href = '/md-view?path=' + encodeURIComponent(keepPath);
+        }
         
         function initTabs() {
             if (currentFilePath) {
-                let tabs = getTabs();
-                if (!tabs.includes(currentFilePath)) {
-                    tabs.push(currentFilePath);
-                    saveTabs(tabs);
-                }
+                registerTab(currentFilePath);
             }
             renderTabs();
         }
@@ -3139,7 +3604,14 @@
                 const name = path.split(/[\\/]/).pop();
                 const div = document.createElement('div');
                 div.className = 'tab' + (path === currentFilePath ? ' active' : '');
-                div.onclick = () => { if (path !== currentFilePath) openFile(path); };
+                div.onclick = async () => {
+                    touchTabHistory(path);
+                    if (path !== currentFilePath) {
+                        await openFile(path);
+                    } else {
+                        renderTabs();
+                    }
+                };
                 div.addEventListener('contextmenu', (e) => {
                     e.preventDefault(); targetTabPath = path;
                     const contextMenu = document.getElementById('tab-context-menu');
@@ -3162,6 +3634,7 @@
             if (index > -1) {
                 tabs.splice(index, 1);
                 saveTabs(tabs);
+                saveTabHistory(getTabHistory().filter(item => item !== path));
                 if (path === currentFilePath) {
                     if (tabs.length > 0) window.location.href = '/md-view?path=' + encodeURIComponent(tabs[Math.min(index, tabs.length - 1)]);
                     else window.location.href = '/md-list';
@@ -3195,6 +3668,7 @@
         function revealTreeFile(fileLink, options = {}) {
             if (!fileLink) return false;
             const flash = options.flash !== false;
+            const shouldScroll = options.scroll === true;
             const nextExpandedPaths = new Set(JSON.parse(localStorage.getItem('md-preview-expanded-paths') || '[]'));
             let parent = fileLink.parentElement;
             while (parent) {
@@ -3214,7 +3688,9 @@
             }
             localStorage.setItem('md-preview-expanded-paths', JSON.stringify(Array.from(nextExpandedPaths)));
             fileLink.classList.add('active');
-            fileLink.scrollIntoView({ block: 'center', behavior: 'auto' });
+            if (shouldScroll) {
+                fileLink.scrollIntoView({ block: 'center', behavior: 'auto' });
+            }
             if (!flash) return true;
             const row = fileLink.closest('.tree-file-row');
             document.querySelectorAll('.tree-file.locate-flash').forEach(el => el.classList.remove('locate-flash'));
@@ -3335,7 +3811,7 @@
                     const searchInput = document.getElementById('search-input');
                     if (searchInput && searchInput.value) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
                     const currentActive = findTreeFileLinkByPath(currentFilePath) || document.querySelector('.tree-file.active');
-                    revealTreeFile(currentActive, { flash: true });
+                    revealTreeFile(currentActive, { flash: true, scroll: true });
                 });
             }
 
@@ -3366,33 +3842,76 @@
                     }
                 });
             }
-            revealTreeFile(findTreeFileLinkByPath(currentFilePath), { flash: false });
+            revealTreeFile(findTreeFileLinkByPath(currentFilePath), { flash: false, scroll: false });
 
             const searchInput = document.getElementById('search-input');
             if (searchInput) {
+                if (!searchInput.dataset.originalBound) {
+                    searchInput.dataset.originalBound = 'true';
+                }
+                let emptyState = document.getElementById('file-search-empty');
+                if (!emptyState && fileList) {
+                    emptyState = document.createElement('div');
+                    emptyState.id = 'file-search-empty';
+                    emptyState.className = 'file-search-empty';
+                    emptyState.textContent = '未找到匹配的 Markdown 文件';
+                    fileList.insertAdjacentElement('afterend', emptyState);
+                }
+                document.querySelectorAll('.tree-file-name').forEach(nameEl => {
+                    if (!nameEl.dataset.originalText) {
+                        nameEl.dataset.originalText = nameEl.textContent || '';
+                    }
+                });
                 searchInput.addEventListener('input', (e) => {
-                    const term = e.target.value.toLowerCase();
+                    const term = String(e.target.value || '').trim();
+                    const lowerTerm = term.toLowerCase();
+                    const allRows = document.querySelectorAll('.tree-file-row');
                     const allFiles = document.querySelectorAll('.tree-file');
                     const allFolders = document.querySelectorAll('.tree-folder');
                     const allChildren = document.querySelectorAll('.tree-children');
-                    if (!term) {
-                        allFiles.forEach(el => el.style.display = '');
-                        allFolders.forEach(el => el.style.display = '');
-                        allChildren.forEach(el => el.style.display = '');
+                    allFiles.forEach(fileLink => {
+                        const nameEl = fileLink.querySelector('.tree-file-name');
+                        if (!nameEl) return;
+                        const originalText = nameEl.dataset.originalText || nameEl.textContent || '';
+                        nameEl.innerHTML = highlightSearchText(originalText, term);
+                    });
+                    if (!lowerTerm) {
+                        allRows.forEach(el => el.style.removeProperty('display'));
+                        allFiles.forEach(el => el.style.removeProperty('display'));
+                        allFolders.forEach(el => el.style.removeProperty('display'));
+                        allChildren.forEach(el => {
+                            el.style.removeProperty('display');
+                            const path = el.getAttribute('data-path');
+                            const expandedPaths = JSON.parse(localStorage.getItem('md-preview-expanded-paths') || '[]');
+                            const shouldExpand = path && expandedPaths.includes(path);
+                            el.classList.toggle('expanded', Boolean(shouldExpand));
+                            const folder = el.previousElementSibling;
+                            const toggle = folder?.querySelector('.tree-toggle');
+                            if (toggle) toggle.classList.toggle('expanded', Boolean(shouldExpand));
+                        });
+                        if (emptyState) emptyState.classList.remove('visible');
                         return;
                     }
-                    allFiles.forEach(el => el.style.display = 'none');
+                    allRows.forEach(el => el.style.display = 'none');
                     allFolders.forEach(el => el.style.display = 'none');
                     allChildren.forEach(el => el.style.display = 'none');
-                    allFiles.forEach(file => {
-                        if (file.textContent.toLowerCase().includes(term)) {
-                            file.style.display = '';
-                            let parent = file.parentElement;
+                    let matchCount = 0;
+                    allRows.forEach(row => {
+                        const file = row.querySelector('.tree-file');
+                        if (!file) return;
+                        const fileName = String(file.getAttribute('data-name') || file.textContent || '').toLowerCase();
+                        const filePath = String(file.getAttribute('data-path') || '').toLowerCase();
+                        if (fileName.includes(lowerTerm) || filePath.includes(lowerTerm)) {
+                            matchCount++;
+                            row.style.display = 'flex';
+                            file.style.removeProperty('display');
+                            let parent = row.parentElement;
                             while(parent && !parent.closest('.file-list')) {
                                 if (parent.classList.contains('tree-children')) {
-                                    parent.classList.add('expanded'); parent.style.display = 'block';
+                                    parent.classList.add('expanded');
+                                    parent.style.display = 'block';
                                     if (parent.previousElementSibling) {
-                                        parent.previousElementSibling.style.display = '';
+                                        parent.previousElementSibling.style.removeProperty('display');
                                         const t = parent.previousElementSibling.querySelector('.tree-toggle');
                                         if (t) t.classList.add('expanded');
                                     }
@@ -3401,6 +3920,9 @@
                             }
                         }
                     });
+                    if (emptyState) {
+                        emptyState.classList.toggle('visible', matchCount === 0);
+                    }
                 });
             }
         }
@@ -3411,22 +3933,73 @@
             const markdownBody = document.getElementById('markdown-body');
             const rawBody = document.getElementById('raw-body');
             if (mode === 'preview') {
+                if (rawBtn.classList.contains('active')) {
+                    lastRawScrollSnapshot = captureRawScrollSnapshot();
+                }
                 previewBtn.classList.add('active'); rawBtn.classList.remove('active');
                 markdownBody.style.display = 'block'; rawBody.style.display = 'none';
+                syncPreviewScrollFromRaw(lastRawScrollSnapshot);
             } else {
+                lastPreviewScrollSnapshot = capturePreviewScrollSnapshot();
                 previewBtn.classList.remove('active'); rawBtn.classList.add('active');
                 markdownBody.style.display = 'none'; rawBody.style.display = 'block';
-                if (!rawBody.textContent) {
-                    const response = await fetch(`/api/md/content?path=${encodeURIComponent(currentFilePath)}`);
-                    rawBody.textContent = response.ok ? await response.text() : '无法加载内容';
-                }
+                await loadRawContent();
+                syncRawScrollFromPreview(lastPreviewScrollSnapshot);
             }
         }
 
         function downloadFile() { if (currentFilePath) window.location.href = `/md-download?path=${encodeURIComponent(currentFilePath)}`; }
 
-        document.addEventListener('click', () => { document.getElementById('tab-context-menu').style.display = 'none'; });
-        document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'w') { e.preventDefault(); closeTab(currentFilePath); } });
+        const closeCurrentMenuItem = document.getElementById('menu-close-current');
+        if (closeCurrentMenuItem && closeCurrentMenuItem.dataset.bound !== 'true') {
+            closeCurrentMenuItem.dataset.bound = 'true';
+            closeCurrentMenuItem.addEventListener('click', () => {
+                closeTab(targetTabPath || currentFilePath);
+            });
+        }
+
+        const closeOthersMenuItem = document.getElementById('menu-close-others');
+        if (closeOthersMenuItem && closeOthersMenuItem.dataset.bound !== 'true') {
+            closeOthersMenuItem.dataset.bound = 'true';
+            closeOthersMenuItem.addEventListener('click', () => {
+                closeOtherTabs(targetTabPath || currentFilePath);
+            });
+        }
+
+        const closeAllMenuItem = document.getElementById('menu-close-all');
+        if (closeAllMenuItem && closeAllMenuItem.dataset.bound !== 'true') {
+            closeAllMenuItem.dataset.bound = 'true';
+            closeAllMenuItem.addEventListener('click', () => {
+                saveTabs([]);
+                saveTabHistory([]);
+                window.location.href = '/md-list';
+            });
+        }
+
+        document.addEventListener('click', () => {
+            const contextMenu = document.getElementById('tab-context-menu');
+            if (contextMenu) contextMenu.style.display = 'none';
+        });
+        document.addEventListener('keydown', async (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
+                e.preventDefault();
+                closeTab(currentFilePath);
+                return;
+            }
+            if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+            if (!/^[1-9]$/.test(e.key)) return;
+            const index = Number(e.key) - 1;
+            const tabs = getTabs();
+            const targetPath = tabs[index];
+            if (!targetPath) return;
+            e.preventDefault();
+            touchTabHistory(targetPath);
+            if (targetPath !== currentFilePath) {
+                await openFile(targetPath);
+            } else {
+                renderTabs();
+            }
+        });
 
         window.addEventListener('popstate', async () => {
             const params = new URLSearchParams(window.location.search);

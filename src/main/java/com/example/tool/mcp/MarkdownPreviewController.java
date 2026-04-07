@@ -22,8 +22,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -271,7 +273,7 @@ public class MarkdownPreviewController {
             return sections;
         }
 
-        String[] lines = md.split("\n", -1);
+        String[] lines = md.split("\\r?\\n", -1);
         Map<String, Integer> anchorCounts = new HashMap<>();
         String currentH3Text = "";
         String currentH3Id = "";
@@ -529,6 +531,17 @@ public class MarkdownPreviewController {
         private String jsonExample = "";
     }
 
+    private static class ListContext {
+        private final int indent;
+        private final boolean ordered;
+        private boolean itemOpen;
+
+        private ListContext(int indent, boolean ordered) {
+            this.indent = indent;
+            this.ordered = ordered;
+        }
+    }
+
     private void listMdFilesRecursive(Path base, Path current, List<String> files, int maxDepth) throws IOException {
         if (maxDepth <= 0) return;
         if (Files.isDirectory(current)) {
@@ -626,20 +639,89 @@ public class MarkdownPreviewController {
         return html.toString();
     }
 
+    private int getIndentWidth(String text) {
+        int indent = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (ch == ' ') {
+                indent++;
+            } else if (ch == '\t') {
+                indent += 4;
+            } else {
+                break;
+            }
+        }
+        return indent;
+    }
+
+    private void openList(StringBuilder html, Deque<ListContext> listStack, int indent, boolean ordered) {
+        html.append(ordered ? "<ol>\n" : "<ul>\n");
+        listStack.push(new ListContext(indent, ordered));
+    }
+
+    private void closeTopList(StringBuilder html, Deque<ListContext> listStack) {
+        if (listStack.isEmpty()) return;
+        ListContext context = listStack.pop();
+        if (context.itemOpen) {
+            html.append("</li>\n");
+        }
+        html.append(context.ordered ? "</ol>\n" : "</ul>\n");
+    }
+
+    private void closeAllLists(StringBuilder html, Deque<ListContext> listStack) {
+        while (!listStack.isEmpty()) {
+            closeTopList(html, listStack);
+        }
+    }
+
+    private void ensureListContext(StringBuilder html, Deque<ListContext> listStack, int indent, boolean ordered) {
+        while (!listStack.isEmpty() && indent < listStack.peek().indent) {
+            closeTopList(html, listStack);
+        }
+        if (!listStack.isEmpty() && indent == listStack.peek().indent && listStack.peek().ordered != ordered) {
+            closeTopList(html, listStack);
+        }
+        if (listStack.isEmpty() || indent > listStack.peek().indent) {
+            openList(html, listStack, indent, ordered);
+        }
+        ListContext current = listStack.peek();
+        if (current != null && current.itemOpen) {
+            html.append("</li>\n");
+            current.itemOpen = false;
+        }
+    }
+
+    private String normalizeLooseListSyntax(String md) {
+        StringBuilder normalized = new StringBuilder();
+        String[] lines = md.split("\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i]
+                    .replaceFirst("^(\\s*[-*+])(\\S)", "$1 $2")
+                    .replaceFirst("^(\\s*\\d+\\.)(\\S)", "$1 $2");
+            normalized.append(line);
+            if (i < lines.length - 1) {
+                normalized.append('\n');
+            }
+        }
+        return normalized.toString();
+    }
+
     private String convertMarkdownToHtml(String md) {
-        md = handleFrontMatter(md);
+        md = normalizeLooseListSyntax(handleFrontMatter(md));
         StringBuilder html = new StringBuilder();
-        String[] lines = md.split("\n");
-        boolean inCodeBlock = false, inList = false, inOrderedList = false, inBlockquote = false;
+        String[] lines = md.split("\\r?\\n");
+        boolean inCodeBlock = false, inList = false, inOrderedList = false, inBlockquote = false, pendingListBreak = false;
+        boolean listItemOpen = false, listItemChanged = false, listItemTask = false, listItemChecked = false;
+        StringBuilder listItemContent = new StringBuilder();
         StringBuilder blockquoteContent = new StringBuilder();
         List<String[]> tableBuffer = new ArrayList<>();
         List<Boolean> tableChanged = new ArrayList<>();
         String[] tableAlign = null;
         boolean inTable = false;
         Pattern codeBlockPattern = Pattern.compile("^\\s*```\\s*(.*?)\\s*$");
-        Pattern unorderedListPattern = Pattern.compile("^(\\s*)([-*+])\\s+(.*)$");
+        Pattern unorderedListPattern = Pattern.compile("^(\\s*)([-*+])(?:\\s+(.*)|([^\\s].*))$");
         Pattern orderedListPattern = Pattern.compile("^(\\s*)(\\d+)\\.\\s+(.*)$");
-        Pattern taskListPattern = Pattern.compile("^(\\s*)([-*+])\\s+\\[([ xX])\\]\\s+(.*)$");
+        Pattern taskListPattern = Pattern.compile("^(\\s*)([-*+])\\s*\\[([ xX])\\]\\s+(.*)$");
         Pattern hrPattern = Pattern.compile("^\\s*([-*_]){3,}$");
         Pattern headingPattern = Pattern.compile("^\\s*(#{1,6})\\s+(.+?)\\s*$");
         Pattern blockquotePattern = Pattern.compile("^>\\s*(.*)$");
@@ -651,6 +733,14 @@ public class MarkdownPreviewController {
             if (line.startsWith("<table>")) { html.append(line).append("\n"); continue; }
             Matcher codeBlockMatcher = codeBlockPattern.matcher(line);
             if (codeBlockMatcher.matches()) {
+                if (listItemOpen) {
+                    html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                    listItemContent.setLength(0);
+                    listItemOpen = false;
+                    listItemChanged = false;
+                    listItemTask = false;
+                    listItemChecked = false;
+                }
                 if (inTable) { html.append(renderTable(tableBuffer, tableAlign, tableChanged)); tableBuffer.clear(); tableChanged.clear(); inTable = false; }
                 if (!inCodeBlock) {
                     if (inList) { html.append(inOrderedList ? "</ol>\n" : "</ul>\n"); inList = false; inOrderedList = false; }
@@ -658,12 +748,23 @@ public class MarkdownPreviewController {
                     String lang = codeBlockMatcher.group(1);
                     html.append("<pre").append(changeClass(changed)).append("><code class=\"language-").append(lang != null && !lang.isEmpty() ? lang : "").append("\">");
                     inCodeBlock = true;
-                } else { html.append("</code></pre>\n"); inCodeBlock = false; }
+                } else {
+                    html.append("</code></pre>\n");
+                    inCodeBlock = false;
+                }
                 continue;
             }
             if (inCodeBlock) { html.append(escapeHtml(line)).append("\n"); continue; }
             boolean isTableAlignRow = isTableAlignmentLine(line);
             if (isTableRow(line) && !isTableAlignRow) {
+                if (listItemOpen) {
+                    html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                    listItemContent.setLength(0);
+                    listItemOpen = false;
+                    listItemChanged = false;
+                    listItemTask = false;
+                    listItemChecked = false;
+                }
                 if (!inTable) { inTable = true; tableBuffer.clear(); }
                 String[] cells = line.split("\\|");
                 List<String> cellList = new ArrayList<>();
@@ -688,6 +789,14 @@ public class MarkdownPreviewController {
             if (!line.startsWith("|") && inTable) { html.append(renderTable(tableBuffer, tableAlign, tableChanged)); tableBuffer.clear(); tableChanged.clear(); inTable = false; }
             Matcher hrMatcher = hrPattern.matcher(line.trim());
             if (hrMatcher.matches() && line.trim().length() >= 3) {
+                if (listItemOpen) {
+                    html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                    listItemContent.setLength(0);
+                    listItemOpen = false;
+                    listItemChanged = false;
+                    listItemTask = false;
+                    listItemChecked = false;
+                }
                 if (inList) { html.append(inOrderedList ? "</ol>\n" : "</ul>\n"); inList = false; inOrderedList = false; }
                 if (inBlockquote) { html.append(processBlockquote(blockquoteContent.toString())); blockquoteContent.setLength(0); inBlockquote = false; }
                 html.append("<hr").append(changeClass(changed)).append(">\n");
@@ -695,34 +804,121 @@ public class MarkdownPreviewController {
             }
             Matcher blockquoteMatcher = blockquotePattern.matcher(line);
             if (blockquoteMatcher.matches()) {
+                if (listItemOpen) {
+                    html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                    listItemContent.setLength(0);
+                    listItemOpen = false;
+                    listItemChanged = false;
+                    listItemTask = false;
+                    listItemChecked = false;
+                }
                 if (!inBlockquote) { if (inList) { html.append(inOrderedList ? "</ol>\n" : "</ul>\n"); inList = false; inOrderedList = false; } inBlockquote = true; }
                 blockquoteContent.append(blockquoteMatcher.group(1)).append("\n");
                 continue;
             } else if (inBlockquote && !line.trim().isEmpty()) {
-                html.append(processBlockquote(blockquoteContent.toString())); blockquoteContent.setLength(0); inBlockquote = false;
+                html.append(processBlockquote(blockquoteContent.toString()));
+                blockquoteContent.setLength(0);
+                inBlockquote = false;
             }
             Matcher taskMatcher = taskListPattern.matcher(line);
             if (taskMatcher.matches()) {
+                int indent = getIndentWidth(taskMatcher.group(1));
+                if (listItemOpen && indent > 0) {
+                    String checked = taskMatcher.group(3).equalsIgnoreCase("x") ? "checked" : "";
+                    listItemContent.append("<ul><li class=\"task-list-item")
+                            .append(changed ? " md-change-line" : "")
+                            .append("\"><input type=\"checkbox\" ")
+                            .append(checked)
+                            .append(" disabled>")
+                            .append(processInlineInList(taskMatcher.group(4)))
+                            .append("</li></ul>");
+                    listItemChanged = listItemChanged || changed;
+                    pendingListBreak = false;
+                    continue;
+                }
                 if (!inList || inOrderedList) { if (inList) html.append(inOrderedList ? "</ol>\n" : "</ul>\n"); html.append("<ul>\n"); inList = true; inOrderedList = false; }
-                String checked = taskMatcher.group(3).equalsIgnoreCase("x") ? "checked" : "";
-                html.append("<li class=\"task-list-item").append(changed ? " md-change-line" : "").append("\"><input type=\"checkbox\" ").append(checked).append(" disabled>")
-                   .append(processInlineInList(taskMatcher.group(4))).append("</li>\n");
+                if (listItemOpen) {
+                    html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                }
+                listItemContent.setLength(0);
+                listItemContent.append(processInlineInList(taskMatcher.group(4)));
+                listItemOpen = true;
+                listItemChanged = changed;
+                listItemTask = true;
+                listItemChecked = taskMatcher.group(3).equalsIgnoreCase("x");
+                pendingListBreak = false;
                 continue;
             }
-            Matcher unorderedMatcher = unorderedListPattern.matcher(line);
-            if (unorderedMatcher.matches()) {
+            String trimmedLine = line.stripLeading();
+            if (trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ") || trimmedLine.startsWith("+ ")) {
+                int indent = getIndentWidth(line);
+                if (listItemOpen && indent > 0) {
+                    String nestedContent = trimmedLine.substring(2).trim();
+                    listItemContent.append("<ul><li")
+                            .append(changeClass(changed))
+                            .append(">")
+                            .append(processInlineInList(nestedContent))
+                            .append("</li></ul>");
+                    listItemChanged = listItemChanged || changed;
+                    pendingListBreak = false;
+                    continue;
+                }
                 if (!inList || inOrderedList) { if (inList) html.append(inOrderedList ? "</ol>\n" : "</ul>\n"); html.append("<ul>\n"); inList = true; inOrderedList = false; }
-                html.append("<li").append(changeClass(changed)).append(">").append(processInlineInList(unorderedMatcher.group(3))).append("</li>\n");
+                if (listItemOpen) {
+                    html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                }
+                listItemContent.setLength(0);
+                String unorderedContent = trimmedLine.substring(2).trim();
+                listItemContent.append(processInlineInList(unorderedContent));
+                listItemOpen = true;
+                listItemChanged = changed;
+                listItemTask = false;
+                listItemChecked = false;
+                pendingListBreak = false;
                 continue;
             }
             Matcher orderedMatcher = orderedListPattern.matcher(line);
             if (orderedMatcher.matches()) {
+                int indent = getIndentWidth(orderedMatcher.group(1));
+                if (listItemOpen && indent > 0) {
+                    listItemContent.append("<ol><li")
+                            .append(changeClass(changed))
+                            .append(">")
+                            .append(processInlineInList(orderedMatcher.group(3)))
+                            .append("</li></ol>");
+                    listItemChanged = listItemChanged || changed;
+                    pendingListBreak = false;
+                    continue;
+                }
                 if (!inList || !inOrderedList) { if (inList) html.append(inOrderedList ? "</ol>\n" : "</ul>\n"); html.append("<ol>\n"); inList = true; inOrderedList = true; }
-                html.append("<li").append(changeClass(changed)).append(">").append(processInlineInList(orderedMatcher.group(3))).append("</li>\n");
+                if (listItemOpen) {
+                    html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                }
+                listItemContent.setLength(0);
+                listItemContent.append(processInlineInList(orderedMatcher.group(3)));
+                listItemOpen = true;
+                listItemChanged = changed;
+                listItemTask = false;
+                listItemChecked = false;
+                pendingListBreak = false;
+                continue;
+            }
+            if (inList && listItemOpen && !line.trim().isEmpty()) {
+                listItemContent.append("<br>").append(processInlineInList(line.trim()));
+                listItemChanged = listItemChanged || changed;
+                pendingListBreak = false;
                 continue;
             }
             Matcher headingMatcher = headingPattern.matcher(line);
             if (headingMatcher.matches()) {
+                if (listItemOpen) {
+                    html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                    listItemContent.setLength(0);
+                    listItemOpen = false;
+                    listItemChanged = false;
+                    listItemTask = false;
+                    listItemChecked = false;
+                }
                 if (inList) { html.append(inOrderedList ? "</ol>\n" : "</ul>\n"); inList = false; inOrderedList = false; }
                 if (inBlockquote) { html.append(processBlockquote(blockquoteContent.toString())); blockquoteContent.setLength(0); inBlockquote = false; }
                 if (inTable) { html.append(renderTable(tableBuffer, tableAlign, tableChanged)); tableBuffer.clear(); tableChanged.clear(); inTable = false; }
@@ -737,21 +933,75 @@ public class MarkdownPreviewController {
                 continue;
             }
             if (line.trim().isEmpty()) {
+                if (inList || listItemOpen) {
+                    if (listItemOpen) {
+                        html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                        listItemContent.setLength(0);
+                        listItemOpen = false;
+                        listItemChanged = false;
+                        listItemTask = false;
+                        listItemChecked = false;
+                    }
+                    pendingListBreak = true;
+                    continue;
+                }
+                if (listItemOpen) {
+                    html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                    listItemContent.setLength(0);
+                    listItemOpen = false;
+                    listItemChanged = false;
+                    listItemTask = false;
+                    listItemChecked = false;
+                }
                 if (inList) { html.append(inOrderedList ? "</ol>\n" : "</ul>\n"); inList = false; inOrderedList = false; }
                 if (inBlockquote) { html.append(processBlockquote(blockquoteContent.toString())); blockquoteContent.setLength(0); inBlockquote = false; }
                 if (inTable) { html.append(renderTable(tableBuffer, tableAlign, tableChanged)); tableBuffer.clear(); tableChanged.clear(); inTable = false; }
                 html.append("<br>\n");
             } else {
+                if (pendingListBreak) {
+                    if (inList) { html.append(inOrderedList ? "</ol>\n" : "</ul>\n"); inList = false; inOrderedList = false; }
+                    pendingListBreak = false;
+                }
+                if (listItemOpen) {
+                    html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
+                    listItemContent.setLength(0);
+                    listItemOpen = false;
+                    listItemChanged = false;
+                    listItemTask = false;
+                    listItemChecked = false;
+                }
                 if (inList) { html.append(inOrderedList ? "</ol>\n" : "</ul>\n"); inList = false; inOrderedList = false; }
                 if (inBlockquote) { html.append(processBlockquote(blockquoteContent.toString())); blockquoteContent.setLength(0); inBlockquote = false; }
                 if (inTable) { html.append(renderTable(tableBuffer, tableAlign, tableChanged)); tableBuffer.clear(); tableChanged.clear(); inTable = false; }
                 html.append("<p").append(changeClass(changed)).append(">").append(processInline(line)).append("</p>\n");
             }
         }
+        if (listItemOpen) html.append(renderListItem(listItemContent.toString(), listItemChanged, listItemTask, listItemChecked));
         if (inTable && !tableBuffer.isEmpty()) html.append(renderTable(tableBuffer, tableAlign, tableChanged));
         if (inList) html.append(inOrderedList ? "</ol>\n" : "</ul>\n");
         if (inBlockquote) html.append(processBlockquote(blockquoteContent.toString()));
         return html.toString();
+    }
+
+    private String renderListItem(String content, boolean changed, boolean taskItem, boolean checked) {
+        if (taskItem) {
+            return new StringBuilder()
+                    .append("<li class=\"task-list-item")
+                    .append(changed ? " md-change-line" : "")
+                    .append("\"><input type=\"checkbox\" ")
+                    .append(checked ? "checked" : "")
+                    .append(" disabled>")
+                    .append(content)
+                    .append("</li>\n")
+                    .toString();
+        }
+        return new StringBuilder()
+                .append("<li")
+                .append(changeClass(changed))
+                .append(">")
+                .append(content)
+                .append("</li>\n")
+                .toString();
     }
     
     private boolean isTableRow(String line) {
