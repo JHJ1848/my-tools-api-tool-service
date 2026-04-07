@@ -15,12 +15,19 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.StreamUtils;
+import org.springframework.util.StringUtils;
 
+import javax.swing.JFileChooser;
+import javax.swing.SwingUtilities;
+import java.awt.GraphicsEnvironment;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Properties;
 import java.util.ArrayList;
 import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
@@ -45,12 +52,121 @@ public class MarkdownPreviewController {
     private static final Pattern API_METHOD_PATTERN = Pattern.compile("^\\s*-\\s*\\*\\*请求方式\\*\\*\\s*:\\s*`?([A-Za-z]+)`?\\s*$");
     private static final Pattern PATH_PARAM_PLACEHOLDER_PATTERN = Pattern.compile("\\{([^{}]+)\\}");
     private static final Pattern CODE_FENCE_PATTERN = Pattern.compile("^\\s*```\\s*(.*?)\\s*$");
+    private static final String WORKSPACE_CONFIG_KEY = "markdown.workspace.path";
     
     private static final String FOLDER_SVG = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z\" fill=\"none\"></path></svg>";
     private static final String FILE_SVG = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z\"></path><polyline points=\"13 2 13 9 20 9\"></polyline></svg>";
 
     @Value("${markdown.base-path:D:\\adas\\项目}")
     private String basePath;
+
+    private Path getWorkspaceConfigFile() {
+        return Paths.get(System.getProperty("user.home"), ".tool-service", "markdown-preview.properties");
+    }
+
+    private Path getDesktopPath() {
+        return Paths.get(System.getProperty("user.home"), "Desktop").toAbsolutePath().normalize();
+    }
+
+    private Properties loadWorkspaceProperties() {
+        Properties properties = new Properties();
+        Path configFile = getWorkspaceConfigFile();
+        if (!Files.exists(configFile)) {
+            return properties;
+        }
+        try (InputStream inputStream = Files.newInputStream(configFile)) {
+            properties.load(inputStream);
+        } catch (IOException e) {
+            logger.warn("读取工作目录配置失败: {}", configFile, e);
+        }
+        return properties;
+    }
+
+    private void saveWorkspacePath(String workspacePath) throws IOException {
+        Path configFile = getWorkspaceConfigFile();
+        Files.createDirectories(configFile.getParent());
+        Properties properties = loadWorkspaceProperties();
+        properties.setProperty(WORKSPACE_CONFIG_KEY, workspacePath);
+        try (OutputStream outputStream = Files.newOutputStream(configFile)) {
+            properties.store(outputStream, "Markdown preview workspace config");
+        }
+    }
+
+    private String readConfiguredWorkspacePath() {
+        String configured = loadWorkspaceProperties().getProperty(WORKSPACE_CONFIG_KEY, "");
+        if (StringUtils.hasText(configured)) {
+            return configured.trim();
+        }
+        return StringUtils.hasText(basePath) ? basePath.trim() : "";
+    }
+
+    private Path normalizeAbsoluteDirectory(String rawPath) {
+        if (!StringUtils.hasText(rawPath)) {
+            return null;
+        }
+        try {
+            Path candidate = Paths.get(rawPath.trim()).toAbsolutePath().normalize();
+            if (Files.exists(candidate) && Files.isDirectory(candidate)) {
+                return candidate;
+            }
+        } catch (Exception e) {
+            logger.warn("解析工作目录失败: {}", rawPath);
+        }
+        return null;
+    }
+
+    private Map<String, Object> getWorkspaceConfig() {
+        String configuredPath = readConfiguredWorkspacePath();
+        Path effectivePath = normalizeAbsoluteDirectory(configuredPath);
+        boolean fallbackToDesktop = false;
+        if (effectivePath == null) {
+            effectivePath = getDesktopPath();
+            fallbackToDesktop = true;
+        }
+        Map<String, Object> config = new HashMap<>();
+        config.put("configuredPath", configuredPath);
+        config.put("effectivePath", effectivePath.toString());
+        config.put("exists", normalizeAbsoluteDirectory(configuredPath) != null);
+        config.put("fallbackToDesktop", fallbackToDesktop);
+        return config;
+    }
+
+    private Path getEffectiveWorkspaceBase() {
+        Object path = getWorkspaceConfig().get("effectivePath");
+        return Paths.get(String.valueOf(path)).toAbsolutePath().normalize();
+    }
+
+    private String chooseDirectoryFromSystem() throws Exception {
+        if (GraphicsEnvironment.isHeadless()) {
+            throw new IllegalStateException("当前运行环境不支持弹出目录选择框");
+        }
+        final String initialDir = String.valueOf(getWorkspaceConfig().get("effectivePath"));
+        final String[] selected = new String[1];
+        final Exception[] failure = new Exception[1];
+        Runnable chooserTask = () -> {
+            try {
+                JFileChooser chooser = new JFileChooser(initialDir);
+                chooser.setDialogTitle("选择 Markdown 工作目录");
+                chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                chooser.setAcceptAllFileFilterUsed(false);
+                int result = chooser.showOpenDialog(null);
+                if (result == JFileChooser.APPROVE_OPTION && chooser.getSelectedFile() != null) {
+                    selected[0] = chooser.getSelectedFile().getAbsolutePath();
+                }
+            } catch (Exception e) {
+                failure[0] = e;
+            }
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            chooserTask.run();
+        } else {
+            SwingUtilities.invokeAndWait(chooserTask);
+        }
+        if (failure[0] != null) {
+            throw failure[0];
+        }
+        return selected[0];
+    }
 
     private String loadTemplate(String name) {
         try {
@@ -63,33 +179,77 @@ public class MarkdownPreviewController {
     }
 
     @GetMapping("/md-view")
-    public ResponseEntity<String> viewMarkdown(@RequestParam String path) {
-        // 返回静态模板，不带数据，数据由前端异步请求
+    public ResponseEntity<String> viewMarkdown(@RequestParam(required = false) String path) {
         return ResponseEntity.ok()
                 .contentType(MediaType.TEXT_HTML)
                 .body(loadTemplate("md-preview"));
     }
 
+    @GetMapping("/api/md/workspace-config")
+    public ResponseEntity<Map<String, Object>> getWorkspaceConfigData() {
+        return ResponseEntity.ok(getWorkspaceConfig());
+    }
+
+    @PostMapping("/api/md/workspace-config")
+    public ResponseEntity<Map<String, Object>> saveWorkspaceConfig(@RequestBody Map<String, String> body) {
+        try {
+            String workspacePath = String.valueOf(body.getOrDefault("path", "")).trim();
+            Path directory = normalizeAbsoluteDirectory(workspacePath);
+            if (directory == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", Boolean.FALSE, "message", "目录不存在或不是有效文件夹"));
+            }
+            saveWorkspacePath(directory.toString());
+            return ResponseEntity.ok(Map.of("success", Boolean.TRUE, "config", getWorkspaceConfig()));
+        } catch (Exception e) {
+            logger.error("保存工作目录失败", e);
+            return ResponseEntity.internalServerError().body(Map.of("success", Boolean.FALSE, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/api/md/workspace-config/pick-directory")
+    public ResponseEntity<Map<String, Object>> pickWorkspaceDirectory() {
+        try {
+            String selected = chooseDirectoryFromSystem();
+            if (!StringUtils.hasText(selected)) {
+                return ResponseEntity.ok(Map.of("success", Boolean.FALSE, "cancelled", Boolean.TRUE, "config", getWorkspaceConfig()));
+            }
+            Path directory = normalizeAbsoluteDirectory(selected);
+            if (directory == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", Boolean.FALSE, "message", "所选目录无效"));
+            }
+            saveWorkspacePath(directory.toString());
+            return ResponseEntity.ok(Map.of("success", Boolean.TRUE, "config", getWorkspaceConfig()));
+        } catch (Exception e) {
+            logger.error("选择工作目录失败", e);
+            return ResponseEntity.internalServerError().body(Map.of("success", Boolean.FALSE, "message", e.getMessage()));
+        }
+    }
+
     @GetMapping("/api/md/preview-data")
-    public ResponseEntity<Map<String, Object>> getPreviewData(@RequestParam String path,
+    public ResponseEntity<Map<String, Object>> getPreviewData(@RequestParam(required = false) String path,
                                                               @RequestParam(required = false, defaultValue = "") String scope) {
         try {
             String decodedPath = normalizeRelativePath(path);
             String normalizedScope = normalizeRelativePath(scope);
-            Path fullPath = resolveMarkdownPath(decodedPath);
+            List<String> files = getMdFiles(normalizedScope);
+            String htmlContent = "";
+            String tocHtml = renderTocHtml(List.of());
+            String safeTitle = "Markdown 预览";
+            List<Map<String, Object>> apiSections = List.of();
 
-            if (fullPath == null || !Files.exists(fullPath)) {
-                return ResponseEntity.notFound().build();
+            if (StringUtils.hasText(decodedPath)) {
+                Path fullPath = resolveMarkdownPath(decodedPath);
+                if (fullPath == null || !Files.exists(fullPath)) {
+                    return ResponseEntity.notFound().build();
+                }
+                String content = Files.readString(fullPath);
+                safeTitle = decodedPath.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+                htmlContent = convertMarkdownToHtml(content);
+                tocHtml = renderTocHtml(extractTableOfContents(content));
+                apiSections = extractApiSections(content);
             }
 
-            String content = Files.readString(fullPath);
-            List<String> files = getMdFiles(normalizedScope);
-            
-            String safeTitle = decodedPath.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-            String htmlContent = convertMarkdownToHtml(content);
             String sidebarHtml = buildTreeHtml(files, decodedPath, normalizedScope);
-            List<Map<String, Object>> toc = extractTableOfContents(content);
-            String tocHtml = renderTocHtml(toc);
 
             Map<String, Object> data = new HashMap<>();
             data.put("title", safeTitle);
@@ -99,8 +259,9 @@ public class MarkdownPreviewController {
             data.put("path", decodedPath);
             data.put("scope", normalizedScope);
             data.put("directories", getMdDirectories());
-            data.put("apiSections", extractApiSections(content));
+            data.put("apiSections", apiSections);
             data.put("apiSectionsVersion", 1);
+            data.put("workspaceConfig", getWorkspaceConfig());
 
             return ResponseEntity.ok(data);
         } catch (Exception e) {
@@ -248,7 +409,7 @@ public class MarkdownPreviewController {
 
     private Path resolveScopePath(String scope) {
         try {
-            Path base = Paths.get(basePath).toAbsolutePath().normalize();
+            Path base = getEffectiveWorkspaceBase();
             if (scope == null || scope.isBlank()) {
                 return base;
             }
@@ -1099,7 +1260,7 @@ public class MarkdownPreviewController {
             }
         }
         StringBuilder sb = new StringBuilder();
-        sb.append("<div class=\"sidebar-header\"><span class=\"sidebar-title\">Markdown 文件列表</span><div class=\"directory-switcher\" id=\"directory-switcher\" data-scope=\"")
+        sb.append("<div class=\"sidebar-header\"><div class=\"sidebar-header-row\"><span class=\"sidebar-title\">Markdown 文件列表</span></div><div class=\"directory-switcher\" id=\"directory-switcher\" data-scope=\"")
           .append(escapeHtml(currentScope))
           .append("\"></div></div><div class=\"search-box\">")
           .append("<input type=\"text\" class=\"search-input\" id=\"search-input\" placeholder=\"搜索...\">")

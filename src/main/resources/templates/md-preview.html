@@ -71,7 +71,15 @@
             cursor: pointer;
             border-left: 2px solid transparent;
             line-height: 1.45;
-            transition: background-color 0.16s ease, border-left-color 0.16s ease, color 0.16s ease;
+            max-height: 120px;
+            opacity: 1;
+            overflow: hidden;
+            transform: scaleY(1);
+            transform-origin: top;
+            will-change: max-height, opacity, transform;
+            transition: background-color 0.16s ease, border-left-color 0.16s ease, color 0.16s ease,
+                max-height 0.2s ease, opacity 0.2s ease, transform 0.2s ease,
+                padding-top 0.2s ease, padding-bottom 0.2s ease;
         }
         .toc-item::before {
             content: none;
@@ -135,7 +143,13 @@
             white-space: nowrap;
         }
         .toc-item.toc-collapsed-hidden {
-            display: none !important;
+            max-height: 0 !important;
+            opacity: 0 !important;
+            transform: scaleY(0.98) !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            border-left-width: 0 !important;
+            pointer-events: none !important;
         }
         .toc-circle-h1 .toc-toggle-btn {
             background: #f14c4c;
@@ -262,6 +276,63 @@
             color: #cccccc;
             background-color: #2d2d2d;
             border-bottom: 1px solid #333;
+        }
+        .sidebar-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .sidebar-title {
+            flex-shrink: 0;
+        }
+        .directory-switcher {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .workspace-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .workspace-input {
+            flex: 1;
+            min-width: 0;
+            padding: 6px 10px;
+            background-color: #3c3c3c;
+            border: 1px solid #3c3c3c;
+            color: #cccccc;
+            border-radius: 4px;
+            outline: none;
+            font-size: 12px;
+        }
+        .workspace-input:focus {
+            border-color: #007fd4;
+        }
+        .workspace-btn {
+            padding: 6px 10px;
+            border: 1px solid #3f454f;
+            background: #262b33;
+            color: #c9d4e0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .workspace-btn:hover {
+            background: #2f3742;
+            color: #ffffff;
+        }
+        .workspace-status {
+            font-size: 12px;
+            color: #8fb4d9;
+            line-height: 1.35;
+        }
+        .workspace-status.is-warning {
+            color: #e2b96b;
         }
         .search-box {
             padding: 10px;
@@ -393,6 +464,22 @@
         }
         .file-search-empty.visible {
             display: block;
+        }
+        .markdown-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100%;
+            padding: 40px;
+            color: #8d8d8d;
+            font-size: 14px;
+            text-align: center;
+        }
+        .tree-file-name mark {
+            background: rgba(255, 198, 95, 0.28);
+            color: #fff2cc;
+            padding: 0 1px;
+            border-radius: 2px;
         }
         .global-search-modal {
             display: none;
@@ -1464,8 +1551,26 @@
         .folder-icon { color: #dcb67a; }
         .file-icon { color: #519aba; }
         .tree-toggle.expanded { transform: rotate(90deg); }
-        .tree-children { display: none; padding-left: 12px; }
-        .tree-children.expanded { display: block; }
+        .tree-children {
+            display: block;
+            padding-left: 12px;
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            transform: scaleY(0.98);
+            transform-origin: top;
+            visibility: hidden;
+            pointer-events: none;
+            will-change: max-height, opacity, transform;
+            transition: max-height 0.2s ease, opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+        }
+        .tree-children.expanded {
+            opacity: 1;
+            transform: scaleY(1);
+            visibility: visible;
+            pointer-events: auto;
+            transition: max-height 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+        }
         .tree-file-row {
             display: flex;
             align-items: center;
@@ -1712,12 +1817,31 @@
         const REQUEST_EMPTY_RESPONSE_TEXT = '点击“发送请求”查看结果';
         const urlParams = new URLSearchParams(window.location.search);
         let currentFilePath = urlParams.get('path');
+        let currentWorkspaceConfig = null;
         const TOOLTIP_DELAY_MS = 600;
         let tooltipTimer = null;
         let tooltipTarget = null;
         let tooltipVisibleTarget = null;
         let lastPreviewScrollSnapshot = null;
         let lastRawScrollSnapshot = null;
+        let lastSidebarScrollSnapshot = null;
+
+        function escapeHtmlText(text) {
+            return String(text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function highlightSearchText(text, term) {
+            const source = String(text || '');
+            const keyword = String(term || '').trim();
+            if (!keyword) return escapeHtmlText(source);
+            const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return escapeHtmlText(source).replace(new RegExp(escapedKeyword, 'ig'), match => `<mark>${match}</mark>`);
+        }
 
         function ensureDelayedTooltip() {
             let tooltipEl = document.getElementById('delayed-tooltip');
@@ -1840,36 +1964,6 @@
                     fileNameEl.dataset.tooltip = tooltipText;
                 }
             });
-        }
-
-        function escapeHtmlText(text) {
-            return String(text || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        function highlightSearchText(text, term) {
-            const source = String(text || '');
-            const keyword = String(term || '').trim();
-            if (!keyword) return escapeHtmlText(source);
-            const lowerSource = source.toLowerCase();
-            const lowerKeyword = keyword.toLowerCase();
-            let index = 0;
-            let html = '';
-            while (index < source.length) {
-                const matchIndex = lowerSource.indexOf(lowerKeyword, index);
-                if (matchIndex < 0) {
-                    html += escapeHtmlText(source.slice(index));
-                    break;
-                }
-                html += escapeHtmlText(source.slice(index, matchIndex));
-                html += `<span class="search-highlight">${escapeHtmlText(source.slice(matchIndex, matchIndex + keyword.length))}</span>`;
-                index = matchIndex + keyword.length;
-            }
-            return html;
         }
 
         function createBreadcrumbSegment(text, className, options = {}) {
@@ -2222,8 +2316,118 @@
             if (prefixEl) prefixEl.textContent = getRequestApiPrefix();
         }
 
+        function captureSidebarScrollSnapshot() {
+            const fileList = document.querySelector('.file-list');
+            return { fileListTop: fileList ? fileList.scrollTop : 0 };
+        }
+
+        function restoreSidebarScrollSnapshot(snapshot) {
+            if (!snapshot) return;
+            const fileList = document.querySelector('.file-list');
+            if (fileList) {
+                fileList.scrollTop = snapshot.fileListTop || 0;
+            }
+        }
+
+        function renderEmptyPreviewState(message = '请选择左侧 Markdown 文件') {
+            document.title = 'Markdown 预览';
+            const markdownBody = document.getElementById('markdown-body');
+            const rawBody = document.getElementById('raw-body');
+            if (markdownBody) {
+                markdownBody.innerHTML = `<div class="markdown-empty">${escapeHtmlText(message)}</div>`;
+            }
+            if (rawBody) {
+                rawBody.textContent = '';
+                rawBody.dataset.loadedPath = '';
+                rawBody.style.display = 'none';
+            }
+            const previewBtn = document.getElementById('btn-preview');
+            const rawBtn = document.getElementById('btn-raw');
+            if (previewBtn) previewBtn.classList.add('active');
+            if (rawBtn) rawBtn.classList.remove('active');
+            const breadcrumbEl = document.getElementById('breadcrumb-path');
+            if (breadcrumbEl) {
+                breadcrumbEl.dataset.fullPath = '';
+                breadcrumbEl.innerHTML = '';
+            }
+            document.getElementById('toc-container').innerHTML = '<div class="toc-header">目录</div><div class="toc-empty">当前未打开 Markdown 文件</div>';
+        }
+
+        async function fetchWorkspaceConfig() {
+            const response = await fetch('/api/md/workspace-config');
+            if (!response.ok) throw new Error('加载工作目录配置失败');
+            currentWorkspaceConfig = await response.json();
+            return currentWorkspaceConfig;
+        }
+
+        async function persistWorkspacePath(path) {
+            const response = await fetch('/api/md/workspace-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path })
+            });
+            const data = await response.json();
+            if (!response.ok || data.success === false) {
+                throw new Error(data.message || '保存工作目录失败');
+            }
+            currentWorkspaceConfig = data.config || currentWorkspaceConfig;
+            return currentWorkspaceConfig;
+        }
+
+        async function pickWorkspacePath() {
+            const response = await fetch('/api/md/workspace-config/pick-directory', { method: 'POST' });
+            const data = await response.json();
+            if (!response.ok || data.success === false) {
+                if (data.cancelled) return currentWorkspaceConfig;
+                throw new Error(data.message || '选择工作目录失败');
+            }
+            currentWorkspaceConfig = data.config || currentWorkspaceConfig;
+            return currentWorkspaceConfig;
+        }
+
+        function renderWorkspaceControls() {
+            const container = document.getElementById('directory-switcher');
+            if (!container) return;
+            const effectivePath = String(currentWorkspaceConfig?.effectivePath || '').trim();
+            const fallback = Boolean(currentWorkspaceConfig?.fallbackToDesktop);
+            container.innerHTML = `
+                <div class="workspace-row">
+                    <input type="text" id="workspace-path-input" class="workspace-input" value="${escapeHtmlText(effectivePath)}" placeholder="选择工作目录">
+                    <button type="button" id="workspace-save-btn" class="workspace-btn">保存</button>
+                    <button type="button" id="workspace-pick-btn" class="workspace-btn">选择</button>
+                </div>
+                <div class="workspace-status${fallback ? ' is-warning' : ''}" id="workspace-status">${fallback ? '配置目录不存在，已回退到桌面' : '当前工作目录'}</div>
+            `;
+            document.getElementById('workspace-save-btn')?.addEventListener('click', async () => {
+                try {
+                    await persistWorkspacePath(document.getElementById('workspace-path-input')?.value || '');
+                    currentFilePath = null;
+                    saveTabs([]);
+                    saveTabHistory([]);
+                    updatePathUrl('', true);
+                    await loadPreviewData();
+                    pushRequestMessage('工作目录已更新', 'success');
+                } catch (error) {
+                    pushRequestMessage(error instanceof Error ? error.message : String(error), 'error');
+                }
+            });
+            document.getElementById('workspace-pick-btn')?.addEventListener('click', async () => {
+                try {
+                    await pickWorkspacePath();
+                    currentFilePath = null;
+                    saveTabs([]);
+                    saveTabHistory([]);
+                    updatePathUrl('', true);
+                    await loadPreviewData();
+                    pushRequestMessage('工作目录已更新', 'success');
+                } catch (error) {
+                    pushRequestMessage(error instanceof Error ? error.message : String(error), 'error');
+                }
+            });
+        }
+
         function updatePathUrl(path, replace = false) {
-            const nextUrl = `/md-view?path=${encodeURIComponent(path)}`;
+            const nextUrl = path ? `/md-view?path=${encodeURIComponent(path)}` : '/md-view';
             if (replace) {
                 window.history.replaceState({ path }, '', nextUrl);
             } else {
@@ -2232,7 +2436,7 @@
         }
 
         function updateHeadingHash(headingId) {
-            const baseUrl = `/md-view?path=${encodeURIComponent(currentFilePath || '')}`;
+            const baseUrl = currentFilePath ? `/md-view?path=${encodeURIComponent(currentFilePath)}` : '/md-view';
             const hash = headingId ? `#${encodeURIComponent(headingId)}` : '';
             window.history.replaceState({ path: currentFilePath, headingId: headingId || '' }, '', `${baseUrl}${hash}`);
         }
@@ -2241,6 +2445,7 @@
             const nextPath = String(path || '').trim();
             if (!nextPath || nextPath === currentFilePath) return;
             const replace = Boolean(options.replaceHistory);
+            lastSidebarScrollSnapshot = captureSidebarScrollSnapshot();
             currentFilePath = nextPath;
             hideDelayedTooltip();
             updatePathUrl(nextPath, replace);
@@ -2249,32 +2454,35 @@
         let currentApiSections = [];
 
         async function loadPreviewData() {
-            if (!currentFilePath) {
-                document.getElementById('markdown-body').innerHTML = '未指定文件路径';
-                return;
-            }
             try {
+                lastSidebarScrollSnapshot = lastSidebarScrollSnapshot || captureSidebarScrollSnapshot();
                 const rawBody = document.getElementById('raw-body');
                 if (rawBody) {
                     rawBody.textContent = '';
                     rawBody.dataset.loadedPath = '';
                 }
-                const response = await fetch(`/api/md/preview-data?path=${encodeURIComponent(currentFilePath)}`);
+                const query = currentFilePath ? `?path=${encodeURIComponent(currentFilePath)}` : '';
+                const response = await fetch(`/api/md/preview-data${query}`);
                 if (!response.ok) throw new Error('加载数据失败');
                 const data = await response.json();
-                
+                currentWorkspaceConfig = data.workspaceConfig || currentWorkspaceConfig;
                 document.title = data.title;
                 document.getElementById('sidebar-container').innerHTML = data.sidebar;
                 document.getElementById('toc-container').innerHTML = data.toc;
-                document.getElementById('markdown-body').innerHTML = data.content;
+                renderWorkspaceControls();
+                if (data.content) {
+                    document.getElementById('markdown-body').innerHTML = data.content;
+                } else {
+                    renderEmptyPreviewState();
+                }
                 const breadcrumbEl = document.getElementById('breadcrumb-path');
                 if (breadcrumbEl) {
                     breadcrumbEl.dataset.fullPath = data.path || currentFilePath;
                     renderBreadcrumb();
                 }
-                const sidebarHeader = document.querySelector('.sidebar-header');
-                if (sidebarHeader && !/[\u{1F300}-\u{1FAFF}]/u.test(sidebarHeader.textContent || '')) {
-                    sidebarHeader.textContent = `📚 ${sidebarHeader.textContent || ''}`.trim();
+                const sidebarTitle = document.querySelector('.sidebar-title');
+                if (sidebarTitle && !/[\u{1F300}-\u{1FAFF}]/u.test(sidebarTitle.textContent || '')) {
+                    sidebarTitle.textContent = `📚 ${sidebarTitle.textContent || ''}`.trim();
                 }
                 const tocHeader = document.querySelector('.toc-header');
                 if (tocHeader && !/[\u{1F300}-\u{1FAFF}]/u.test(tocHeader.textContent || '')) {
@@ -2294,11 +2502,13 @@
                 initTreeInteraction();
                 initTooltipSystem();
                 applyOverflowTooltips();
+                restoreSidebarScrollSnapshot(lastSidebarScrollSnapshot);
+                lastSidebarScrollSnapshot = null;
                 if (document.getElementById('btn-raw')?.classList.contains('active')) {
                     await loadRawContent(true);
                 }
                 const hashId = decodeURIComponent((window.location.hash || '').replace(/^#/, '').trim());
-                if (hashId) {
+                if (hashId && currentFilePath) {
                     setTimeout(() => scrollToHeading(hashId), 0);
                 }
             } catch (error) {
@@ -3204,7 +3414,59 @@
             return resolved;
         }
 
-        function applyTocCollapseState(tocItems, resolvedState) {
+        function withCollapsedAnimationState(element, immediate) {
+            if (!element || !immediate) return () => {};
+            const previousTransition = element.style.transition;
+            element.style.transition = 'none';
+            return () => {
+                void element.offsetHeight;
+                element.style.transition = previousTransition;
+            };
+        }
+
+        function setTocItemVisibility(item, visible, options = {}) {
+            if (!item) return;
+            const immediate = options.immediate === true;
+            const restoreTransition = withCollapsedAnimationState(item, immediate);
+            if (visible) {
+                item.classList.remove('toc-collapsed-hidden');
+                item.style.maxHeight = immediate ? 'none' : '0px';
+                item.style.opacity = '1';
+                item.style.transform = 'scaleY(1)';
+                restoreTransition();
+                if (immediate) return;
+                const targetHeight = `${item.scrollHeight}px`;
+                requestAnimationFrame(() => {
+                    item.style.maxHeight = targetHeight;
+                });
+                window.setTimeout(() => {
+                    if (!item.classList.contains('toc-collapsed-hidden')) {
+                        item.style.maxHeight = 'none';
+                    }
+                }, 220);
+                return;
+            }
+            item.style.maxHeight = item.scrollHeight > 0 ? `${item.scrollHeight}px` : '0px';
+            item.style.opacity = '1';
+            item.style.transform = 'scaleY(1)';
+            restoreTransition();
+            if (immediate) {
+                item.classList.add('toc-collapsed-hidden');
+                item.style.maxHeight = '0px';
+                item.style.opacity = '0';
+                item.style.transform = 'scaleY(0.98)';
+                return;
+            }
+            requestAnimationFrame(() => {
+                item.classList.add('toc-collapsed-hidden');
+                item.style.maxHeight = '0px';
+                item.style.opacity = '0';
+                item.style.transform = 'scaleY(0.98)';
+            });
+        }
+
+        function applyTocCollapseState(tocItems, resolvedState, options = {}) {
+            const immediate = options.immediate === true;
             const collapsedLevels = [];
             tocItems.forEach(item => {
                 const level = getTocLevel(item);
@@ -3212,7 +3474,7 @@
                     collapsedLevels.pop();
                 }
                 const hidden = collapsedLevels.length > 0;
-                item.classList.toggle('toc-collapsed-hidden', hidden);
+                setTocItemVisibility(item, !hidden, { immediate });
                 const id = String(item.getAttribute('data-id') || '').trim();
                 const hasChildren = item.dataset.hasChildren === 'true';
                 const collapsed = hasChildren && Boolean(resolvedState[id]);
@@ -3366,7 +3628,7 @@
 
             const savedState = readTocCollapseState();
             const resolvedState = resolveTocCollapseState(tocItems, savedState);
-            applyTocCollapseState(tocItems, resolvedState);
+            applyTocCollapseState(tocItems, resolvedState, { immediate: true });
 
             if (tocList.dataset.bound !== 'true') {
                 tocList.dataset.bound = 'true';
@@ -3637,7 +3899,7 @@
                 saveTabHistory(getTabHistory().filter(item => item !== path));
                 if (path === currentFilePath) {
                     if (tabs.length > 0) window.location.href = '/md-view?path=' + encodeURIComponent(tabs[Math.min(index, tabs.length - 1)]);
-                    else window.location.href = '/md-list';
+                    else window.location.href = '/md-view';
                 } else renderTabs();
             }
         }
@@ -3665,6 +3927,48 @@
             return null;
         }
 
+        function setTreeChildrenExpanded(children, expanded, options = {}) {
+            if (!children) return;
+            const immediate = options.immediate === true;
+            const restoreTransition = withCollapsedAnimationState(children, immediate);
+            if (expanded) {
+                children.classList.add('expanded');
+                children.style.removeProperty('visibility');
+                children.style.removeProperty('pointer-events');
+                children.style.maxHeight = immediate ? 'none' : '0px';
+                children.style.opacity = '1';
+                children.style.transform = 'scaleY(1)';
+                restoreTransition();
+                if (immediate) return;
+                requestAnimationFrame(() => {
+                    children.style.maxHeight = `${children.scrollHeight}px`;
+                });
+                window.setTimeout(() => {
+                    if (children.classList.contains('expanded')) {
+                        children.style.maxHeight = 'none';
+                    }
+                }, 220);
+                return;
+            }
+            children.style.maxHeight = children.scrollHeight > 0 ? `${children.scrollHeight}px` : '0px';
+            children.style.opacity = '1';
+            children.style.transform = 'scaleY(1)';
+            restoreTransition();
+            if (immediate) {
+                children.classList.remove('expanded');
+                children.style.maxHeight = '0px';
+                children.style.opacity = '0';
+                children.style.transform = 'scaleY(0.98)';
+                return;
+            }
+            requestAnimationFrame(() => {
+                children.classList.remove('expanded');
+                children.style.maxHeight = '0px';
+                children.style.opacity = '0';
+                children.style.transform = 'scaleY(0.98)';
+            });
+        }
+
         function revealTreeFile(fileLink, options = {}) {
             if (!fileLink) return false;
             const flash = options.flash !== false;
@@ -3674,7 +3978,7 @@
             while (parent) {
                 if (parent.classList && parent.classList.contains('tree-children')) {
                     parent.style.display = '';
-                    parent.classList.add('expanded');
+                    setTreeChildrenExpanded(parent, true, { immediate: true });
                     const path = parent.getAttribute('data-path');
                     if (path) nextExpandedPaths.add(path);
                     const folder = parent.previousElementSibling;
@@ -3705,6 +4009,73 @@
                 if (row) row.classList.remove('locate-flash');
             }, 1200);
             return true;
+        }
+
+        function resetTreeSearchState(fileList, emptyState) {
+            const expandedPaths = JSON.parse(localStorage.getItem('md-preview-expanded-paths') || '[]');
+            const expandedSet = new Set(expandedPaths);
+            document.querySelectorAll('.tree-file-row').forEach(row => row.style.removeProperty('display'));
+            document.querySelectorAll('.tree-file').forEach(file => file.style.removeProperty('display'));
+            document.querySelectorAll('.tree-folder').forEach(folder => folder.style.removeProperty('display'));
+            document.querySelectorAll('.tree-children').forEach(children => {
+                children.style.removeProperty('display');
+                const path = children.getAttribute('data-path');
+                const shouldExpand = Boolean(path && expandedSet.has(path));
+                setTreeChildrenExpanded(children, shouldExpand, { immediate: true });
+                const toggle = children.previousElementSibling?.querySelector('.tree-toggle');
+                if (toggle) toggle.classList.toggle('expanded', shouldExpand);
+            });
+            if (fileList) {
+                fileList.querySelectorAll('.tree-file-name').forEach(nameEl => {
+                    nameEl.innerHTML = highlightSearchText(nameEl.dataset.originalText || nameEl.textContent || '', '');
+                });
+            }
+            if (emptyState) emptyState.classList.remove('visible');
+        }
+
+        function applyTreeSearch(term, fileList, emptyState) {
+            const keyword = String(term || '').trim();
+            if (!keyword) {
+                resetTreeSearchState(fileList, emptyState);
+                return;
+            }
+            const lowerKeyword = keyword.toLowerCase();
+            const matchedRows = [];
+            document.querySelectorAll('.tree-file-row').forEach(row => row.style.display = 'none');
+            document.querySelectorAll('.tree-folder').forEach(folder => folder.style.display = 'none');
+            document.querySelectorAll('.tree-children').forEach(children => {
+                children.style.display = 'none';
+                setTreeChildrenExpanded(children, false, { immediate: true });
+            });
+            document.querySelectorAll('.tree-file').forEach(fileLink => {
+                const nameEl = fileLink.querySelector('.tree-file-name');
+                if (!nameEl) return;
+                const originalText = nameEl.dataset.originalText || nameEl.textContent || '';
+                nameEl.innerHTML = highlightSearchText(originalText, keyword);
+                const fileName = String(fileLink.getAttribute('data-name') || originalText).toLowerCase();
+                const filePath = String(fileLink.getAttribute('data-path') || '').toLowerCase();
+                if (fileName.includes(lowerKeyword) || filePath.includes(lowerKeyword)) {
+                    matchedRows.push(fileLink.closest('.tree-file-row'));
+                }
+            });
+            matchedRows.filter(Boolean).forEach(row => {
+                row.style.display = 'flex';
+                let parent = row.parentElement;
+                while (parent && !parent.classList.contains('file-list')) {
+                    if (parent.classList.contains('tree-children')) {
+                        parent.style.display = 'block';
+                        setTreeChildrenExpanded(parent, true, { immediate: true });
+                        const folder = parent.previousElementSibling;
+                        if (folder?.classList.contains('tree-folder')) {
+                            folder.style.display = 'flex';
+                            const toggle = folder.querySelector('.tree-toggle');
+                            if (toggle) toggle.classList.add('expanded');
+                        }
+                    }
+                    parent = parent.parentElement;
+                }
+            });
+            if (emptyState) emptyState.classList.toggle('visible', matchedRows.length === 0);
         }
 
         async function copyTextToClipboard(text) {
@@ -3743,7 +4114,7 @@
                 const folder = document.querySelector(`.tree-folder[data-path="${escapeSelectorValue(path)}"]`);
                 const children = document.querySelector(`.tree-children[data-path="${escapeSelectorValue(path)}"]`);
                 if (folder && children) {
-                    children.classList.add('expanded');
+                    setTreeChildrenExpanded(children, true, { immediate: true });
                     const toggle = folder.querySelector('.tree-toggle');
                     if (toggle) toggle.classList.add('expanded');
                 }
@@ -3756,7 +4127,8 @@
                     const children = this.nextElementSibling;
                     const path = this.getAttribute('data-path');
                     if (children && children.classList.contains('tree-children')) {
-                        const isExpanded = children.classList.toggle('expanded');
+                        const isExpanded = !children.classList.contains('expanded');
+                        setTreeChildrenExpanded(children, isExpanded);
                         toggle.classList.toggle('expanded');
                         const currentPaths = JSON.parse(localStorage.getItem('md-preview-expanded-paths') || '[]');
                         if (isExpanded) { if (!currentPaths.includes(path)) currentPaths.push(path); }
@@ -3846,9 +4218,6 @@
 
             const searchInput = document.getElementById('search-input');
             if (searchInput) {
-                if (!searchInput.dataset.originalBound) {
-                    searchInput.dataset.originalBound = 'true';
-                }
                 let emptyState = document.getElementById('file-search-empty');
                 if (!emptyState && fileList) {
                     emptyState = document.createElement('div');
@@ -3863,67 +4232,9 @@
                     }
                 });
                 searchInput.addEventListener('input', (e) => {
-                    const term = String(e.target.value || '').trim();
-                    const lowerTerm = term.toLowerCase();
-                    const allRows = document.querySelectorAll('.tree-file-row');
-                    const allFiles = document.querySelectorAll('.tree-file');
-                    const allFolders = document.querySelectorAll('.tree-folder');
-                    const allChildren = document.querySelectorAll('.tree-children');
-                    allFiles.forEach(fileLink => {
-                        const nameEl = fileLink.querySelector('.tree-file-name');
-                        if (!nameEl) return;
-                        const originalText = nameEl.dataset.originalText || nameEl.textContent || '';
-                        nameEl.innerHTML = highlightSearchText(originalText, term);
-                    });
-                    if (!lowerTerm) {
-                        allRows.forEach(el => el.style.removeProperty('display'));
-                        allFiles.forEach(el => el.style.removeProperty('display'));
-                        allFolders.forEach(el => el.style.removeProperty('display'));
-                        allChildren.forEach(el => {
-                            el.style.removeProperty('display');
-                            const path = el.getAttribute('data-path');
-                            const expandedPaths = JSON.parse(localStorage.getItem('md-preview-expanded-paths') || '[]');
-                            const shouldExpand = path && expandedPaths.includes(path);
-                            el.classList.toggle('expanded', Boolean(shouldExpand));
-                            const folder = el.previousElementSibling;
-                            const toggle = folder?.querySelector('.tree-toggle');
-                            if (toggle) toggle.classList.toggle('expanded', Boolean(shouldExpand));
-                        });
-                        if (emptyState) emptyState.classList.remove('visible');
-                        return;
-                    }
-                    allRows.forEach(el => el.style.display = 'none');
-                    allFolders.forEach(el => el.style.display = 'none');
-                    allChildren.forEach(el => el.style.display = 'none');
-                    let matchCount = 0;
-                    allRows.forEach(row => {
-                        const file = row.querySelector('.tree-file');
-                        if (!file) return;
-                        const fileName = String(file.getAttribute('data-name') || file.textContent || '').toLowerCase();
-                        const filePath = String(file.getAttribute('data-path') || '').toLowerCase();
-                        if (fileName.includes(lowerTerm) || filePath.includes(lowerTerm)) {
-                            matchCount++;
-                            row.style.display = 'flex';
-                            file.style.removeProperty('display');
-                            let parent = row.parentElement;
-                            while(parent && !parent.closest('.file-list')) {
-                                if (parent.classList.contains('tree-children')) {
-                                    parent.classList.add('expanded');
-                                    parent.style.display = 'block';
-                                    if (parent.previousElementSibling) {
-                                        parent.previousElementSibling.style.removeProperty('display');
-                                        const t = parent.previousElementSibling.querySelector('.tree-toggle');
-                                        if (t) t.classList.add('expanded');
-                                    }
-                                }
-                                parent = parent.parentElement;
-                            }
-                        }
-                    });
-                    if (emptyState) {
-                        emptyState.classList.toggle('visible', matchCount === 0);
-                    }
+                    applyTreeSearch(e.target.value, fileList, emptyState);
                 });
+                applyTreeSearch(searchInput.value, fileList, emptyState);
             }
         }
 
@@ -3972,7 +4283,8 @@
             closeAllMenuItem.addEventListener('click', () => {
                 saveTabs([]);
                 saveTabHistory([]);
-                window.location.href = '/md-list';
+                currentFilePath = null;
+                window.location.href = '/md-view';
             });
         }
 
@@ -4004,12 +4316,13 @@
         window.addEventListener('popstate', async () => {
             const params = new URLSearchParams(window.location.search);
             const path = params.get('path');
-            if (!path || path === currentFilePath) return;
+            if ((path || '') === (currentFilePath || '')) return;
             currentFilePath = path;
             await loadPreviewData();
         });
-
-        loadPreviewData();
+        fetchWorkspaceConfig()
+            .catch(() => null)
+            .finally(() => loadPreviewData());
     </script>
 </body>
 </html>
