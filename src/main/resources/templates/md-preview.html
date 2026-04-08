@@ -282,6 +282,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 8px;
+            margin-top: 8px;
         }
         .sidebar-title {
             flex-shrink: 0;
@@ -290,13 +291,17 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            margin-top: 8px;
         }
         .workspace-row {
             display: flex;
             align-items: center;
             gap: 6px;
             min-width: 0;
+        }
+        .workspace-label {
+            color: #8fb4d9;
+            font-size: 12px;
+            flex-shrink: 0;
         }
         .workspace-input {
             flex: 1;
@@ -309,11 +314,16 @@
             outline: none;
             font-size: 12px;
         }
+        .workspace-input[readonly] {
+            cursor: default;
+        }
         .workspace-input:focus {
             border-color: #007fd4;
         }
         .workspace-btn {
-            padding: 6px 10px;
+            width: 32px;
+            height: 32px;
+            padding: 0;
             border: 1px solid #3f454f;
             background: #262b33;
             color: #c9d4e0;
@@ -321,6 +331,16 @@
             cursor: pointer;
             font-size: 12px;
             flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .workspace-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.6;
         }
         .workspace-btn:hover {
             background: #2f3742;
@@ -1825,6 +1845,8 @@
         let lastPreviewScrollSnapshot = null;
         let lastRawScrollSnapshot = null;
         let lastSidebarScrollSnapshot = null;
+        let currentSidebarScope = String(document.getElementById('directory-switcher')?.dataset.scope || '').trim();
+        let suspendHeadingHashSync = false;
 
         function escapeHtmlText(text) {
             return String(text || '')
@@ -2055,6 +2077,16 @@
             });
         }
 
+        function buildHeadingChain(levelData = {}, targetId = '') {
+            return [1, 2, 3]
+                .map(level => {
+                    const item = levelData[level];
+                    if (!item || !item.text || !item.id) return null;
+                    return { level, text: String(item.text).trim(), id: String(item.id).trim(), active: String(item.id).trim() === String(targetId || '').trim() };
+                })
+                .filter(Boolean);
+        }
+
         function renderBreadcrumb(levelData = {}) {
             const breadcrumbEl = document.getElementById('breadcrumb-path');
             if (!breadcrumbEl) return;
@@ -2063,19 +2095,112 @@
             if (fullPath) {
                 breadcrumbEl.appendChild(createBreadcrumbSegment(fullPath, 'breadcrumb-segment-path'));
             }
-            [1, 2, 3].forEach((level) => {
-                const item = levelData[level];
-                if (!item || !item.text || !item.id) return;
+            buildHeadingChain(levelData).forEach((item) => {
                 const separator = document.createElement('span');
                 separator.className = 'breadcrumb-separator';
                 separator.textContent = '>';
                 breadcrumbEl.appendChild(separator);
                 breadcrumbEl.appendChild(createBreadcrumbSegment(
-                    `${'#'.repeat(level)}${item.text}`,
-                    `breadcrumb-segment-level${level}`,
+                    `${'#'.repeat(item.level)}${item.text}`,
+                    `breadcrumb-segment-level${item.level}`,
                     { onClick: () => scrollToHeading(item.id) }
                 ));
             });
+        }
+
+        function encodeHeadingLocation(headingId, levelData = {}) {
+            const chain = buildHeadingChain(levelData, headingId);
+            if (!headingId && chain.length === 0) return '';
+            const params = new URLSearchParams();
+            if (headingId) params.set('h', headingId);
+            chain.forEach(item => params.set(`l${item.level}`, item.text));
+            return params.toString();
+        }
+
+        function parseHeadingLocation() {
+            const rawHash = String(window.location.hash || '').replace(/^#/, '').trim();
+            if (!rawHash) return { legacyId: '', headingId: '', levels: { 1: '', 2: '', 3: '' } };
+            if (!rawHash.includes('=')) {
+                return { legacyId: decodeURIComponent(rawHash), headingId: '', levels: { 1: '', 2: '', 3: '' } };
+            }
+            const params = new URLSearchParams(rawHash);
+            return {
+                legacyId: '',
+                headingId: String(params.get('h') || '').trim(),
+                levels: {
+                    1: String(params.get('l1') || '').trim(),
+                    2: String(params.get('l2') || '').trim(),
+                    3: String(params.get('l3') || '').trim()
+                }
+            };
+        }
+
+        function findHeadingByChain(parsedLocation) {
+            const normalizedLevels = {
+                1: normalizeCompareText(parsedLocation?.levels?.[1] || ''),
+                2: normalizeCompareText(parsedLocation?.levels?.[2] || ''),
+                3: normalizeCompareText(parsedLocation?.levels?.[3] || '')
+            };
+            const tocItems = Array.from(document.querySelectorAll('.toc-item'));
+            if (!tocItems.length) return '';
+            let currentLevels = { 1: '', 2: '', 3: '' };
+            const candidates = [];
+            tocItems.forEach(item => {
+                const level = getTocLevel(item);
+                if (level < 1 || level > 3) return;
+                currentLevels = {
+                    ...currentLevels,
+                    [level]: normalizeCompareText(item.querySelector('.toc-label')?.textContent || item.textContent || '')
+                };
+                for (let i = level + 1; i <= 3; i++) {
+                    currentLevels[i] = '';
+                }
+                candidates.push({
+                    id: String(item.getAttribute('data-id') || '').trim(),
+                    levels: { ...currentLevels }
+                });
+            });
+            const exact = candidates.find(candidate => {
+                if (normalizedLevels[3] && candidate.levels[3] !== normalizedLevels[3]) return false;
+                if (normalizedLevels[2] && candidate.levels[2] !== normalizedLevels[2]) return false;
+                if (normalizedLevels[1] && candidate.levels[1] !== normalizedLevels[1]) return false;
+                return Boolean(candidate.id);
+            });
+            if (exact) return exact.id;
+            if (normalizedLevels[3]) {
+                const level3 = candidates.find(candidate => candidate.levels[3] === normalizedLevels[3] && candidate.id);
+                if (level3) return level3.id;
+            }
+            if (normalizedLevels[2]) {
+                const level2 = candidates.find(candidate => candidate.levels[2] === normalizedLevels[2] && candidate.id);
+                if (level2) return level2.id;
+            }
+            if (normalizedLevels[1]) {
+                const level1 = candidates.find(candidate => candidate.levels[1] === normalizedLevels[1] && candidate.id);
+                if (level1) return level1.id;
+            }
+            return '';
+        }
+
+        function resolveHeadingLocationTarget(parsedLocation) {
+            const headingId = String(parsedLocation?.headingId || '').trim();
+            if (headingId && document.getElementById(headingId)) return headingId;
+            const legacyId = String(parsedLocation?.legacyId || '').trim();
+            if (legacyId && document.getElementById(legacyId)) return legacyId;
+            return findHeadingByChain(parsedLocation);
+        }
+
+        function applyHeadingLocationFromUrl() {
+            if (!currentFilePath) return;
+            const targetId = resolveHeadingLocationTarget(parseHeadingLocation());
+            if (!targetId) return;
+            window.setTimeout(() => {
+                suspendHeadingHashSync = true;
+                scrollToHeading(targetId, { skipUrlSync: true });
+                window.setTimeout(() => {
+                    suspendHeadingHashSync = false;
+                }, 180);
+            }, 0);
         }
 
         async function loadRawContent(force = false) {
@@ -2392,33 +2517,23 @@
             const fallback = Boolean(currentWorkspaceConfig?.fallbackToDesktop);
             container.innerHTML = `
                 <div class="workspace-row">
-                    <input type="text" id="workspace-path-input" class="workspace-input" value="${escapeHtmlText(effectivePath)}" placeholder="选择工作目录">
-                    <button type="button" id="workspace-save-btn" class="workspace-btn">保存</button>
-                    <button type="button" id="workspace-pick-btn" class="workspace-btn">选择</button>
+                    <span class="workspace-label">当前工作目录:</span>
+                    <input type="text" id="workspace-path-input" class="workspace-input" value="${escapeHtmlText(effectivePath)}" placeholder="选择工作目录" readonly>
+                    <button type="button" id="workspace-pick-btn" class="workspace-btn" title="选择工作目录" aria-label="选择工作目录">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h4l1.2 1.5H14v5.8A1.2 1.2 0 0 1 12.8 13H3.2A1.2 1.2 0 0 1 2 11.8z"></path><path d="M2 6h12"></path></svg>
+                    </button>
                 </div>
                 <div class="workspace-status${fallback ? ' is-warning' : ''}" id="workspace-status">${fallback ? '配置目录不存在，已回退到桌面' : '当前工作目录'}</div>
             `;
-            document.getElementById('workspace-save-btn')?.addEventListener('click', async () => {
-                try {
-                    await persistWorkspacePath(document.getElementById('workspace-path-input')?.value || '');
-                    currentFilePath = null;
-                    saveTabs([]);
-                    saveTabHistory([]);
-                    updatePathUrl('', true);
-                    await loadPreviewData();
-                    pushRequestMessage('工作目录已更新', 'success');
-                } catch (error) {
-                    pushRequestMessage(error instanceof Error ? error.message : String(error), 'error');
-                }
-            });
             document.getElementById('workspace-pick-btn')?.addEventListener('click', async () => {
                 try {
                     await pickWorkspacePath();
                     currentFilePath = null;
                     saveTabs([]);
                     saveTabHistory([]);
+                    lastSidebarScrollSnapshot = { fileListTop: 0 };
                     updatePathUrl('', true);
-                    await loadPreviewData();
+                    await loadPreviewData({ forceSidebarRefresh: true });
                     pushRequestMessage('工作目录已更新', 'success');
                 } catch (error) {
                     pushRequestMessage(error instanceof Error ? error.message : String(error), 'error');
@@ -2435,9 +2550,11 @@
             }
         }
 
-        function updateHeadingHash(headingId) {
+        function updateHeadingHash(headingId, levelData = {}) {
+            if (suspendHeadingHashSync) return;
             const baseUrl = currentFilePath ? `/md-view?path=${encodeURIComponent(currentFilePath)}` : '/md-view';
-            const hash = headingId ? `#${encodeURIComponent(headingId)}` : '';
+            const hashValue = encodeHeadingLocation(headingId, levelData);
+            const hash = hashValue ? `#${hashValue}` : '';
             window.history.replaceState({ path: currentFilePath, headingId: headingId || '' }, '', `${baseUrl}${hash}`);
         }
 
@@ -2449,13 +2566,66 @@
             currentFilePath = nextPath;
             hideDelayedTooltip();
             updatePathUrl(nextPath, replace);
-            await loadPreviewData();
+            await loadPreviewData({
+                preserveSidebar: options.preserveSidebar !== false,
+                forceSidebarRefresh: Boolean(options.forceSidebarRefresh)
+            });
         }
         let currentApiSections = [];
 
-        async function loadPreviewData() {
+        function syncActiveTreeFile(path) {
+            const normalizedPath = String(path || '').trim();
+            document.querySelectorAll('.tree-file.active').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tree-file-row.active').forEach(el => el.classList.remove('active'));
+            if (!normalizedPath) return;
+            const fileLink = findTreeFileLinkByPath(normalizedPath);
+            if (!fileLink) return;
+            fileLink.classList.add('active');
+            const row = fileLink.closest('.tree-file-row');
+            if (row) row.classList.add('active');
+        }
+
+        function captureTreeSearchState() {
+            const searchInput = document.getElementById('search-input');
+            const fileList = document.querySelector('.file-list');
+            return {
+                searchTerm: String(searchInput?.value || ''),
+                fileListTop: fileList ? fileList.scrollTop : 0
+            };
+        }
+
+        function restoreTreeSearchState(state) {
+            const searchInput = document.getElementById('search-input');
+            const fileList = document.querySelector('.file-list');
+            const emptyState = document.getElementById('file-search-empty');
+            if (searchInput) {
+                searchInput.value = String(state?.searchTerm || '');
+                applyTreeSearch(searchInput.value, fileList, emptyState);
+            }
+            if (fileList) {
+                fileList.scrollTop = state?.fileListTop || 0;
+            }
+        }
+
+        function shouldReuseSidebar(data, options = {}) {
+            if (options.forceSidebarRefresh) return false;
+            const nextScope = String(data?.scope || '').trim();
+            return Boolean(
+                options.preserveSidebar !== false &&
+                document.querySelector('.file-list') &&
+                document.getElementById('directory-switcher') &&
+                currentSidebarScope === nextScope
+            );
+        }
+
+        async function loadPreviewData(options = {}) {
             try {
-                lastSidebarScrollSnapshot = lastSidebarScrollSnapshot || captureSidebarScrollSnapshot();
+                lastSidebarScrollSnapshot = options.forceSidebarRefresh
+                    ? { fileListTop: 0 }
+                    : (lastSidebarScrollSnapshot || captureSidebarScrollSnapshot());
+                const preservedTreeState = options.forceSidebarRefresh
+                    ? { searchTerm: '', fileListTop: 0 }
+                    : captureTreeSearchState();
                 const rawBody = document.getElementById('raw-body');
                 if (rawBody) {
                     rawBody.textContent = '';
@@ -2467,7 +2637,11 @@
                 const data = await response.json();
                 currentWorkspaceConfig = data.workspaceConfig || currentWorkspaceConfig;
                 document.title = data.title;
-                document.getElementById('sidebar-container').innerHTML = data.sidebar;
+                const reuseSidebar = shouldReuseSidebar(data, options);
+                if (!reuseSidebar) {
+                    document.getElementById('sidebar-container').innerHTML = data.sidebar;
+                    currentSidebarScope = String(data.scope || '').trim();
+                }
                 document.getElementById('toc-container').innerHTML = data.toc;
                 renderWorkspaceControls();
                 if (data.content) {
@@ -2499,7 +2673,12 @@
                 initHeadingCollapse();
                 initTocScrollSpy();
                 initTabs();
-                initTreeInteraction();
+                if (!reuseSidebar) {
+                    initTreeInteraction();
+                    restoreTreeSearchState(preservedTreeState);
+                } else {
+                    syncActiveTreeFile(currentFilePath);
+                }
                 initTooltipSystem();
                 applyOverflowTooltips();
                 restoreSidebarScrollSnapshot(lastSidebarScrollSnapshot);
@@ -2507,10 +2686,7 @@
                 if (document.getElementById('btn-raw')?.classList.contains('active')) {
                     await loadRawContent(true);
                 }
-                const hashId = decodeURIComponent((window.location.hash || '').replace(/^#/, '').trim());
-                if (hashId && currentFilePath) {
-                    setTimeout(() => scrollToHeading(hashId), 0);
-                }
+                applyHeadingLocationFromUrl();
             } catch (error) {
                 document.getElementById('markdown-body').innerHTML = '错误: ' + error.message;
             }
@@ -3697,7 +3873,7 @@
                     document.querySelectorAll('.toc-item.toc-active-l3').forEach(el => el.classList.remove('toc-active-l3'));
                     lastActiveId = '';
                     renderBreadcrumb();
-                    updateHeadingHash('');
+                    updateHeadingHash('', {});
                     return;
                 }
                 const currentHeading = headings[currentHeadingIndex];
@@ -3731,7 +3907,7 @@
                         }
                     }
                     renderBreadcrumb(levelData);
-                    updateHeadingHash(currentHeading.element.id);
+                    updateHeadingHash(currentHeading.element.id, levelData);
                 }
             }
             contentArea.addEventListener('scroll', () => {
@@ -3741,7 +3917,7 @@
             updateActiveHeading();
         }
 
-        window.scrollToHeading = function(id) {
+        window.scrollToHeading = function(id, options = {}) {
             const target = document.getElementById(id);
             const contentArea = document.querySelector('.markdown-body');
             const tocItem = document.querySelector(`.toc-item[data-id="${escapeSelectorValue(id)}"]`);
@@ -3758,6 +3934,17 @@
                 const offset = tabsHeight + toolbarHeight + 20;
                 const deltaY = targetRect.top - mainRect.top - offset;
                 contentArea.scrollTop = contentArea.scrollTop + deltaY;
+                if (!options.skipUrlSync) {
+                    const level = getTocLevel(tocItem);
+                    const levelData = { 1: null, 2: null, 3: null };
+                    if (level >= 1 && level <= 3) {
+                        levelData[level] = {
+                            text: String(tocItem.querySelector('.toc-label')?.textContent || tocItem.textContent || '').trim(),
+                            id
+                        };
+                    }
+                    updateHeadingHash(id, levelData);
+                }
                 setTimeout(() => {
                     target.classList.add('heading-flash');
                     setTimeout(() => target.classList.remove('heading-flash'), 600);
@@ -4143,7 +4330,7 @@
                     const path = fileLink.getAttribute('data-path');
                     if (!path) return;
                     e.preventDefault();
-                    await openFile(path);
+                    await openFile(path, { preserveSidebar: true });
                 });
             });
 
@@ -4214,7 +4401,7 @@
                     }
                 });
             }
-            revealTreeFile(findTreeFileLinkByPath(currentFilePath), { flash: false, scroll: false });
+            syncActiveTreeFile(currentFilePath);
 
             const searchInput = document.getElementById('search-input');
             if (searchInput) {
@@ -4316,13 +4503,16 @@
         window.addEventListener('popstate', async () => {
             const params = new URLSearchParams(window.location.search);
             const path = params.get('path');
-            if ((path || '') === (currentFilePath || '')) return;
-            currentFilePath = path;
-            await loadPreviewData();
+            if ((path || '') !== (currentFilePath || '')) {
+                currentFilePath = path;
+                await loadPreviewData({ preserveSidebar: true });
+                return;
+            }
+            applyHeadingLocationFromUrl();
         });
         fetchWorkspaceConfig()
             .catch(() => null)
-            .finally(() => loadPreviewData());
+            .finally(() => loadPreviewData({ preserveSidebar: true }));
     </script>
 </body>
 </html>

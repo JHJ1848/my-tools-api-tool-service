@@ -1204,9 +1204,9 @@ public class MarkdownPreviewController {
             }
         }
         StringBuilder sb = new StringBuilder();
-        sb.append("<div class=\"sidebar-header\"><div class=\"sidebar-header-row\"><span class=\"sidebar-title\">Markdown 文件列表</span></div><div class=\"directory-switcher\" id=\"directory-switcher\" data-scope=\"")
+        sb.append("<div class=\"sidebar-header\"><div class=\"directory-switcher\" id=\"directory-switcher\" data-scope=\"")
           .append(escapeHtml(currentScope))
-          .append("\"></div></div><div class=\"search-box\">")
+          .append("\"></div><div class=\"sidebar-header-row\"><span class=\"sidebar-title\">Markdown 文件列表</span></div></div><div class=\"search-box\">")
           .append("<input type=\"text\" class=\"search-input\" id=\"search-input\" placeholder=\"搜索...\">")
           .append("<button class=\"locate-btn\" id=\"locate-btn\" title=\"定位到当前文件\">⌖</button></div>")
           .append("<div class=\"file-list\">");
