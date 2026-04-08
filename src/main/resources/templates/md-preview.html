@@ -314,9 +314,6 @@
             outline: none;
             font-size: 12px;
         }
-        .workspace-input[readonly] {
-            cursor: default;
-        }
         .workspace-input:focus {
             border-color: #007fd4;
         }
@@ -346,10 +343,19 @@
             background: #2f3742;
             color: #ffffff;
         }
+        .workspace-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            background: #262b33;
+            color: #93a0ae;
+        }
         .workspace-status {
             font-size: 12px;
             color: #8fb4d9;
             line-height: 1.35;
+        }
+        .workspace-status:empty {
+            display: none;
         }
         .workspace-status.is-warning {
             color: #e2b96b;
@@ -2510,31 +2516,80 @@
             return currentWorkspaceConfig;
         }
 
+        async function finalizeWorkspaceChange(config = null) {
+            if (config) {
+                currentWorkspaceConfig = config;
+            }
+            currentFilePath = null;
+            saveTabs([]);
+            saveTabHistory([]);
+            lastSidebarScrollSnapshot = { fileListTop: 0 };
+            updatePathUrl('', true);
+            await loadPreviewData({ forceSidebarRefresh: true });
+            pushRequestMessage('工作目录已更新', 'success');
+            return currentWorkspaceConfig;
+        }
+
+        async function applyWorkspacePath(path) {
+            const nextPath = String(path || '').trim();
+            if (!nextPath) {
+                throw new Error('请输入有效的工作目录');
+            }
+            const currentEffectivePath = String(currentWorkspaceConfig?.effectivePath || '').trim();
+            if (nextPath === currentEffectivePath) {
+                return currentWorkspaceConfig;
+            }
+            const config = await persistWorkspacePath(nextPath);
+            return finalizeWorkspaceChange(config);
+        }
+
         function renderWorkspaceControls() {
             const container = document.getElementById('directory-switcher');
             if (!container) return;
             const effectivePath = String(currentWorkspaceConfig?.effectivePath || '').trim();
-            const fallback = Boolean(currentWorkspaceConfig?.fallbackToDesktop);
+            const supportsDirectoryPicker = Boolean(currentWorkspaceConfig?.supportsDirectoryPicker);
             container.innerHTML = `
                 <div class="workspace-row">
                     <span class="workspace-label">当前工作目录:</span>
-                    <input type="text" id="workspace-path-input" class="workspace-input" value="${escapeHtmlText(effectivePath)}" placeholder="选择工作目录" readonly>
-                    <button type="button" id="workspace-pick-btn" class="workspace-btn" title="选择工作目录" aria-label="选择工作目录">
+                    <input type="text" id="workspace-path-input" class="workspace-input" value="${escapeHtmlText(effectivePath)}" placeholder="请输入绝对路径">
+                    <button type="button" id="workspace-pick-btn" class="workspace-btn" title="${supportsDirectoryPicker ? '选择工作目录' : '当前环境不支持目录选择框，请直接输入路径'}" aria-label="选择工作目录"${supportsDirectoryPicker ? '' : ' disabled'}>
                         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h4l1.2 1.5H14v5.8A1.2 1.2 0 0 1 12.8 13H3.2A1.2 1.2 0 0 1 2 11.8z"></path><path d="M2 6h12"></path></svg>
                     </button>
                 </div>
-                <div class="workspace-status${fallback ? ' is-warning' : ''}" id="workspace-status">${fallback ? '配置目录不存在，已回退到桌面' : '当前工作目录'}</div>
             `;
+            const workspaceInput = document.getElementById('workspace-path-input');
+            const submitWorkspaceInput = async () => {
+                try {
+                    await applyWorkspacePath(workspaceInput?.value || '');
+                } catch (error) {
+                    if (workspaceInput && currentWorkspaceConfig?.effectivePath) {
+                        workspaceInput.value = String(currentWorkspaceConfig.effectivePath);
+                    }
+                    pushRequestMessage(error instanceof Error ? error.message : String(error), 'error');
+                }
+            };
+            workspaceInput?.addEventListener('keydown', async event => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                await submitWorkspaceInput();
+                workspaceInput.blur();
+            });
+            workspaceInput?.addEventListener('blur', async () => {
+                const currentValue = String(workspaceInput?.value || '').trim();
+                const currentEffectivePath = String(currentWorkspaceConfig?.effectivePath || '').trim();
+                if (!currentValue || currentValue === currentEffectivePath) {
+                    if (workspaceInput) workspaceInput.value = currentEffectivePath;
+                    return;
+                }
+                await submitWorkspaceInput();
+            });
             document.getElementById('workspace-pick-btn')?.addEventListener('click', async () => {
                 try {
-                    await pickWorkspacePath();
-                    currentFilePath = null;
-                    saveTabs([]);
-                    saveTabHistory([]);
-                    lastSidebarScrollSnapshot = { fileListTop: 0 };
-                    updatePathUrl('', true);
-                    await loadPreviewData({ forceSidebarRefresh: true });
-                    pushRequestMessage('工作目录已更新', 'success');
+                    const config = await pickWorkspacePath();
+                    const selectedPath = String(config?.effectivePath || '').trim();
+                    if (selectedPath) {
+                        await finalizeWorkspaceChange(config);
+                    }
                 } catch (error) {
                     pushRequestMessage(error instanceof Error ? error.message : String(error), 'error');
                 }

@@ -128,6 +128,7 @@ public class MarkdownPreviewController {
         config.put("effectivePath", effectivePath.toString());
         config.put("exists", normalizeAbsoluteDirectory(configuredPath) != null);
         config.put("fallbackToDesktop", fallbackToDesktop);
+        config.put("supportsDirectoryPicker", !GraphicsEnvironment.isHeadless());
         return config;
     }
 
@@ -219,6 +220,14 @@ public class MarkdownPreviewController {
             }
             saveWorkspacePath(directory.toString());
             return ResponseEntity.ok(Map.of("success", Boolean.TRUE, "config", getWorkspaceConfig()));
+        } catch (IllegalStateException e) {
+            logger.warn("当前环境不支持目录选择框");
+            return ResponseEntity.ok(Map.of(
+                    "success", Boolean.FALSE,
+                    "unsupported", Boolean.TRUE,
+                    "message", e.getMessage(),
+                    "config", getWorkspaceConfig()
+            ));
         } catch (Exception e) {
             logger.error("选择工作目录失败", e);
             return ResponseEntity.internalServerError().body(Map.of("success", Boolean.FALSE, "message", e.getMessage()));
