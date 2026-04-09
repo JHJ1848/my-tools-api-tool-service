@@ -1853,6 +1853,13 @@
         let lastSidebarScrollSnapshot = null;
         let currentSidebarScope = String(document.getElementById('directory-switcher')?.dataset.scope || '').trim();
         let suspendHeadingHashSync = false;
+        let shellInitialized = false;
+        let sidebarLoadSeq = 0;
+        let previewLoadSeq = 0;
+        let rawLoadSeq = 0;
+        let sidebarFetchAbortController = null;
+        let previewFetchAbortController = null;
+        let rawFetchAbortController = null;
 
         function escapeHtmlText(text) {
             return String(text || '')
@@ -1980,8 +1987,9 @@
             document.addEventListener('click', hideDelayedTooltip);
         }
 
-        function applyOverflowTooltips() {
-            document.querySelectorAll('.tree-file').forEach(fileLink => {
+        function applyOverflowTooltips(root = document) {
+            const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+            scope.querySelectorAll('.tree-file').forEach(fileLink => {
                 const rawPath = String(fileLink.getAttribute('data-path') || '').trim();
                 const fileName = String(fileLink.getAttribute('data-name') || '').trim();
                 const tooltipText = rawPath || fileName;
@@ -1992,6 +2000,35 @@
                     fileNameEl.dataset.tooltip = tooltipText;
                 }
             });
+        }
+
+        function initShellOnce() {
+            if (shellInitialized) return;
+            initTooltipSystem();
+            initRequestPanel();
+            shellInitialized = true;
+        }
+
+        function highlightMarkdownCodeBlocks() {
+            if (!window.hljs) return;
+            const markdownBody = document.getElementById('markdown-body');
+            if (!markdownBody) return;
+            markdownBody.querySelectorAll('pre code').forEach(block => {
+                if (block.dataset.hljsDone === 'true') return;
+                window.hljs.highlightElement(block);
+                block.dataset.hljsDone = 'true';
+            });
+        }
+
+        function ensureSidebarAndTocHeaderIcons() {
+            const sidebarTitle = document.querySelector('.sidebar-title');
+            if (sidebarTitle && !/[\u{1F300}-\u{1FAFF}]/u.test(sidebarTitle.textContent || '')) {
+                sidebarTitle.textContent = `📚 ${sidebarTitle.textContent || ''}`.trim();
+            }
+            const tocHeader = document.querySelector('.toc-header');
+            if (tocHeader && !/[\u{1F300}-\u{1FAFF}]/u.test(tocHeader.textContent || '')) {
+                tocHeader.textContent = `🧭 ${tocHeader.textContent || ''}`.trim();
+            }
         }
 
         function createBreadcrumbSegment(text, className, options = {}) {
@@ -2215,16 +2252,28 @@
             if (!force && rawBody.dataset.loadedPath === currentFilePath && rawBody.textContent) {
                 return;
             }
+            if (rawFetchAbortController) {
+                rawFetchAbortController.abort();
+            }
+            const requestSeq = ++rawLoadSeq;
+            const controller = new AbortController();
+            rawFetchAbortController = controller;
             rawBody.dataset.loadedPath = '';
             rawBody.textContent = '正在加载原文本...';
             try {
-                const response = await fetch(`/md-content?path=${encodeURIComponent(currentFilePath)}`);
+                const response = await fetch(`/md-content?path=${encodeURIComponent(currentFilePath)}`, { signal: controller.signal });
+                if (requestSeq !== rawLoadSeq) return;
                 rawBody.textContent = response.ok ? await response.text() : '无法加载内容';
                 if (response.ok) {
                     rawBody.dataset.loadedPath = currentFilePath;
                 }
             } catch (error) {
+                if (error && error.name === 'AbortError') return;
                 rawBody.textContent = '无法加载内容';
+            } finally {
+                if (rawFetchAbortController === controller) {
+                    rawFetchAbortController = null;
+                }
             }
         }
 
@@ -2615,16 +2664,15 @@
 
         async function openFile(path, options = {}) {
             const nextPath = String(path || '').trim();
-            if (!nextPath || nextPath === currentFilePath) return;
+            const forceReload = Boolean(options.forceReload);
+            if (!nextPath) return;
+            if (!forceReload && nextPath === currentFilePath) return;
             const replace = Boolean(options.replaceHistory);
             lastSidebarScrollSnapshot = captureSidebarScrollSnapshot();
             currentFilePath = nextPath;
             hideDelayedTooltip();
             updatePathUrl(nextPath, replace);
-            await loadPreviewData({
-                preserveSidebar: options.preserveSidebar !== false,
-                forceSidebarRefresh: Boolean(options.forceSidebarRefresh)
-            });
+            await loadDocumentData(nextPath, { skipHeadingLocation: false });
         }
         let currentApiSections = [];
 
@@ -2673,7 +2721,80 @@
             );
         }
 
-        async function loadPreviewData(options = {}) {
+        async function fetchSidebarData(signal) {
+            const params = new URLSearchParams();
+            if (currentSidebarScope) params.set('scope', currentSidebarScope);
+            if (currentFilePath) params.set('currentPath', currentFilePath);
+            const scopeQuery = params.toString() ? `?${params.toString()}` : '';
+            try {
+                const response = await fetch(`/api/md/sidebar-data${scopeQuery}`, { signal });
+                if (!response.ok) throw new Error('加载侧边栏数据失败');
+                const data = await response.json();
+                if (!data || typeof data !== 'object' || typeof data.sidebar !== 'string') {
+                    throw new Error('侧边栏数据格式异常');
+                }
+                return data;
+            } catch (error) {
+                if (error && error.name === 'AbortError') throw error;
+                const params = new URLSearchParams();
+                if (currentFilePath) params.set('path', currentFilePath);
+                if (currentSidebarScope) params.set('scope', currentSidebarScope);
+                const query = params.toString() ? `?${params.toString()}` : '';
+                const response = await fetch(`/api/md/preview-data${query}`, { signal });
+                if (!response.ok) throw new Error('加载侧边栏数据失败');
+                return response.json();
+            }
+        }
+
+        async function fetchDocumentData(path, signal) {
+            const targetPath = String(path || '').trim();
+            if (!targetPath) {
+                return {
+                    title: 'Markdown 预览',
+                    content: '',
+                    toc: '<div class="toc-header">目录</div><div class="toc-empty">当前未打开 Markdown 文件</div>',
+                    path: '',
+                    apiSections: []
+                };
+            }
+            try {
+                const response = await fetch(`/api/md/document-data?path=${encodeURIComponent(targetPath)}`, { signal });
+                if (!response.ok) throw new Error('加载文档数据失败');
+                const data = await response.json();
+                if (!data || typeof data !== 'object') throw new Error('文档数据格式异常');
+                return data;
+            } catch (error) {
+                if (error && error.name === 'AbortError') throw error;
+                const response = await fetch(`/api/md/preview-data?path=${encodeURIComponent(targetPath)}`, { signal });
+                if (!response.ok) throw new Error('加载文档数据失败');
+                return response.json();
+            }
+        }
+
+        function initGlobalUiOnce() {
+            if (shellInitialized) return;
+            if (typeof initLocalSearch === 'function') {
+                initLocalSearch();
+            }
+            initShellOnce();
+            initRequestPanel();
+        }
+
+        async function loadShellData(options = {}) {
+            const shouldReloadSidebar = Boolean(options.forceSidebarRefresh)
+                || !document.querySelector('.file-list')
+                || !document.getElementById('directory-switcher');
+            if (!shouldReloadSidebar) {
+                syncActiveTreeFile(currentFilePath);
+                initGlobalUiOnce();
+                return;
+            }
+            const requestSeq = ++sidebarLoadSeq;
+            if (sidebarFetchAbortController) {
+                sidebarFetchAbortController.abort();
+            }
+            const controller = new AbortController();
+            sidebarFetchAbortController = controller;
             try {
                 lastSidebarScrollSnapshot = options.forceSidebarRefresh
                     ? { fileListTop: 0 }
@@ -2681,24 +2802,46 @@
                 const preservedTreeState = options.forceSidebarRefresh
                     ? { searchTerm: '', fileListTop: 0 }
                     : captureTreeSearchState();
+
+                const data = await fetchSidebarData(controller.signal);
+                if (requestSeq !== sidebarLoadSeq) return;
+                currentWorkspaceConfig = data.workspaceConfig || currentWorkspaceConfig;
+                document.getElementById('sidebar-container').innerHTML = data.sidebar || '';
+                currentSidebarScope = String(data.scope || '').trim();
+                initTreeInteraction();
+                restoreTreeSearchState(preservedTreeState);
+                applyOverflowTooltips(document.getElementById('sidebar-container'));
+                renderWorkspaceControls();
+                ensureSidebarAndTocHeaderIcons();
+                restoreSidebarScrollSnapshot(lastSidebarScrollSnapshot);
+                lastSidebarScrollSnapshot = null;
+                initGlobalUiOnce();
+            } finally {
+                if (sidebarFetchAbortController === controller) {
+                    sidebarFetchAbortController = null;
+                }
+            }
+        }
+
+        async function loadDocumentData(path, options = {}) {
+            const targetPath = String(path ?? currentFilePath ?? '').trim();
+            currentFilePath = targetPath || null;
+            const requestSeq = ++previewLoadSeq;
+            if (previewFetchAbortController) {
+                previewFetchAbortController.abort();
+            }
+            const controller = new AbortController();
+            previewFetchAbortController = controller;
+            try {
                 const rawBody = document.getElementById('raw-body');
-                if (rawBody) {
+                if (rawBody && rawBody.dataset.loadedPath && rawBody.dataset.loadedPath !== currentFilePath) {
                     rawBody.textContent = '';
                     rawBody.dataset.loadedPath = '';
                 }
-                const query = currentFilePath ? `?path=${encodeURIComponent(currentFilePath)}` : '';
-                const response = await fetch(`/api/md/preview-data${query}`);
-                if (!response.ok) throw new Error('加载数据失败');
-                const data = await response.json();
-                currentWorkspaceConfig = data.workspaceConfig || currentWorkspaceConfig;
-                document.title = data.title;
-                const reuseSidebar = shouldReuseSidebar(data, options);
-                if (!reuseSidebar) {
-                    document.getElementById('sidebar-container').innerHTML = data.sidebar;
-                    currentSidebarScope = String(data.scope || '').trim();
-                }
-                document.getElementById('toc-container').innerHTML = data.toc;
-                renderWorkspaceControls();
+                const data = await fetchDocumentData(currentFilePath, controller.signal);
+                if (requestSeq !== previewLoadSeq) return;
+                document.title = data.title || 'Markdown 预览';
+                document.getElementById('toc-container').innerHTML = data.toc || '<div class="toc-header">目录</div><div class="toc-empty">当前未打开 Markdown 文件</div>';
                 if (data.content) {
                     document.getElementById('markdown-body').innerHTML = data.content;
                 } else {
@@ -2706,43 +2849,46 @@
                 }
                 const breadcrumbEl = document.getElementById('breadcrumb-path');
                 if (breadcrumbEl) {
-                    breadcrumbEl.dataset.fullPath = data.path || currentFilePath;
+                    breadcrumbEl.dataset.fullPath = data.path || currentFilePath || '';
                     renderBreadcrumb();
                 }
-                const sidebarTitle = document.querySelector('.sidebar-title');
-                if (sidebarTitle && !/[\u{1F300}-\u{1FAFF}]/u.test(sidebarTitle.textContent || '')) {
-                    sidebarTitle.textContent = `📚 ${sidebarTitle.textContent || ''}`.trim();
-                }
-                const tocHeader = document.querySelector('.toc-header');
-                if (tocHeader && !/[\u{1F300}-\u{1FAFF}]/u.test(tocHeader.textContent || '')) {
-                    tocHeader.textContent = `🧭 ${tocHeader.textContent || ''}`.trim();
-                }
                 currentApiSections = normalizeApiSections(data?.apiSections);
-
-                // 初始化交互功能
-                if (window.hljs) hljs.highlightAll();
+                syncActiveTreeFile(currentFilePath);
+                if (typeof initLocalSearch === 'function') {
+                    initLocalSearch();
+                }
                 initToc();
-                initLocalSearch();
-                initRequestPanel();
                 initRequestParams();
                 initHeadingCollapse();
                 initTocScrollSpy();
                 initTabs();
-                if (!reuseSidebar) {
-                    initTreeInteraction();
-                    restoreTreeSearchState(preservedTreeState);
-                } else {
-                    syncActiveTreeFile(currentFilePath);
-                }
-                initTooltipSystem();
-                applyOverflowTooltips();
-                restoreSidebarScrollSnapshot(lastSidebarScrollSnapshot);
-                lastSidebarScrollSnapshot = null;
+                ensureSidebarAndTocHeaderIcons();
+                requestAnimationFrame(() => {
+                    highlightMarkdownCodeBlocks();
+                    applyOverflowTooltips(document.getElementById('toc-container'));
+                });
                 if (document.getElementById('btn-raw')?.classList.contains('active')) {
                     await loadRawContent(true);
                 }
-                applyHeadingLocationFromUrl();
+                if (options.skipHeadingLocation !== true) {
+                    applyHeadingLocationFromUrl();
+                }
             } catch (error) {
+                if (error && error.name === 'AbortError') return;
+                document.getElementById('markdown-body').innerHTML = '错误: ' + error.message;
+            } finally {
+                if (previewFetchAbortController === controller) {
+                    previewFetchAbortController = null;
+                }
+            }
+        }
+
+        async function loadPreviewData(options = {}) {
+            try {
+                await loadShellData(options);
+                await loadDocumentData(currentFilePath, { skipHeadingLocation: options.skipHeadingLocation });
+            } catch (error) {
+                if (error && error.name === 'AbortError') return;
                 document.getElementById('markdown-body').innerHTML = '错误: ' + error.message;
             }
         }
@@ -4079,7 +4225,7 @@
             enforceTabLimit(target);
         }
 
-        function closeOtherTabs(path) {
+        async function closeOtherTabs(path) {
             const keepPath = String(path || currentFilePath || '').trim();
             if (!keepPath) return;
             saveTabs([keepPath]);
@@ -4088,7 +4234,7 @@
                 renderTabs();
                 return;
             }
-            window.location.href = '/md-view?path=' + encodeURIComponent(keepPath);
+            await openFile(keepPath, { replaceHistory: true, preserveSidebar: true });
         }
         
         function initTabs() {
@@ -4132,7 +4278,7 @@
             });
         }
 
-        function closeTab(path) {
+        async function closeTab(path) {
             let tabs = getTabs();
             const index = tabs.indexOf(path);
             if (index > -1) {
@@ -4140,9 +4286,17 @@
                 saveTabs(tabs);
                 saveTabHistory(getTabHistory().filter(item => item !== path));
                 if (path === currentFilePath) {
-                    if (tabs.length > 0) window.location.href = '/md-view?path=' + encodeURIComponent(tabs[Math.min(index, tabs.length - 1)]);
-                    else window.location.href = '/md-view';
-                } else renderTabs();
+                    if (tabs.length > 0) {
+                        const nextPath = tabs[Math.min(index, tabs.length - 1)];
+                        await openFile(nextPath, { replaceHistory: true, preserveSidebar: true });
+                    } else {
+                        currentFilePath = null;
+                        updatePathUrl('', true);
+                        await loadDocumentData('', { skipHeadingLocation: false });
+                    }
+                } else {
+                    renderTabs();
+                }
             }
         }
 
@@ -4385,7 +4539,7 @@
                     const path = fileLink.getAttribute('data-path');
                     if (!path) return;
                     e.preventDefault();
-                    await openFile(path, { preserveSidebar: true });
+                    await openFile(path, { preserveSidebar: true, forceReload: path === currentFilePath });
                 });
             });
 
@@ -4514,19 +4668,20 @@
         const closeOthersMenuItem = document.getElementById('menu-close-others');
         if (closeOthersMenuItem && closeOthersMenuItem.dataset.bound !== 'true') {
             closeOthersMenuItem.dataset.bound = 'true';
-            closeOthersMenuItem.addEventListener('click', () => {
-                closeOtherTabs(targetTabPath || currentFilePath);
+            closeOthersMenuItem.addEventListener('click', async () => {
+                await closeOtherTabs(targetTabPath || currentFilePath);
             });
         }
 
         const closeAllMenuItem = document.getElementById('menu-close-all');
         if (closeAllMenuItem && closeAllMenuItem.dataset.bound !== 'true') {
             closeAllMenuItem.dataset.bound = 'true';
-            closeAllMenuItem.addEventListener('click', () => {
+            closeAllMenuItem.addEventListener('click', async () => {
                 saveTabs([]);
                 saveTabHistory([]);
                 currentFilePath = null;
-                window.location.href = '/md-view';
+                updatePathUrl('', true);
+                await loadDocumentData('', { skipHeadingLocation: false });
             });
         }
 
@@ -4560,14 +4715,21 @@
             const path = params.get('path');
             if ((path || '') !== (currentFilePath || '')) {
                 currentFilePath = path;
-                await loadPreviewData({ preserveSidebar: true });
+                await loadDocumentData(currentFilePath, { skipHeadingLocation: false });
                 return;
             }
             applyHeadingLocationFromUrl();
         });
         fetchWorkspaceConfig()
             .catch(() => null)
-            .finally(() => loadPreviewData({ preserveSidebar: true }));
+            .finally(async () => {
+                try {
+                    await loadShellData({ preserveSidebar: false, forceSidebarRefresh: true });
+                    await loadDocumentData(currentFilePath, { skipHeadingLocation: false });
+                } catch (error) {
+                    document.getElementById('markdown-body').innerHTML = '错误: ' + (error instanceof Error ? error.message : String(error));
+                }
+            });
     </script>
 </body>
 </html>

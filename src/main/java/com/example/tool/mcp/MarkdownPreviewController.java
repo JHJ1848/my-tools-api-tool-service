@@ -59,6 +59,7 @@ public class MarkdownPreviewController {
 
     @Value("${markdown.base-path:D:\\adas\\项目}")
     private String basePath;
+    private final MarkdownPreviewCacheService previewCache = new MarkdownPreviewCacheService();
 
     private Path getWorkspaceConfigFile() {
         return Paths.get(System.getProperty("user.home"), ".tool-service", "markdown-preview.properties");
@@ -200,6 +201,7 @@ public class MarkdownPreviewController {
                 return ResponseEntity.badRequest().body(Map.of("success", Boolean.FALSE, "message", "目录不存在或不是有效文件夹"));
             }
             saveWorkspacePath(directory.toString());
+            previewCache.clearAll();
             return ResponseEntity.ok(Map.of("success", Boolean.TRUE, "config", getWorkspaceConfig()));
         } catch (Exception e) {
             logger.error("保存工作目录失败", e);
@@ -219,6 +221,7 @@ public class MarkdownPreviewController {
                 return ResponseEntity.badRequest().body(Map.of("success", Boolean.FALSE, "message", "所选目录无效"));
             }
             saveWorkspacePath(directory.toString());
+            previewCache.clearAll();
             return ResponseEntity.ok(Map.of("success", Boolean.TRUE, "config", getWorkspaceConfig()));
         } catch (IllegalStateException e) {
             logger.warn("当前环境不支持目录选择框");
@@ -240,41 +243,61 @@ public class MarkdownPreviewController {
         try {
             String decodedPath = normalizeRelativePath(path);
             String normalizedScope = normalizeRelativePath(scope);
-            List<String> files = getMdFiles(normalizedScope);
-            String htmlContent = "";
-            String tocHtml = renderTocHtml(List.of());
-            String safeTitle = "Markdown 预览";
-            List<Map<String, Object>> apiSections = List.of();
-
             if (StringUtils.hasText(decodedPath)) {
                 Path fullPath = resolveMarkdownPath(decodedPath);
                 if (fullPath == null || !Files.exists(fullPath)) {
                     return ResponseEntity.notFound().build();
                 }
-                String content = Files.readString(fullPath);
-                safeTitle = decodedPath.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-                htmlContent = convertMarkdownToHtml(content);
-                tocHtml = renderTocHtml(extractTableOfContents(content));
-                apiSections = extractApiSections(content);
             }
-
-            String sidebarHtml = buildTreeHtml(files, decodedPath, normalizedScope);
-
-            Map<String, Object> data = new HashMap<>();
-            data.put("title", safeTitle);
-            data.put("content", htmlContent);
-            data.put("sidebar", sidebarHtml);
-            data.put("toc", tocHtml);
+            Map<String, Object> data = buildSidebarData(normalizedScope, decodedPath);
+            Map<String, Object> documentData = buildDocumentData(decodedPath);
+            data.put("title", documentData.get("title"));
+            data.put("content", documentData.get("content"));
+            data.put("toc", documentData.get("toc"));
             data.put("path", decodedPath);
-            data.put("scope", normalizedScope);
-            data.put("directories", getMdDirectories());
-            data.put("apiSections", apiSections);
+            data.put("apiSections", documentData.get("apiSections"));
             data.put("apiSectionsVersion", 1);
-            data.put("workspaceConfig", getWorkspaceConfig());
+            data.put("cacheHit", documentData.get("cacheHit"));
+            data.put("fileLastModified", documentData.get("fileLastModified"));
+            data.put("fileSize", documentData.get("fileSize"));
 
             return ResponseEntity.ok(data);
         } catch (Exception e) {
             logger.error("获取预览数据失败", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/api/md/sidebar-data")
+    public ResponseEntity<Map<String, Object>> getSidebarData(@RequestParam(required = false, defaultValue = "") String scope,
+                                                              @RequestParam(required = false) String currentPath) {
+        try {
+            String normalizedScope = normalizeRelativePath(scope);
+            String normalizedCurrentPath = normalizeRelativePath(currentPath);
+            return ResponseEntity.ok(buildSidebarData(normalizedScope, normalizedCurrentPath));
+        } catch (Exception e) {
+            logger.error("获取侧边栏数据失败", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/api/md/document-data")
+    public ResponseEntity<Map<String, Object>> getDocumentData(@RequestParam String path) {
+        try {
+            String decodedPath = normalizeRelativePath(path);
+            if (!StringUtils.hasText(decodedPath)) {
+                return ResponseEntity.badRequest().body(Map.of("message", "path 不能为空"));
+            }
+            Path fullPath = resolveMarkdownPath(decodedPath);
+            if (fullPath == null || !Files.exists(fullPath)) {
+                return ResponseEntity.notFound().build();
+            }
+            Map<String, Object> data = buildDocumentData(decodedPath);
+            data.put("path", decodedPath);
+            data.put("apiSectionsVersion", 1);
+            return ResponseEntity.ok(data);
+        } catch (Exception e) {
+            logger.error("获取文档数据失败", e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -338,6 +361,10 @@ public class MarkdownPreviewController {
     }
 
     private List<String> getMdFiles(String scope) {
+        return scanMdFiles(normalizeRelativePath(scope));
+    }
+
+    private List<String> scanMdFiles(String scope) {
         try {
             Path base = resolveScopePath(scope);
             if (base == null || !Files.exists(base) || !Files.isDirectory(base)) {
@@ -364,6 +391,7 @@ public class MarkdownPreviewController {
             }
             String content = body.getOrDefault("content", "");
             Files.writeString(fullPath, content, StandardCharsets.UTF_8);
+            previewCache.evictDocument(fullPath.toString());
             return ResponseEntity.ok(Map.of("success", Boolean.TRUE, "path", decodedPath));
         } catch (Exception e) {
             logger.error("保存 Markdown 失败", e);
@@ -372,8 +400,11 @@ public class MarkdownPreviewController {
     }
 
     private List<String> getMdDirectories() {
+        return computeDirectoriesFromFiles(getMdFiles(""));
+    }
+
+    private List<String> computeDirectoriesFromFiles(List<String> files) {
         try {
-            List<String> files = getMdFiles();
             Set<String> directories = new LinkedHashSet<>();
             directories.add("");
             for (String file : files) {
@@ -394,9 +425,83 @@ public class MarkdownPreviewController {
             values.add(0, "");
             return values;
         } catch (Exception e) {
-            logger.error("鍒楀嚭鐩綍澶辫触: {}", e.getMessage());
+            logger.error("列出目录失败: {}", e.getMessage());
             return List.of("");
         }
+    }
+
+    private Map<String, Object> buildSidebarData(String normalizedScope, String currentPath) {
+        String workspaceKey = getEffectiveWorkspaceBase().toString();
+        MarkdownPreviewCacheService.SidebarCacheResult cacheResult = previewCache.getSidebarData(
+                workspaceKey,
+                normalizedScope,
+                () -> {
+                    List<String> files = scanMdFiles(normalizedScope);
+                    List<String> directories = computeDirectoriesFromFiles(scanMdFiles(""));
+                    return new MarkdownPreviewCacheService.SidebarPayload(files, directories);
+                }
+        );
+        List<String> files = cacheResult.payload().files();
+        List<String> directories = cacheResult.payload().directories();
+        String sidebarHtml = buildTreeHtml(files, currentPath, normalizedScope);
+        Map<String, Object> data = new HashMap<>();
+        data.put("sidebar", sidebarHtml);
+        data.put("scope", normalizedScope);
+        data.put("directories", directories);
+        data.put("workspaceConfig", getWorkspaceConfig());
+        data.put("cacheHit", cacheResult.cacheHit());
+        return data;
+    }
+
+    private Map<String, Object> buildDocumentData(String decodedPath) throws IOException {
+        String title = "Markdown 预览";
+        String content = "";
+        String toc = renderTocHtml(List.of());
+        List<Map<String, Object>> apiSections = List.of();
+        boolean cacheHit = false;
+        long fileLastModified = 0L;
+        long fileSize = 0L;
+
+        if (StringUtils.hasText(decodedPath)) {
+            Path fullPath = resolveMarkdownPath(decodedPath);
+            if (fullPath == null || !Files.exists(fullPath)) {
+                throw new IOException("Markdown 文件不存在");
+            }
+            fileLastModified = Files.getLastModifiedTime(fullPath).toMillis();
+            fileSize = Files.size(fullPath);
+            MarkdownPreviewCacheService.DocumentCacheResult cacheResult = previewCache.getDocumentData(
+                    fullPath.toString(),
+                    fileLastModified,
+                    fileSize,
+                    () -> {
+                        try {
+                            String markdown = Files.readString(fullPath);
+                            String safeTitle = decodedPath.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+                            String htmlContent = convertMarkdownToHtml(markdown);
+                            String tocHtml = renderTocHtml(extractTableOfContents(markdown));
+                            List<Map<String, Object>> parsedApiSections = extractApiSections(markdown);
+                            return new MarkdownPreviewCacheService.DocumentPayload(safeTitle, htmlContent, tocHtml, parsedApiSections);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+            );
+            title = cacheResult.payload().title();
+            content = cacheResult.payload().content();
+            toc = cacheResult.payload().toc();
+            apiSections = cacheResult.payload().apiSections();
+            cacheHit = cacheResult.cacheHit();
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("title", title);
+        data.put("content", content);
+        data.put("toc", toc);
+        data.put("apiSections", apiSections);
+        data.put("cacheHit", cacheHit);
+        data.put("fileLastModified", fileLastModified);
+        data.put("fileSize", fileSize);
+        return data;
     }
 
     private String normalizeRelativePath(String value) {
