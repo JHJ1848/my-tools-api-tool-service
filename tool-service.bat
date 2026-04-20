@@ -19,25 +19,35 @@ if errorlevel 1 (
 )
 
 set "GIT_REMOTE=origin"
+set "GIT_BRANCH="
+set "SKIP_GIT_PULL="
+
+git rev-parse --is-inside-work-tree >nul 2>nul
+if errorlevel 1 (
+  set "SKIP_GIT_PULL=1"
+  echo.
+  echo [WARN] Current directory is not a git repository. Skip git pull.
+  goto start_project
+)
+
 for /f "delims=" %%i in ('git remote 2^>nul') do (
   set "GIT_REMOTE=%%i"
   goto git_remote_found
 )
 :git_remote_found
 
-set "GIT_BRANCH="
 for /f "delims=" %%i in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set "GIT_BRANCH=%%i"
 if not defined GIT_BRANCH (
   echo.
-  echo [ERROR] Cannot determine current git branch. Startup aborted.
-  pause
-  exit /b 1
+  echo [WARN] Cannot determine current git branch. Skip git pull.
+  set "SKIP_GIT_PULL=1"
+  goto start_project
 )
 if /i "%GIT_BRANCH%"=="HEAD" (
   echo.
-  echo [ERROR] Detached HEAD is not supported by this startup script. Startup aborted.
-  pause
-  exit /b 1
+  echo [WARN] Detached HEAD detected. Skip git pull.
+  set "SKIP_GIT_PULL=1"
+  goto start_project
 )
 
 echo.
@@ -45,11 +55,10 @@ echo [2/3] Pulling latest code from %GIT_REMOTE%/%GIT_BRANCH%...
 call git pull %GIT_REMOTE% %GIT_BRANCH%
 if errorlevel 1 (
   echo.
-  echo [ERROR] git pull failed. Startup aborted.
-  pause
-  exit /b 1
+  echo [WARN] git pull failed. Continue starting with local code.
 )
 
+:start_project
 echo.
 echo [3/3] Starting project...
 call mvn clean spring-boot:run
