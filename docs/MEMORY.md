@@ -1,441 +1,597 @@
 # Tool Service MEMORY
 
-本文档记录当前仓库已经落地的实现事实，重点覆盖 Markdown 预览模块的系统边界、页面流程、按钮行为、接口契约、状态缓存和已知约束。
+本文档记录当前仓库已经落地的实现事实，覆盖项目结构、运行链路、核心模块、接口契约、页面交互、缓存策略、历史包袱和维护约束。
 
 ## 1. 使用原则
 
 - 这里记录的是“当前实现事实”，不是需求草稿。
 - 当 README、历史方案文档、口头描述与当前代码冲突时，以当前代码为准。
-- 当前页面主实现以 `src/main/java/com/example/tool/mcp/MarkdownPreviewController.java` 和 `src/main/resources/templates/md-preview.html` 为准。
-- 仓库里存在一套未接入当前运行链路的 React/Vite 前端脚手架与旧 README，不能把它当作当前线上实现。
+- 当前事实源优先级：
+  1. `src/main/java/**`
+  2. `src/main/resources/**`
+  3. `pom.xml`
+  4. 本文档
+  5. `README.md`、`ARCHITECTURE_ANALYSIS.md`、React/Node 原型目录
 
-## 2. 当前系统结构
+## 2. 仓库结构分层
 
-### 2.1 当前有效架构
+### 2.1 Primary：当前有效主链路
 
-- 后端：Spring Boot
-- 页面模板：Thymeleaf 风格静态模板文件 `md-preview.html`
+- `pom.xml`
+  - 当前主构建入口，Spring Boot + Maven。
+- `src/main/java/com/example/tool/**`
+  - 当前后端主实现。
+- `src/main/resources/application*.yml`
+  - 当前配置体系。
+- `src/main/resources/templates/md-preview.html`
+  - 当前 Markdown 预览页面。
+- `src/main/resources/static/md-search.js`
+  - 当前页面的本地全文搜索脚本。
+- `docs/MEMORY.md`
+  - 当前事实手册。
+
+### 2.2 Secondary：并存但未接入当前主发布链路的原型
+
+- `src/App.tsx`、`src/main.tsx`、`src/components/**`、`src/hooks/**`、`src/stores/**`、`src/styles/**`
+  - 一套 React/Vite 前端原型。
+- `server/**`
+  - 一套独立 Node 文件服务原型。
+- `package.json`、`vite.config.ts`、`tailwind.config.js`
+  - 对应上述 React/Vite 原型的构建配置。
+
+### 2.3 Archive：历史说明或方案文档
+
+- `README.md`
+  - 当前内容主要描述 React + Node 的 MD Preview Tool，不是当前真实主链路说明。
+- `ARCHITECTURE_ANALYSIS.md`
+  - 架构分析与建议稿，不是现状事实源。
+- `mcp-config/*.json`
+  - MCP 客户端样例配置，不驱动当前服务端运行。
+- `openspec/**`
+  - 需求和变更过程资产，不属于运行时实现。
+
+## 3. 当前有效架构
+
+### 3.1 应用定位
+
+当前项目是一个基于 Spring Boot 的本地工具服务，主要提供两类能力：
+
+- 面向 AI 客户端的 MCP / HTTP 数据库工具能力
+- 面向本地 Markdown 文档的浏览、预览、原文查看、保存、下载和请求调试能力
+
+### 3.2 当前运行主链路
+
+```text
+Spring Boot 应用
+├─ HTTP / REST 入口
+│  ├─ /api/mcp/**         数据库工具与 MCP 兼容接口
+│  ├─ /api/health/**      健康检查
+│  └─ /api/md/** + /md-*  Markdown 预览工作台
+├─ 工具层
+│  ├─ DatabaseMcpTool
+│  └─ MarkdownMcpTool
+├─ 服务层
+│  ├─ DatabaseQueryService
+│  └─ QueryHistoryService
+├─ 协议层
+│  └─ McpProtocolHandler
+└─ 资源层
+   ├─ 达梦数据库
+   └─ 本地 Markdown 文件系统
+```
+
+### 3.3 当前真实页面链路
+
 - 页面入口：`GET /md-view`
-- 页面数据主接口：`GET /api/md/preview-data`
-- 原文读取：`GET /md-content`
-- 文件下载：`GET /md-download`
-- 文件保存：`POST /api/md/save-content`
-- 工作目录配置：
+- 页面模板：`src/main/resources/templates/md-preview.html`
+- 页面数据接口：
   - `GET /api/md/workspace-config`
-  - `POST /api/md/workspace-config`
-  - `POST /api/md/workspace-config/pick-directory`
+  - `GET /api/md/preview-data`
+  - `GET /api/md/sidebar-data`
+  - `GET /api/md/document-data`
+  - `GET /md-content`
+  - `GET /md-download`
+  - `POST /api/md/save-content`
 
-### 2.2 页面布局
+当前页面不是 React/Vite 构建产物，而是服务端直接返回模板页，前端逻辑以内联脚本和 `md-search.js` 为主。
+
+## 4. 启动、构建与配置体系
+
+### 4.1 启动入口
+
+- 主类：`ToolServiceApplication`
+- 默认端口：`9527`
+- 主配置文件：`src/main/resources/application.yml`
+
+### 4.2 配置导入顺序
+
+`application.yml` 会导入以下配置：
+
+- 外部文件：
+  - `config/application-dameng.yml`
+  - `config/application-md.yml`
+  - `config/application-mcp.yml`
+- classpath 默认文件：
+  - `application-dameng.yml`
+  - `application-md.yml`
+  - `application-mcp.yml`
+
+结论：
+
+- 运行目录下 `config/` 中的同名配置优先于 classpath 默认配置。
+- `src/main/resources/application-datasource.yml` 已标记为弃用说明文件。
+
+### 4.3 功能开关
+
+- `tool-service.dameng.enabled`
+  - 控制数据库相关 HTTP 接口、MCP 控制器、协议层与数据库工具是否启用。
+- `tool-service.markdown.enabled`
+  - 只影响 `MarkdownMcpTool` 是否对 MCP 工具列表暴露 Markdown 工具。
+  - 不影响 `MarkdownPreviewController` 的页面与 HTTP 预览接口。
+
+### 4.4 CORS 与异常
+
+- `CorsConfig`
+  - 对所有路径放开跨域、方法和请求头。
+- `GlobalExceptionHandler`
+  - 对资源 404 返回统一 JSON。
+  - 其他异常统一返回 `500` 和裁剪后的堆栈摘要。
+
+## 5. 数据库模块
+
+### 5.1 数据源实现事实
+
+- 固定 Bean：
+  - `masterDataSource`
+  - `ssoDataSource`
+- 主数据源：
+  - `master`
+- 动态数据源：
+  - 对除 `master` / `sso` 以外的名称，`DataSourceConfig.getDataSource(name)` 会按名称动态创建连接池。
+
+注意：
+
+- 早期文档或图示中提到的“三个固定数据源”不是当前代码的严格事实。
+- 当前代码显式维护的固定数据源只有 `master` 和 `sso`。
+- 其他数据库名称通过动态创建实现，不应把旧图示直接当成当前固定实现。
+
+### 5.2 数据库配置来源
+
+- 优先使用 `spring.datasource.dynamic.datasource.master.*` 与 `sso.*`
+- 当 `DM_DB_ENABLED=true` 时，连接信息可被一组外部环境变量覆盖：
+  - `DM_DB_HOST`
+  - `DM_DB_PORT`
+  - `DM_DB_NAME`
+  - `DM_DB_USERNAME`
+  - `DM_DB_PASSWORD`
+
+### 5.3 查询与执行行为
+
+- `DatabaseQueryService.executeQuery`
+  - 仅允许 `SELECT` / `WITH`
+  - 设置 30 秒查询超时
+  - 最大返回 1000 行
+- `executeUpdate`
+  - 执行 DML
+- `executeDDL`
+  - 执行 DDL
+- `executeAutoSql`
+  - `auto` 模式下按 SQL 首词自动分发到 query / update / ddl
+- `getTableList`
+  - 查询 `user_tables`
+- `getTableInfo`
+  - 查询 `user_tab_columns`
+  - 表名会做安全校验和双引号转义
+
+### 5.4 查询历史
+
+- 存储文件：`logs/query_history.csv`
+- 记录字段：
+  - timestamp
+  - sql
+  - database
+  - type
+  - success
+  - duration_ms
+  - affected_rows
+- 单条 SQL 文本最多截断到 500 字符
+- `GET /api/mcp/history` 读取最近记录
+- `DELETE /api/mcp/history` 清空历史
+
+### 5.5 健康检查
+
+- `GET /api/health`
+  - 返回服务状态
+- `GET /api/health/db`
+  - 通过执行 `SELECT 1` 检测 `master` 数据库可用性
+
+注意：
+
+- 这两个健康检查接口都依赖 `tool-service.dameng.enabled=true`。
+
+## 6. MCP 协议与数据库工具暴露
+
+### 6.1 REST 风格数据库接口
+
+控制器：`McpController`
+
+接口包括：
+
+- `GET /api/mcp/tools`
+- `POST /api/mcp/execute`
+- `GET /api/mcp/datasources`
+- `POST /api/mcp/query`
+- `POST /api/mcp/update`
+- `POST /api/mcp/ddl`
+- `POST /api/mcp/execute-sql`
+- `GET /api/mcp/tables`
+- `GET /api/mcp/table-info`
+- `GET /api/mcp/history`
+- `DELETE /api/mcp/history`
+
+### 6.2 JSON-RPC 风格 MCP 接口
+
+控制器：`McpJsonRpcController`
+
+接口包括：
+
+- `POST /api/mcp/json-rpc`
+- `GET /api/mcp/sse`
+- `GET /api/mcp/capabilities`
+
+### 6.3 协议层行为
+
+`McpProtocolHandler` 当前支持的方法：
+
+- `initialize`
+- `tools/list`
+- `tools/call`
+- `resources/list`
+- `resources/templates/list`
+- `ping`
+
+当前服务信息：
+
+- `protocolVersion = 2024-11-05`
+- `serverName = tool-service`
+- `serverVersion = 1.0.0`
+
+### 6.4 工具暴露事实
+
+#### 数据库工具
+
+`DatabaseMcpTool` 当前暴露：
+
+- `dm_query`
+- `dm_execute_sql`
+- `dm_list_tables`
+- `dm_table_info`
+- `dm_list_datasources`
+
+#### Markdown 工具
+
+`MarkdownMcpTool` 当前暴露：
+
+- `md_list_files`
+- `md_read_file`
+- `md_render`
+
+注意：
+
+- `MarkdownMcpTool` 是否返回工具定义取决于 `tool-service.markdown.enabled`
+- 但 MCP 控制器整体仍受 `tool-service.dameng.enabled` 控制
+- 也就是说，当前代码里数据库功能关闭时，MCP 接口整体不会对外提供，即使 Markdown 工具类本身仍存在
+
+## 7. Markdown 预览工作台
+
+### 7.1 页面定位
+
+Markdown 预览工作台是一页式文档浏览与调试页面，入口是 `/md-view`。
 
 页面固定分为四块：
 
 - 左侧：Markdown 文件树
-- 中间：标签栏 + 面包屑 + 预览/原文切换 + Markdown 正文
+- 中间：标签栏 + 面包屑 + 预览/原文切换 + 正文区
 - 右侧：标题树 TOC
 - 最右：请求调试面板
 
-## 3. 核心状态
-
-### 3.1 工作目录
+### 7.2 工作目录配置
 
 - 配置键：`markdown.workspace.path`
-- 用户级配置文件：`%USERPROFILE%\.tool-service\markdown-preview.properties`
+- 用户级配置文件：
+  - `%USERPROFILE%\.tool-service\markdown-preview.properties`
 - 读取优先级：
-  1. 用户配置文件中的工作目录
-  2. Spring 配置 `markdown.base-path`
-  3. 若以上目录无效，则回退到桌面
+  1. 用户级配置文件
+  2. `markdown.base-path`
+  3. 桌面目录回退
 
-### 3.2 页面关键状态
+工作目录配置接口：
+
+- `GET /api/md/workspace-config`
+- `POST /api/md/workspace-config`
+- `POST /api/md/workspace-config/pick-directory`
+
+返回字段包括：
+
+- `configuredPath`
+- `effectivePath`
+- `exists`
+- `fallbackToDesktop`
+- `supportsDirectoryPicker`
+
+注意：
+
+- `pick-directory` 通过 Swing 打开系统目录选择框
+- 依赖图形环境
+- headless 场景下会返回 `unsupported=true`
+
+### 7.3 页面主数据接口
+
+- `GET /api/md/preview-data`
+  - 返回页面壳数据 + 文档数据
+- `GET /api/md/sidebar-data`
+  - 只返回左树壳层数据
+- `GET /api/md/document-data`
+  - 只返回当前文档数据
+- `GET /md-content`
+  - 返回原始 Markdown 文本
+- `GET /md-download`
+  - 返回下载流
+- `POST /api/md/save-content`
+  - 保存 Markdown 文本
+
+### 7.4 路径安全规则
+
+- `path` 和 `scope` 都会先规范化：
+  - `\` 转 `/`
+  - 去首尾 `/`
+  - 合并连续 `/`
+  - 禁止 `..`
+- 解析后的真实路径必须位于当前工作目录下
+- 左树、预览、原文、下载、保存使用同一套工作目录基线
+
+### 7.5 页面核心状态
 
 - `currentFilePath`
-  - 当前打开的 md 相对路径
-- `scope`
-  - 当前文件树作用域目录
-- `workspaceConfig`
-  - 包含 `configuredPath`、`effectivePath`、`exists`、`fallbackToDesktop`
-- `TABS_KEY = md-preview-open-tabs`
-  - 已打开文件标签列表
-- `TAB_HISTORY_KEY = md-preview-tab-history`
-  - 标签访问历史
-- `MAX_OPEN_TABS = 9`
-  - 超过 9 个标签时会淘汰历史最远的标签
+  - 当前打开的 Markdown 相对路径
+- `currentSidebarScope`
+  - 当前左树作用域目录
+- `currentWorkspaceConfig`
+  - 当前工作目录配置对象
+- `currentApiSections`
+  - 从 Markdown 中提取的接口元数据
+
+localStorage 关键键包括：
+
+- `md-preview-open-tabs`
+- `md-preview-tab-history`
 - `md-preview-expanded-paths`
-  - 左侧树已展开目录
 - TOC 折叠状态
-  - 右侧标题树折叠状态持久化在 localStorage
-- 请求调试面板状态
-  - 包括面板展开状态、折叠区状态、请求标签数据、响应视图模式、API host/port
+- 请求调试面板展开状态与内部配置
 
-## 4. 页面主流程
+### 7.6 页面主流程
 
-### 4.1 启动流程
+#### 启动流程
 
-1. 打开 `/md-view`。
-2. 前端先调用 `/api/md/workspace-config` 获取工作目录。
-3. 无论工作目录接口是否成功，最终都会调用 `/api/md/preview-data` 加载页面主数据。
-4. 若 URL 不带 `path`，页面进入空白壳态，仍渲染：
-   - 左侧文件树
-   - 工作目录输入区
-   - 空标题树
-   - 空预览提示
-5. 若 URL 带 `path`，则加载对应 Markdown、标题树、面包屑和请求元数据。
+1. 打开 `/md-view`
+2. 前端请求 `/api/md/workspace-config`
+3. 初始化左树壳层与当前文档
+4. 如果 URL 无 `path`，页面保持空壳态
+5. 如果 URL 有 `path`，则加载正文、TOC、面包屑和请求元数据
 
-### 4.2 文件打开流程
+#### 文件打开流程
 
-1. 点击左侧 md 文件。
-2. 更新 `currentFilePath` 与浏览器地址栏 `/md-view?path=...`。
-3. 调用 `/api/md/preview-data?path=...`。
-4. 刷新：
-   - 左侧文件树高亮
-   - 顶部标签栏
-   - 面包屑
-   - Markdown 预览区
-   - 右侧标题树
-   - 请求调试面板元数据
-5. 左侧文件树会保留原滚动位置，不应把左侧列表滚到顶部。
+1. 点击左侧 Markdown 文件
+2. 更新 `currentFilePath`
+3. 更新地址栏 `/md-view?path=...`
+4. 只刷新文档区，不强制重置左树滚动和展开状态
+5. 刷新标签、面包屑、TOC、正文和请求面板
 
-### 4.3 预览/原文切换流程
+#### 预览/原文切换流程
 
-1. 默认进入预览模式。
-2. 点击“原文本”时，调用 `/md-content?path=...`。
-3. 切换模式时保持当前阅读行附近的滚动位置同步：
-   - 预览切到原文时，同步原文滚动位置
-   - 原文切回预览时，同步预览滚动位置
+1. 默认进入预览模式
+2. 点击“原文本”时通过 `/md-content` 加载原文
+3. 切换预览/原文时尽量保持当前阅读位置一致
 
-### 4.4 标签页流程
+### 7.7 左侧文件树区域
 
-1. 打开新文件会注册标签。
-2. 标签上限为 9。
-3. 超出 9 个时，按标签访问历史淘汰最久未查看的标签。
-4. 关闭全部标签后，页面回到 `/md-view` 空壳页，而不是旧的 JSON 页面。
+职责：
 
-## 5. 后端接口契约
-
-### 5.1 `GET /md-view`
-
-- 返回页面模板 `md-preview.html`
-- `path` 参数只影响前端初始化 URL，不参与服务端渲染模板
-
-### 5.2 `GET /api/md/workspace-config`
-
-返回：
-
-```json
-{
-  "configuredPath": "配置中的原始路径",
-  "effectivePath": "当前实际生效的绝对路径",
-  "exists": true,
-  "fallbackToDesktop": false
-}
-```
-
-### 5.3 `POST /api/md/workspace-config`
-
-请求：
-
-```json
-{
-  "path": "绝对目录路径"
-}
-```
-
-成功返回：
-
-```json
-{
-  "success": true,
-  "config": {}
-}
-```
-
-失败时返回 `success=false` 和错误信息。
-
-### 5.4 `POST /api/md/workspace-config/pick-directory`
-
-- 服务端直接弹出 Windows/Swing 目录选择框
-- 依赖图形环境
-- 用户取消时返回 `cancelled=true`
-- headless 环境会失败
-
-### 5.5 `GET /api/md/preview-data`
-
-请求参数：
-
-- `path`：当前 md 相对路径，可空
-- `scope`：当前作用域目录，可空
-
-返回字段：
-
-- `title`
-- `content`
-- `sidebar`
-- `toc`
-- `path`
-- `scope`
-- `directories`
-- `apiSections`
-- `apiSectionsVersion`
-- `workspaceConfig`
-
-分支规则：
-
-- `path` 为空：只返回页面壳数据
-- `path` 有值且文件存在：返回正文、toc、接口元数据
-- `path` 有值但文件不存在：返回 404
-
-### 5.6 `GET /md-content`
-
-- 输入：`path`
-- 输出：Markdown 原文文本
-
-### 5.7 `GET /md-download`
-
-- 输入：`path`
-- 输出：对应 md 下载流
-
-### 5.8 `POST /api/md/save-content`
-
-- 输入：`path + content`
-- 输出：保存成功标记
-
-### 5.9 `GET /md-list`
-
-- 输入：`scope`
-- 输出：作用域内 md 相对路径数组
-
-## 6. 左侧文件树区域
-
-### 6.1 区域职责
-
-- 展示工作目录下的 Markdown 树
+- 展示工作目录下 Markdown 树
 - 搜索文件
 - 定位当前文件
 - 复制文件名 / 文件链接
 - 维护目录展开状态
 
-### 6.2 元素与行为
+关键交互：
 
-- 工作目录输入框
-  - 展示当前 `effectivePath`
-  - 当配置目录失效时，状态文案显示“已回退到桌面”
-- `保存`
-  - 保存输入框中的目录
-  - 成功后清空当前文件与标签
-  - 地址栏重置为 `/md-view`
-  - 重新加载工作区
-- `选择`
-  - 调后端目录选择接口
-  - 成功后清空当前文件与标签
-  - 地址栏重置为 `/md-view`
-  - 重新加载工作区
+- 文件夹展开/收起
+  - 有 0.2 秒动画
+  - 展开状态持久化
+- 文件点击
+  - 打开文件
+  - 不应把左侧树滚到顶部
 - 搜索框
-  - 按文件名和文件相对路径匹配
-  - 匹配文本高亮
+  - 按文件名和相对路径匹配
+  - 命中内容高亮
   - 自动展开命中的父目录
-  - 清空搜索时恢复原始展开状态
-- `⌖` 定位按钮
-  - 清空搜索词
-  - 定位并闪烁高亮当前活动文件
-- 文件夹行
-  - 点击展开/收起
-  - 带 0.2s 的展开收起动画
-  - 展开状态写入 `md-preview-expanded-paths`
-- md 文件行
-  - 点击后打开文件
-  - 不应把左侧文件树滚动到顶部
-  - 只更新高亮和主内容
-- 复制文件名按钮
-  - 把文件名写入剪贴板
-- 复制链接按钮
-  - 把 `window.location.origin + /md-view?path=...` 写入剪贴板
+- Tooltip
+  - 长文件名悬浮 0.6 秒显示完整值
 
-### 6.3 提示行为
+### 7.8 顶部标签栏、工具栏、面包屑
 
-- 文件名过长时，悬浮 0.6s 显示完整名称
-- 搜索命中高亮通过 `<mark>` 渲染
+标签栏：
 
-## 7. 顶部标签栏、工具栏、面包屑
+- 打开文件会注册标签
+- 上限 9 个
+- 超限时按访问历史淘汰最久未查看标签
+- 支持右键菜单：
+  - 关闭当前
+  - 关闭其他标签页
+  - 关闭所有
+- 支持快捷键：
+  - `Ctrl+W`
+  - `Ctrl+1~9`
 
-### 7.1 标签栏
-
-- 标签点击
-  - 切换到该文件
-- 标签关闭 `×`
-  - 关闭当前标签
-  - 若关闭的是活动标签，则切到相邻标签或空壳页
-- 标签右键菜单
-  - `关闭当前`
-  - `关闭其他标签页`
-  - `关闭所有`
-- 快捷键
-  - `Ctrl+W`：关闭当前标签
-  - `Ctrl+1~9`：快速切换前 9 个标签
-
-### 7.2 工具栏
+工具栏：
 
 - `预览模式`
-  - 显示 HTML 预览区
-  - 从原文模式切回时同步滚动位置
 - `原文本`
-  - 显示原文区
-  - 首次进入时加载 `/md-content`
-  - 与预览模式同步滚动位置
 - `下载`
-  - 下载当前 Markdown 文件
 
-### 7.3 面包屑
+面包屑：
 
-面包屑分两类：
+- 文件路径段支持固定长度省略
+- 可拖选横向查看长文本
+- 标题段展示当前阅读位置对应的 1~3 级标题
+- 超长内容有悬浮提示
 
-- 文件路径段
-  - 显示当前 md 路径
-  - 超长时固定长度显示省略
-  - 支持横向拖选查看后半段
-  - 悬浮 0.6s 显示完整内容
-- 标题段
-  - 展示当前阅读位置对应的 1~3 级标题
-  - 各级标题段长度固定
-  - 三级标题空间按总宽均分
-  - 超长省略并带悬浮提示
-  - 点击后滚动到对应标题
+### 7.9 右侧标题树 TOC
 
-## 8. 右侧标题树 TOC
+职责：
 
-### 8.1 区域职责
-
-- 展示当前文档标题结构
-- 支持标题折叠/展开
+- 展示标题结构
+- 支持折叠/展开
 - 跟随阅读位置高亮
-- 与面包屑、正文滚动联动
+- 与面包屑、正文滚动、URL hash 联动
 
-### 8.2 交互规则
+交互事实：
 
-- 标题圆点/折叠按钮
-  - 点击切换当前节点展开状态
-  - 状态持久化到 localStorage
-- 标题文本
-  - 点击滚动到正文对应标题
-- 三级标题特殊逻辑
-  - 激活某个三级标题时，会突出当前三级标题分组
-  - 同时对四级标题展示做联动控制
-- 缩进
-  - 不同层级缩进已加大，用于增强层级区分
-- 动画
-  - 展开/收起带 0.2s 过渡
+- 不同层级缩进已加大
+- 展开/收起带 0.2 秒动画
+- 点击标题会滚动到正文对应位置
 
-### 8.3 联动行为
+### 7.10 正文区与原文区
 
-- 正文滚动时，TOC 自动高亮当前标题
-- TOC 高亮切换时会更新：
-  - 顶部面包屑
-  - URL hash
-  - 标题定位反馈闪烁
+正文区能力：
 
-## 9. Markdown 正文区
+- Markdown HTML 渲染
+- 代码高亮
+- 标题折叠
+- 列表、表格等结构渲染
+- 从文档提取接口元数据以驱动请求面板
 
-### 9.1 职责
+原文区能力：
 
-- 展示 Markdown 渲染后的 HTML
-- 支持标题折叠
-- 支持代码高亮
-- 支持表格和列表
-- 支持从文档提取接口元数据驱动请求面板
+- 延迟加载
+- 失败时显示错误提示，不是空白
+- 与预览区保持滚动位置相对一致
 
-### 9.2 当前已知渲染规则
+### 7.11 请求调试面板
 
-- `-` 列表按标准 Markdown 列表解析
-- 有序列表应按真实序号连续渲染，而不是全部显示为 1
-- 需要区分：
-  - `--` 普通文本
-  - `---` 分隔线
-- 标题可点击折叠对应正文块
+职责：
 
-## 10. 原文本区域
-
-- 点击“原文本”才显示
-- 从 `/md-content` 读取原始 Markdown
-- 切换预览/原文时保持当前阅读位置尽量一致
-- 原文加载失败时应显示错误，而不是空白无反馈
-
-## 11. 请求调试面板
-
-### 11.1 区域职责
-
-- 根据文档里的接口说明生成请求调试表单
+- 根据文档中的接口描述生成调试表单
 - 支持多请求标签
-- 支持 host/port 自定义
+- 支持 host / port 自定义
 - 支持路径参数、查询参数、请求体编辑
 - 支持 raw / preview 响应查看
 
-### 11.2 元素与行为
+关键交互：
 
-- 面板开关按钮
-  - 展开/收起请求面板
-  - 状态持久化
-- 请求标签
-  - 点击切换标签
-- 请求标签关闭按钮
-  - 关闭单个请求标签
-  - 若只剩一个，则重建默认标签
-- `+`
-  - 新增一个请求标签
-- host / port 输入框
-  - 支持修改请求地址
-  - `保存` 后写入本地配置
-- 请求方法下拉
-  - 切换 GET / POST
-- 请求路径输入框
-  - 录入路径与 query string
-  - 自动拆分路径参数与查询参数
-- 路径参数表格
-  - 可编辑
-- 查询参数表格
-  - 可编辑
-  - 可删除行
-- `+ 添加查询参数`
-  - 追加空查询参数行
-- `发送请求`
-  - 发起真实请求
-  - 成功/失败信息写入响应区与消息提示
-- `清空`
-  - 重置当前请求标签数据，保留标签 id/name
-- 响应 `raw`
-  - 展示原始文本
-- 响应 `preview`
-  - 以 JSON 树展示
-- JSON 树节点
-  - 点击展开/收起
-- 文档中的“调用”按钮
-  - 从当前 Markdown 中提取接口名称、路径、方法、参数
-  - 直接回填到请求面板
-  - 自动展开面板
+- 面板开关状态持久化
+- 文档中的“调用”按钮可直接回填请求信息
+- 若只剩一个请求标签，关闭时会重建默认标签
 
-## 12. 路径与安全规则
+## 8. Markdown 预览性能链路
 
-- `path` 和 `scope` 都会先做规范化：
-  - `\` 转 `/`
-  - 去前后 `/`
-  - 合并连续 `/`
-  - 禁止 `..`
-- 实际解析出的路径必须位于工作目录下
-- 左侧树、预览、原文、下载、保存全部依赖同一套工作目录基线
+### 8.1 后端缓存
 
-## 13. 已知约束
+`MarkdownPreviewCacheService` 提供两类缓存：
 
-- `POST /api/md/workspace-config/pick-directory` 依赖桌面环境，服务端通过 Swing 弹窗选目录，不适合 headless 场景。
-- 当前仓库里存在旧 README 和前端脚手架文件，但不代表当前运行中的真实 UI。
-- 本模块强依赖浏览器 localStorage 维持标签、树展开、面板配置等体验。
+- 侧栏缓存
+  - Key：`workspacePath + scope`
+  - TTL：30 秒
+- 文档缓存
+  - Key：文件绝对路径
+  - 命中条件：`lastModified + fileSize` 一致
 
-## 14. 当前维护建议
+缓存失效：
 
-- 后续修改页面行为时，优先同步本文件，而不是继续让 README 承担事实文档职责。
-- 如果新增按钮或快捷键，至少补充：
-  - 所在区域
-  - 触发方式
-  - 成功行为
-  - 失败提示
-  - 是否写入 localStorage
-- 如果修改工作目录策略，必须同步：
-  - 配置优先级
-  - 回退逻辑
-  - 接口返回结构
+- 工作目录变更后 `clearAll()`
+- 保存 Markdown 后 `evictDocument(filePath)`
+
+### 8.2 前端增量加载
+
+前端把加载流程拆为两层：
+
+- `loadShellData`
+  - 只负责左树壳层和工作区相关信息
+- `loadDocumentData`
+  - 只负责当前文档、TOC、面包屑、请求元数据
+
+兼容入口：
+
+- `loadPreviewData`
+  - 组合调用壳层与文档层
+
+### 8.3 并发保护
+
+前端通过两种机制防止快速切换时旧请求覆盖新状态：
+
+- `AbortController`
+- 自增序列号 `sidebarLoadSeq` / `previewLoadSeq` / `rawLoadSeq`
+
+### 8.4 局部初始化
+
+当前页面已把以下逻辑改为局部或按需执行：
+
+- 原文加载
+- 代码高亮
+- Tooltip 应用
+- 文档区刷新
+
+目标是减少 Markdown 切换时的整页重初始化和闪动。
+
+## 9. 历史原型与边界说明
+
+### 9.1 当前不应当作事实源的内容
+
+- `README.md`
+  - 当前主要描述 React + Node 的独立 MD Preview Tool
+- `server/**`
+  - 独立 Node 文件服务原型
+- 根目录 `package.json` / `vite.config.ts`
+  - React/Vite 原型构建体系
+- `src/**` 下的 React 组件与 hooks
+  - 原型前端，不是当前 `/md-view` 主链路
+- `ARCHITECTURE_ANALYSIS.md`
+  - 架构建议稿，不是现状说明
+
+### 9.2 这些内容的参考价值
+
+- 可作为未来前后端分离或 UI 重构的参考素材
+- 不应参与当前事实判断
+- 不应继续作为默认项目介绍口径
+
+## 10. 已知约束与维护规则
+
+### 10.1 运行约束
+
+- `pick-directory` 依赖桌面环境
+- 当前页面强依赖浏览器 localStorage 维持交互体验
+- `mvn clean` 可能因运行中的模板文件占用而失败
+- `mvn -Dproject.build.directory=target-verify compile` 可用于绕开当前 target 锁文件问题
+
+### 10.2 修改优先级
+
+后续若修改 Markdown 页面行为，优先同步本文档，而不是继续依赖 README。
+
+### 10.3 维护时最容易写错的地方
+
+- 把 React/Node 原型误当成当前主实现
+- 把早期“三数据源”口径误当成当前固定事实
+- 误以为 `tool-service.markdown.enabled` 会关闭整个 Markdown 页面链路
+- 忽略工作目录的用户级配置与桌面回退策略
+- 忽略前端缓存/并发保护链路，回归到整页刷新
+
+### 10.4 新增功能时的同步要求
+
+如果新增按钮、快捷键或接口，至少同步本文档中的以下内容：
+
+- 所属区域
+- 触发方式
+- 成功行为
+- 失败行为
+- 是否写入 localStorage
+- 是否影响缓存、URL 或工作目录状态
