@@ -26,6 +26,14 @@ Thumbs.db
 *.jar
 *.war
 
+# Frontend dependencies/build artifacts/resources
+node_modules/
+server/node_modules/
+dist/
+build/
+.vite/
+public/
+
 # Config (local)
 *.yml
 
