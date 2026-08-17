@@ -577,12 +577,16 @@ function showGotoDialog() {
     document.querySelectorAll('.goto-option').forEach(opt => {
         opt.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
-            const targetElement = document.getElementById(id);
-            const contentArea = document.querySelector('.markdown-body');
-            if (targetElement && contentArea) {
-                targetElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                targetElement.classList.add('flash');
-                setTimeout(() => targetElement.classList.remove('flash'), 600);
+            if (typeof window.scrollToHeading === 'function') {
+                window.scrollToHeading(id);
+            } else {
+                const targetElement = document.getElementById(id);
+                const contentArea = document.querySelector('.markdown-body');
+                if (targetElement && contentArea) {
+                    targetElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    targetElement.classList.add('flash');
+                    setTimeout(() => targetElement.classList.remove('flash'), 600);
+                }
             }
             dialog.style.display = 'none';
         });

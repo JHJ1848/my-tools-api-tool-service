@@ -1687,10 +1687,309 @@
             stroke-linecap: round;
             stroke-linejoin: round;
         }
+        .tool-btn.lan-share-btn {
+            background: linear-gradient(135deg, #183756 0%, #20507b 100%);
+            border-color: #3b7bb5;
+            color: #dbeaff;
+            font-weight: 500;
+        }
+        .tool-btn.lan-share-btn:hover {
+            background: linear-gradient(135deg, #234c74 0%, #29649b 100%);
+            border-color: #58a6ff;
+            color: #ffffff;
+            box-shadow: 0 0 8px rgba(88, 166, 255, 0.35);
+        }
+        .back-to-top-btn {
+            position: fixed;
+            right: 28px;
+            bottom: 28px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #252a31;
+            border: 1px solid #4a5462;
+            color: #ffffff;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(12px) scale(0.9);
+            transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease, background 0.2s ease, border-color 0.2s ease;
+            z-index: 999;
+        }
+        .back-to-top-btn.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+        .back-to-top-btn:hover {
+            background: #007acc;
+            border-color: #388bfd;
+            transform: translateY(-2px) scale(1.06);
+            box-shadow: 0 6px 20px rgba(0, 122, 204, 0.45);
+        }
+        .code-block-wrapper {
+            position: relative;
+        }
+        .copy-code-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #404552;
+            background: #252932;
+            color: #9da7b3;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s, color 0.2s;
+            z-index: 5;
+        }
+        .code-block-wrapper:hover .copy-code-btn {
+            opacity: 1;
+        }
+        .copy-code-btn:hover {
+            background: #323846;
+            color: #ffffff;
+            border-color: #5c667a;
+        }
+        .copy-code-btn.copied {
+            background: #1b4b38;
+            color: #7ee787;
+            border-color: #2ea043;
+        }
+        /* GitHub style alerts / callouts */
+        .md-alert {
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-left: 4px solid;
+            border-radius: 6px;
+            background: #22272e;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+        .md-alert p {
+            margin: 4px 0 0 0;
+        }
+        .md-alert-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 13.5px;
+        }
+        .md-alert-note {
+            border-left-color: #58a6ff;
+            background: rgba(56, 139, 253, 0.1);
+            color: #c9d1d9;
+        }
+        .md-alert-note .md-alert-title { color: #58a6ff; }
+        .md-alert-tip {
+            border-left-color: #3fb950;
+            background: rgba(63, 185, 80, 0.1);
+            color: #c9d1d9;
+        }
+        .md-alert-tip .md-alert-title { color: #3fb950; }
+        .md-alert-important {
+            border-left-color: #a371f7;
+            background: rgba(163, 113, 247, 0.1);
+            color: #c9d1d9;
+        }
+        .md-alert-important .md-alert-title { color: #a371f7; }
+        .md-alert-warning {
+            border-left-color: #d29922;
+            background: rgba(210, 153, 34, 0.1);
+            color: #c9d1d9;
+        }
+        .md-alert-warning .md-alert-title { color: #d29922; }
+        .md-alert-caution {
+            border-left-color: #f85149;
+            background: rgba(248, 81, 73, 0.1);
+            color: #c9d1d9;
+        }
+        .md-alert-caution .md-alert-title { color: #f85149; }
+        /* Status Badges / Colored Keyword Dots */
+        .md-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.4;
+            vertical-align: middle;
+        }
+        .md-badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .md-badge-danger {
+            background: rgba(248, 81, 73, 0.18);
+            color: #ff7b72;
+            border: 1px solid rgba(248, 81, 73, 0.35);
+        }
+        .md-badge-danger .md-badge-dot { background: #f85149; box-shadow: 0 0 6px #f85149; }
+        .md-badge-success {
+            background: rgba(63, 185, 80, 0.18);
+            color: #7ee787;
+            border: 1px solid rgba(63, 185, 80, 0.35);
+        }
+        .md-badge-success .md-badge-dot { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
+        .md-badge-info {
+            background: rgba(88, 166, 255, 0.18);
+            color: #79c0ff;
+            border: 1px solid rgba(88, 166, 255, 0.35);
+        }
+        .md-badge-info .md-badge-dot { background: #58a6ff; box-shadow: 0 0 6px #58a6ff; }
+        .md-badge-warning {
+            background: rgba(210, 153, 34, 0.18);
+            color: #e3b341;
+            border: 1px solid rgba(210, 153, 34, 0.35);
+        }
+        .md-badge-warning .md-badge-dot { background: #d29922; box-shadow: 0 0 6px #d29922; }
+
+        /* Desktop Titlebar */
+        .app-titlebar {
+            height: 32px;
+            background: #16171b;
+            border-bottom: 1px solid #28292d;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            z-index: 10000;
+            width: 100%;
+        }
+        .app-titlebar-drag {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding-left: 12px;
+            gap: 8px;
+            -webkit-app-region: drag;
+            cursor: default;
+        }
+        .app-titlebar-icon { font-size: 14px; }
+        .app-titlebar-title { font-size: 12px; color: #9da5b4; font-weight: 500; letter-spacing: 0.3px; }
+        .app-titlebar-controls {
+            display: flex;
+            height: 100%;
+            -webkit-app-region: no-drag;
+        }
+        .win-btn {
+            width: 44px;
+            height: 100%;
+            border: none;
+            background: transparent;
+            color: #9da5b4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .win-btn:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
+        .win-btn.win-close:hover { background: #e81123; color: #ffffff; }
+
+        /* Close Confirm Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+        .modal-card {
+            background: #1e1f24;
+            border: 1px solid #32353b;
+            border-radius: 8px;
+            width: 480px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            animation: modalFadeIn 0.2s ease-out;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-header {
+            padding: 14px 18px;
+            background: #24262c;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #32353b;
+        }
+        .modal-header h3 { margin: 0; font-size: 14px; color: #f0f3f6; font-weight: 600; }
+        .modal-close-btn { background: none; border: none; color: #8b949e; cursor: pointer; font-size: 15px; }
+        .modal-close-btn:hover { color: #fff; }
+        .modal-body { padding: 18px; }
+        .modal-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+        .modal-radio-label {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            background: #282a30;
+            border: 1px solid #383b42;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .modal-radio-label:hover { border-color: #58a6ff; background: #2f323a; }
+        .modal-radio-text strong { display: block; font-size: 13px; color: #e1e4e8; margin-bottom: 2px; }
+        .modal-radio-text small { display: block; font-size: 12px; color: #8b949e; }
+        .modal-remember { margin-top: 12px; padding-top: 12px; border-top: 1px solid #2d3036; }
+        .modal-checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #8b949e; cursor: pointer; }
+        .modal-footer {
+            padding: 12px 18px;
+            background: #24262c;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-top: 1px solid #32353b;
+        }
+        .modal-btn {
+            padding: 6px 16px;
+            border-radius: 5px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            font-weight: 500;
+        }
+        .modal-btn.secondary { background: #32353b; color: #c9d1d9; border-color: #444c56; }
+        .modal-btn.secondary:hover { background: #3c4047; }
+        .modal-btn.primary { background: #238636; color: #ffffff; }
+        .modal-btn.primary:hover { background: #2ea043; }
     </style>
 </head>
 <body>
-    <div class="layout">
+    <header class="app-titlebar" id="app-titlebar" style="display:none;">
+        <div class="app-titlebar-drag">
+            <span class="app-titlebar-icon">📝</span>
+            <span class="app-titlebar-title">MD Preview Tool</span>
+        </div>
+        <div class="app-titlebar-controls" id="app-window-controls">
+            <button type="button" class="win-btn win-min" id="win-btn-min" title="最小化">─</button>
+            <button type="button" class="win-btn win-max" id="win-btn-max" title="最大化">🗖</button>
+            <button type="button" class="win-btn win-close" id="win-btn-close" title="关闭">✕</button>
+        </div>
+    </header>
+    <div class="layout" style="height: calc(100vh - 32px);">
         <aside class="sidebar" id="sidebar-container"></aside>
         <aside class="toc-sidebar" id="toc-container"></aside>
         <main class="content">
@@ -1704,10 +2003,13 @@
                     <div class="tool-btn" id="btn-raw" onclick="toggleView('raw')">原文本</div>
                     <div style="width: 1px; height: 16px; background: #3e3e42; margin: 0 4px;"></div>
                     <div class="tool-btn" onclick="downloadFile()">📥 下载</div>
+                    <div style="width: 1px; height: 16px; background: #3e3e42; margin: 0 4px;"></div>
+                    <div class="tool-btn lan-share-btn" id="btn-lan-share" onclick="copyLanShareUrl()" title="复制当前局域网分享链接">🌐 内网分享</div>
                 </div>
             </div>
             <div class="markdown-body" id="markdown-body">正在加载数据...</div>
             <div class="raw-body" id="raw-body"></div>
+            <button type="button" class="back-to-top-btn" id="back-to-top-btn" title="回到顶部" aria-label="回到顶部" onclick="scrollToTop()">🚀</button>
         </main>
         <aside class="request-panel" id="request-panel">
             <div class="request-panel-header">
@@ -2010,14 +2312,54 @@
         }
 
         function highlightMarkdownCodeBlocks() {
-            if (!window.hljs) return;
             const markdownBody = document.getElementById('markdown-body');
             if (!markdownBody) return;
-            markdownBody.querySelectorAll('pre code').forEach(block => {
-                if (block.dataset.hljsDone === 'true') return;
-                window.hljs.highlightElement(block);
-                block.dataset.hljsDone = 'true';
+
+            markdownBody.querySelectorAll('pre').forEach(pre => {
+                if (!pre.querySelector('.copy-code-btn')) {
+                    pre.classList.add('code-block-wrapper');
+                    const codeEl = pre.querySelector('code');
+                    const copyBtn = document.createElement('button');
+                    copyBtn.type = 'button';
+                    copyBtn.className = 'copy-code-btn';
+                    copyBtn.innerHTML = '📋 复制';
+                    copyBtn.title = '复制代码内容';
+                    copyBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const textToCopy = codeEl ? codeEl.innerText : pre.innerText;
+                        try {
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                await navigator.clipboard.writeText(textToCopy);
+                            } else {
+                                const ta = document.createElement('textarea');
+                                ta.value = textToCopy;
+                                document.body.appendChild(ta);
+                                ta.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(ta);
+                            }
+                            copyBtn.innerHTML = '✓ 已复制';
+                            copyBtn.classList.add('copied');
+                            pushRequestMessage('代码已复制到剪贴板', 'success');
+                            setTimeout(() => {
+                                copyBtn.innerHTML = '📋 复制';
+                                copyBtn.classList.remove('copied');
+                            }, 2000);
+                        } catch (err) {
+                            pushRequestMessage('复制失败: ' + err, 'error');
+                        }
+                    });
+                    pre.appendChild(copyBtn);
+                }
             });
+
+            if (window.hljs) {
+                markdownBody.querySelectorAll('pre code').forEach(block => {
+                    if (block.dataset.hljsDone === 'true') return;
+                    window.hljs.highlightElement(block);
+                    block.dataset.hljsDone = 'true';
+                });
+            }
         }
 
         function ensureSidebarAndTocHeaderIcons() {
@@ -2225,11 +2567,37 @@
             return '';
         }
 
+        function normalizeHeadingTextToAnchorId(text) {
+            if (!text) return '';
+            return String(text)
+                .toLowerCase()
+                .replace(/[^\u4e00-\u9fa5a-z0-9\s-]/g, '')
+                .replace(/[\s-]+/g, '-')
+                .trim();
+        }
+
         function resolveHeadingLocationTarget(parsedLocation) {
             const headingId = String(parsedLocation?.headingId || '').trim();
-            if (headingId && document.getElementById(headingId)) return headingId;
+            if (headingId) {
+                if (document.getElementById(headingId)) return headingId;
+                const slugId = normalizeHeadingTextToAnchorId(headingId);
+                if (slugId && document.getElementById(slugId)) return slugId;
+                const foundToc = Array.from(document.querySelectorAll('.toc-item')).find(item => {
+                    const itemText = (item.querySelector('.toc-label')?.textContent || item.textContent || '').trim();
+                    const itemId = item.getAttribute('data-id') || '';
+                    return itemText.toLowerCase() === headingId.toLowerCase() || itemId.toLowerCase() === headingId.toLowerCase();
+                });
+                if (foundToc) {
+                    const fid = foundToc.getAttribute('data-id');
+                    if (fid && document.getElementById(fid)) return fid;
+                }
+            }
             const legacyId = String(parsedLocation?.legacyId || '').trim();
-            if (legacyId && document.getElementById(legacyId)) return legacyId;
+            if (legacyId) {
+                if (document.getElementById(legacyId)) return legacyId;
+                const slugLegacy = normalizeHeadingTextToAnchorId(legacyId);
+                if (slugLegacy && document.getElementById(slugLegacy)) return slugLegacy;
+            }
             return findHeadingByChain(parsedLocation);
         }
 
@@ -2513,8 +2881,24 @@
             document.title = 'Markdown 预览';
             const markdownBody = document.getElementById('markdown-body');
             const rawBody = document.getElementById('raw-body');
+            const effectivePath = String(currentWorkspaceConfig?.effectivePath || '桌面');
             if (markdownBody) {
-                markdownBody.innerHTML = `<div class="markdown-empty">${escapeHtmlText(message)}</div>`;
+                markdownBody.innerHTML = `
+                    <div class="markdown-empty-wrapper" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; text-align:center; color:#969faf;">
+                        <div style="font-size:48px; margin-bottom:16px;">📂</div>
+                        <h2 style="font-size:20px; color:#e1e4e8; margin-bottom:8px; font-weight:600;">欢迎使用 Markdown 预览工具</h2>
+                        <p style="font-size:14px; margin-bottom:12px; max-width:560px;">当前工作目录：<code style="background:#2d333b; color:#58a6ff; padding:2px 8px; border-radius:4px; font-size:13px;">${escapeHtmlText(effectivePath)}</code></p>
+                        <p style="font-size:13px; color:#768390; margin-bottom:24px; max-width:560px;">${escapeHtmlText(message)}</p>
+                        <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                            <button type="button" class="tool-btn active" style="padding:8px 18px; font-size:14px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;" onclick="document.getElementById('workspace-pick-btn')?.click()">
+                                📁 选择工作区文件夹
+                            </button>
+                        </div>
+                        <div style="margin-top:32px; font-size:12px; color:#636e7b; line-height:1.6;">
+                            💡 提示：本工具会自动深度递归扫描所选目录下的所有子文件夹及 .md 文件。
+                        </div>
+                    </div>
+                `;
             }
             if (rawBody) {
                 rawBody.textContent = '';
@@ -2555,6 +2939,11 @@
         }
 
         async function pickWorkspacePath() {
+            if (window.electronAPI && typeof window.electronAPI.pickDirectory === 'function') {
+                const selected = await window.electronAPI.pickDirectory();
+                if (!selected) return currentWorkspaceConfig;
+                return applyWorkspacePath(selected);
+            }
             const response = await fetch('/api/md/workspace-config/pick-directory', { method: 'POST' });
             const data = await response.json();
             if (!response.ok || data.success === false) {
@@ -2574,7 +2963,7 @@
             saveTabHistory([]);
             lastSidebarScrollSnapshot = { fileListTop: 0 };
             updatePathUrl('', true);
-            await loadPreviewData({ forceSidebarRefresh: true });
+            await loadShellData({ preserveSidebar: false, forceSidebarRefresh: true });
             pushRequestMessage('工作目录已更新', 'success');
             return currentWorkspaceConfig;
         }
@@ -2816,6 +3205,17 @@
                 restoreSidebarScrollSnapshot(lastSidebarScrollSnapshot);
                 lastSidebarScrollSnapshot = null;
                 initGlobalUiOnce();
+
+                // 核心增强：初次进入或切换目录若当前未打开文件，自动定位并打开首个 Markdown 文档
+                if (!currentFilePath) {
+                    const firstItem = document.querySelector('.file-item');
+                    const firstPath = firstItem?.getAttribute('data-path') || (Array.isArray(data?.files) && data.files.length > 0 ? data.files[0] : null);
+                    if (firstPath) {
+                        await openFile(firstPath, { replaceHistory: true });
+                    } else {
+                        renderEmptyPreviewState('当前目录下未检测到任何 Markdown (.md) 文件，请点击上方 📁 切换工作区目录');
+                    }
+                }
             } finally {
                 if (sidebarFetchAbortController === controller) {
                     sidebarFetchAbortController = null;
@@ -3662,12 +4062,14 @@
             let method = '';
             blockNodes.forEach(item => {
                 const text = String(item.textContent || '').trim();
-                if (!pathTemplate && text.includes('接口路径')) {
+                if (!pathTemplate && (text.includes('接口路径') || text.includes('接口地址') || text.includes('请求路径') || /^\s*(?:URL|Url|url)\s*[:：]/.test(text))) {
                     const code = item.querySelector('code');
-                    pathTemplate = normalizeRequestPath(code ? code.textContent.trim() : text.split(':').pop().trim(), '');
+                    let rawPath = code ? code.textContent.trim() : text.replace(/^.*?[：:]\s*/, '').trim();
+                    rawPath = rawPath.replace(/^[`"']+|[`"']+$/g, '').replace(/<[^>]+>/g, '').replace(/\\_/g, '_').replace(/&#95;/g, '_');
+                    pathTemplate = normalizeRequestPath(rawPath, '');
                 }
-                if (!method && text.includes('请求方式')) {
-                    const match = text.match(/\b(GET|POST)\b/i);
+                if (!method && (text.includes('请求方式') || text.includes('请求方法') || /^\s*(?:Method|method)\s*[:：]/.test(text))) {
+                    const match = text.match(/\b(GET|POST|PUT|DELETE|PATCH)\b/i);
                     if (match) method = match[1].toUpperCase();
                 }
             });
@@ -4657,6 +5059,73 @@
 
         function downloadFile() { if (currentFilePath) window.location.href = `/md-download?path=${encodeURIComponent(currentFilePath)}`; }
 
+        let currentLanIp = '';
+        async function initLanInfo() {
+            try {
+                const res = await fetch('/api/health');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.lanIp) {
+                        currentLanIp = data.lanIp;
+                        const lanBtn = document.getElementById('btn-lan-share');
+                        if (lanBtn) {
+                            lanBtn.title = `局域网地址: http://${data.lanIp}:${data.port || 9527}/md-view (点击复制分享链接)`;
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
+        async function copyLanShareUrl() {
+            const host = currentLanIp || window.location.hostname || '127.0.0.1';
+            const port = window.location.port || '9527';
+            let shareUrl = `http://${host}:${port}/md-view`;
+            if (currentFilePath) {
+                shareUrl += `?path=${encodeURIComponent(currentFilePath)}`;
+            }
+            const hash = window.location.hash || '';
+            if (hash) {
+                shareUrl += hash;
+            }
+
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(shareUrl);
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = shareUrl;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                pushRequestMessage(`已复制局域网分享链接: ${shareUrl}`, 'success');
+            } catch (err) {
+                pushRequestMessage(`复制失败，请手动复制: ${shareUrl}`, 'error');
+            }
+        }
+
+        function initBackToTop() {
+            const contentArea = document.querySelector('.markdown-body');
+            const rocketBtn = document.getElementById('back-to-top-btn');
+            if (!contentArea || !rocketBtn) return;
+
+            contentArea.addEventListener('scroll', () => {
+                if (contentArea.scrollTop > 180) {
+                    rocketBtn.classList.add('visible');
+                } else {
+                    rocketBtn.classList.remove('visible');
+                }
+            });
+        }
+
+        function scrollToTop() {
+            const contentArea = document.querySelector('.markdown-body');
+            if (contentArea) {
+                contentArea.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
         const closeCurrentMenuItem = document.getElementById('menu-close-current');
         if (closeCurrentMenuItem && closeCurrentMenuItem.dataset.bound !== 'true') {
             closeCurrentMenuItem.dataset.bound = 'true';
@@ -4720,16 +5189,120 @@
             }
             applyHeadingLocationFromUrl();
         });
+        function initElectronWindowControls() {
+            const hasElectron = typeof window.electronAPI !== 'undefined';
+            const titlebar = document.getElementById('app-titlebar');
+            if (!hasElectron) {
+                if (titlebar) titlebar.style.display = 'none';
+                const layout = document.querySelector('.layout');
+                if (layout) layout.style.height = '100vh';
+                return;
+            }
+            if (titlebar) titlebar.style.display = 'flex';
+
+            const btnMin = document.getElementById('win-btn-min');
+            const btnMax = document.getElementById('win-btn-max');
+            const btnClose = document.getElementById('win-btn-close');
+
+            btnMin?.addEventListener('click', () => {
+                window.electronAPI.minimizeWindow();
+            });
+
+            btnMax?.addEventListener('click', async () => {
+                await window.electronAPI.maximizeWindow();
+            });
+
+            window.electronAPI.onMaximizeChange?.((isMax) => {
+                if (btnMax) btnMax.textContent = isMax ? '🗗' : '🗖';
+            });
+
+            btnClose?.addEventListener('click', async () => {
+                const pref = await window.electronAPI.getClosePreference?.();
+                if (pref === 'minimize-to-tray' || pref === 'exit') {
+                    window.electronAPI.performCloseAction(pref);
+                    return;
+                }
+                showCloseModal();
+            });
+
+            window.electronAPI.onConfirmClose?.(() => {
+                showCloseModal();
+            });
+        }
+
+        function showCloseModal() {
+            const modal = document.getElementById('close-modal-overlay');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function hideCloseModal() {
+            const modal = document.getElementById('close-modal-overlay');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function confirmCloseAction() {
+            const selected = document.querySelector('input[name="close-action-option"]:checked')?.value || 'minimize-to-tray';
+            const remember = document.getElementById('close-remember-choice')?.checked || false;
+            hideCloseModal();
+            if (window.electronAPI && typeof window.electronAPI.performCloseAction === 'function') {
+                await window.electronAPI.performCloseAction(selected, remember);
+            }
+        }
+
         fetchWorkspaceConfig()
             .catch(() => null)
             .finally(async () => {
                 try {
+                    initElectronWindowControls();
                     await loadShellData({ preserveSidebar: false, forceSidebarRefresh: true });
                     await loadDocumentData(currentFilePath, { skipHeadingLocation: false });
+                    initBackToTop();
+                    initLanInfo();
                 } catch (error) {
                     document.getElementById('markdown-body').innerHTML = '错误: ' + (error instanceof Error ? error.message : String(error));
                 }
             });
     </script>
+
+    <!-- Close Confirm Modal Overlay -->
+    <div class="modal-overlay" id="close-modal-overlay" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>关闭 Markdown 预览工具</h3>
+                <button type="button" class="modal-close-btn" onclick="hideCloseModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="color:#e1e4e8; margin-bottom:14px; font-size:14px; line-height:1.5;">
+                    当前正在提供局域网 Markdown 预览共享服务。关闭窗口后希望：
+                </p>
+                <div class="modal-options">
+                    <label class="modal-radio-label">
+                        <input type="radio" name="close-action-option" value="minimize-to-tray" checked>
+                        <div class="modal-radio-text">
+                            <strong>最小化到系统托盘</strong>
+                            <small>保持内网 HTTP 服务在后台继续运行，方便其他用户访问</small>
+                        </div>
+                    </label>
+                    <label class="modal-radio-label">
+                        <input type="radio" name="close-action-option" value="exit">
+                        <div class="modal-radio-text">
+                            <strong>彻底退出程序</strong>
+                            <small>完全关闭应用并停止后台内网服务</small>
+                        </div>
+                    </label>
+                </div>
+                <div class="modal-remember">
+                    <label class="modal-checkbox-label">
+                        <input type="checkbox" id="close-remember-choice">
+                        <span>记住我的选择，下次不再提示</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn secondary" onclick="hideCloseModal()">取消</button>
+                <button type="button" class="modal-btn primary" onclick="confirmCloseAction()">确定</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -8,6 +8,20 @@ pushd "%~dp0" || (
   exit /b 1
 )
 
+set "PROJECT_JAVA_HOME=D:\Driver\JDK\jdk-17.0.17"
+if not exist "%PROJECT_JAVA_HOME%\bin\java.exe" (
+  echo [ERROR] Required JDK 17 was not found: %PROJECT_JAVA_HOME%
+  pause
+  exit /b 1
+)
+if not exist "%PROJECT_JAVA_HOME%\bin\javac.exe" (
+  echo [ERROR] Required JDK 17 compiler was not found: %PROJECT_JAVA_HOME%
+  pause
+  exit /b 1
+)
+set "JAVA_HOME=%PROJECT_JAVA_HOME%"
+set "PATH=%JAVA_HOME%\bin;%PATH%"
+
 echo [1/3] Stopping old service if port 9527 is in use...
 if exist "%~dp0port.bat" (
   call "%~dp0port.bat"

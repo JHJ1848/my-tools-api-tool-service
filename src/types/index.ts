@@ -1,3 +1,6 @@
+export type Theme = 'light' | 'dark' | 'system'
+export type ViewMode = 'preview' | 'source' | 'split'
+
 export interface FileNode {
   name: string
   path: string
@@ -5,31 +8,50 @@ export interface FileNode {
   children?: FileNode[]
   extension?: string
   size?: number
-  modifiedTime?: Date
+  modifiedTime?: number
 }
 
 export interface Tab {
   id: string
   path: string
   name: string
-  content?: string
-  isActive: boolean
-  isPinned?: boolean
-  scrollPosition?: number
+  content: string
+  originalContent: string
+  isDirty: boolean
+  isPinned: boolean
+  scrollRatio?: number
+  viewMode?: ViewMode
+  lastAccessedAt: number
+}
+
+export interface TOCItem {
+  id: string
+  text: string
+  level: number
+  line?: number
 }
 
 export interface SearchResult {
   file: string
+  relativePath: string
   line: number
-  content: string
+  lineContent: string
   match: string
+  preview?: string
 }
 
 export interface AppSettings {
-  theme: 'light' | 'dark' | 'system'
-  sidebarWidth: number
-  showSidebar: boolean
+  theme: Theme
+  codeTheme: string
   fontSize: number
+  fontFamily: string
+  splitRatio: number
+  defaultViewMode: ViewMode
+  recentWorkspaces: string[]
+  autoSave: boolean
+  autoSaveDelay: number
+  sidebarWidth: number
+  showToc: boolean
+  tocWidth: number
+  lastWorkspace?: string
 }
-
-export type Theme = 'light' | 'dark' | 'system'

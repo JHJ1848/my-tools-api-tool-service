@@ -1,55 +1,53 @@
-# Maven
+# Node & Electron 依赖与构建产物
+node_modules/
+dist/
+dist-electron/
+dist-app/
+release/
+.vite/
+test-results/
+
+# Maven 与 Java 构建
 target/
+*.class
+*.jar
+*.war
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
 pom.xml.next
 release.properties
 
-# IDE
+# IDE & 编辑器
 .idea/
 *.iml
 .vscode/
 *.swp
 *.swo
 
-# Logs
-logs/
-*.log
-
-# OS
+# 系统与缓存
 .DS_Store
 Thumbs.db
+tmp/
+*.tmp
+*.bak
 
-# Build
-*.class
-*.jar
-*.war
+# 日志与临时截图
+logs/
+*.log
+mcp_*.log
+screenshot_*.png
 
-# Frontend dependencies/build artifacts/resources
-node_modules/
-server/node_modules/
-dist/
-build/
-.vite/
-public/
-
-# Config (local)
-*.yml
-
-# YAML config files
-src/main/resources/*.yml
-
-# AI 开发工具配置
-.trae/
-.claude/
-openspec/
-
-# 环境变量文件
+# 环境变量与私有配置
 .env
 .env.*
 *.local
+*.yml
+src/main/resources/*.yml
 
-# 临时文件
-*.tmp
-*.bak
+# AI 辅助临时目录
+.agents/
+.codex/
+.trae/
+.claude/
+openspec/

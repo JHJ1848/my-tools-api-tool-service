@@ -1283,12 +1283,96 @@ public class MarkdownPreviewController {
     private String processInlineInList(String text) { return processInline(text); }
 
     private String processInline(String text) {
+        if (text == null || text.isEmpty()) return "";
+
+        // 1. 优先提取并保护行内代码块 `...`
+        List<String> codeSpans = new ArrayList<>();
+        Matcher codeMatcher = Pattern.compile("`([^`]+)`").matcher(text);
+        StringBuilder sbCode = new StringBuilder();
+        while (codeMatcher.find()) {
+            int idx = codeSpans.size();
+            codeSpans.add("<code>" + escapeHtml(codeMatcher.group(1)) + "</code>");
+            codeMatcher.appendReplacement(sbCode, "\u0000CODE_" + idx + "\u0000");
+        }
+        codeMatcher.appendTail(sbCode);
+        text = sbCode.toString();
+
+        // 2. 保护 Markdown 图片与链接，避免 URL 内部下划线被转义
+        List<String> linkSpans = new ArrayList<>();
+        Matcher imgMatcher = Pattern.compile("!\\[([^\\]]*)\\]\\(([^)]+)\\)").matcher(text);
+        StringBuilder sbImg = new StringBuilder();
+        while (imgMatcher.find()) {
+            int idx = linkSpans.size();
+            linkSpans.add("<img src=\"" + escapeHtml(imgMatcher.group(2)) + "\" alt=\"" + escapeHtml(imgMatcher.group(1)) + "\">");
+            imgMatcher.appendReplacement(sbImg, "\u0000LINK_" + idx + "\u0000");
+        }
+        imgMatcher.appendTail(sbImg);
+        text = sbImg.toString();
+
+        Matcher linkMatcher = Pattern.compile("\\[([^\\]]+)\\]\\(([^)]+)\\)").matcher(text);
+        StringBuilder sbLink = new StringBuilder();
+        while (linkMatcher.find()) {
+            int idx = linkSpans.size();
+            linkSpans.add("<a href=\"" + escapeHtml(linkMatcher.group(2)) + "\">" + processInline(linkMatcher.group(1)) + "</a>");
+            linkMatcher.appendReplacement(sbLink, "\u0000LINK_" + idx + "\u0000");
+        }
+        linkMatcher.appendTail(sbLink);
+        text = sbLink.toString();
+
+        // 3. 自动保护所有 URL 与接口路径（含 / 或 http:// 等），彻底杜绝 URL 内部下划线误转斜体
+        List<String> urlSpans = new ArrayList<>();
+        Matcher urlMatcher = Pattern.compile("(?:https?://[^\\s<]+|/[a-zA-Z0-9_./-]+)").matcher(text);
+        StringBuilder sbUrl = new StringBuilder();
+        while (urlMatcher.find()) {
+            int idx = urlSpans.size();
+            urlSpans.add(urlMatcher.group());
+            urlMatcher.appendReplacement(sbUrl, "\u0000URL_" + idx + "\u0000");
+        }
+        urlMatcher.appendTail(sbUrl);
+        text = sbUrl.toString();
+
+        // 4. 自动保护蛇形命名标识符（如 delete_by_name, is_deleted, user_id 等变量/字段名）
+        List<String> identSpans = new ArrayList<>();
+        Matcher identMatcher = Pattern.compile("\\b[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)+\\b").matcher(text);
+        StringBuilder sbIdent = new StringBuilder();
+        while (identMatcher.find()) {
+            int idx = identSpans.size();
+            identSpans.add(identMatcher.group());
+            identMatcher.appendReplacement(sbIdent, "\u0000IDENT_" + idx + "\u0000");
+        }
+        identMatcher.appendTail(sbIdent);
+        text = sbIdent.toString();
+
+        // 5. 处理反斜杠转义
         text = processBackslashEscapes(text);
-        text = text.replaceAll("__([^_]+)__", "<strong>$1</strong>").replaceAll("\\*\\*([^*]+)\\*\\*", "<strong>$1</strong>");
-        text = text.replaceAll("_([^_]+)_", "<em>$1</em>").replaceAll("\\*([^*]+)\\*", "<em>$1</em>");
-        text = text.replaceAll("`([^`]+)`", "<code>$1</code>");
-        text = text.replaceAll("!\\[([^\\]]*)\\]\\(([^)]+)\\)", "<img src=\"$2\" alt=\"$1\">");
-        text = text.replaceAll("\\[([^\\]]+)\\]\\(([^)]+)\\)", "<a href=\"$2\">$1</a>");
+
+        // 6. 粗体：**text** 以及严格独立的 __text__
+        text = text.replaceAll("\\*\\*([^*\n]+?)\\*\\*", "<strong>$1</strong>");
+        text = Pattern.compile("(?:^|\\s)__([^_]+?)__(?=\\s|$)")
+                    .matcher(text).replaceAll("$1<strong>$2</strong>");
+
+        // 7. 斜体：*text* 以及严格独立的 _text_（前后必须有空格或起止，不能是路径或单词的一部分）
+        text = text.replaceAll("\\*([^*\n]+?)\\*", "<em>$1</em>");
+        text = Pattern.compile("(?:^|\\s)_([^_]+?)_(?=\\s|$)")
+                    .matcher(text).replaceAll("$1<em>$2</em>");
+
+        // 8. 将转义的下划线还原为字面量 _
+        text = text.replace("&#95;", "_");
+
+        // 9. 还原所有受保护的 Token
+        for (int i = 0; i < identSpans.size(); i++) {
+            text = text.replace("\u0000IDENT_" + i + "\u0000", identSpans.get(i));
+        }
+        for (int i = 0; i < urlSpans.size(); i++) {
+            text = text.replace("\u0000URL_" + i + "\u0000", urlSpans.get(i));
+        }
+        for (int i = 0; i < linkSpans.size(); i++) {
+            text = text.replace("\u0000LINK_" + i + "\u0000", linkSpans.get(i));
+        }
+        for (int i = 0; i < codeSpans.size(); i++) {
+            text = text.replace("\u0000CODE_" + i + "\u0000", codeSpans.get(i));
+        }
+
         return text;
     }
 

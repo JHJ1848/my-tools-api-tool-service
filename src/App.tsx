@@ -1,112 +1,251 @@
-import React, { useState, useCallback, useEffect } from 'react'
-import { FileTree } from '@/components/FileTree/FileTree'
-import { MarkdownPreview } from '@/components/Markdown/MarkdownPreview'
-import { Header } from '@/components/Layout/Header'
-import { Sidebar } from '@/components/Layout/Sidebar'
+import React, { useState, useEffect, useCallback } from 'react'
+import { TitleBar } from '@/components/Layout/TitleBar'
 import { TabBar } from '@/components/Layout/TabBar'
+import { FileTree } from '@/components/FileTree/FileTree'
+import { MarkdownView } from '@/components/Markdown/MarkdownView'
+import { TocSidebar } from '@/components/Markdown/TocSidebar'
+import { GlobalSearchModal } from '@/components/Search/GlobalSearchModal'
+import { SettingsModal } from '@/components/Settings/SettingsModal'
+import { CloseConfirmModal } from '@/components/Layout/CloseConfirmModal'
+import { useConfigStore } from '@/stores/configStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useTabsStore } from '@/stores/tabsStore'
-import { useFileStore } from '@/stores/fileStore'
-import { useFileSystem } from '@/hooks/useFileSystem'
-import { useThemeStore } from '@/stores/themeStore'
 
-function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [currentContent, setCurrentContent] = useState('')
-  const { tabs, activeTabId, addTab, updateTabContent } = useTabsStore()
-  const { addRecentFile } = useFileStore()
-  const { readFile, isLoading, error } = useFileSystem()
-  const { actualTheme } = useThemeStore()
+export default function App() {
+  const { loadConfig, settings, isLoaded } = useConfigStore()
+  const { currentWorkspace, setWorkspace, pickAndOpenWorkspace } = useWorkspaceStore()
+  const {
+    tabs,
+    activeTabId,
+    getActiveTab,
+    openFile,
+    closeTab,
+    saveActiveTab,
+    selectTabByIndex,
+    nextTab,
+    prevTab,
+  } = useTabsStore()
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isTocOpen, setIsTocOpen] = useState(true)
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+  const [isCloseConfirmModalOpen, setIsCloseConfirmModalOpen] = useState(false)
+  const [isDraggingFileOver, setIsDraggingFileOver] = useState(false)
+
+  // 1. Load initial settings
   useEffect(() => {
-    document.documentElement.classList.remove('light', 'dark')
-    document.documentElement.classList.add(actualTheme)
-  }, [actualTheme])
+    loadConfig()
+  }, [loadConfig])
 
-  const openFile = useCallback(async (path: string) => {
-    try {
-      const content = await readFile(path)
-      const fileName = path.split('\\').pop() || path.split('/').pop() || path
-
-      addTab(path, fileName, content)
-      setCurrentContent(content)
-      addRecentFile(path)
-    } catch (err) {
-      console.error('Failed to open file:', err)
+  // 2. Listen to electron close confirmation
+  useEffect(() => {
+    if (window.electronAPI?.onConfirmClose) {
+      const cleanup = window.electronAPI.onConfirmClose(() => {
+        setIsCloseConfirmModalOpen(true)
+      })
+      return cleanup
     }
-  }, [readFile, addTab, addRecentFile])
+  }, [])
 
-  const handleTabChange = useCallback(async (path: string) => {
-    const tab = tabs.find(t => t.path === path)
-    if (tab?.content) {
-      setCurrentContent(tab.content)
-    } else {
-      try {
-        const content = await readFile(path)
-        setCurrentContent(content)
+  // 3. Load last workspace if available on startup
+  useEffect(() => {
+    if (isLoaded && !currentWorkspace && settings.lastWorkspace) {
+      setWorkspace(settings.lastWorkspace, true)
+    }
+  }, [isLoaded, currentWorkspace, settings.lastWorkspace, setWorkspace])
+
+
+  // 3. Global Keyboard Shortcuts
+  const handleGlobalKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      // Ctrl+O: Open directory
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o' && !e.shiftKey) {
+        e.preventDefault()
+        pickAndOpenWorkspace()
+        return
+      }
+
+      // Ctrl+S: Save file
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !e.shiftKey) {
+        e.preventDefault()
+        saveActiveTab()
+        return
+      }
+
+      // Ctrl+W: Close tab
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+        e.preventDefault()
         if (activeTabId) {
-          updateTabContent(activeTabId, content)
+          closeTab(activeTabId)
         }
-      } catch (err) {
-        console.error('Failed to load tab content:', err)
+        return
       }
-    }
-  }, [tabs, readFile, activeTabId, updateTabContent])
 
-  const handleFileDrop = useCallback((file: File) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const content = e.target?.result as string
-      const fileName = file.name
-      const fakePath = `D:\\Dropped\\${fileName}`
+      // Ctrl+Shift+F or Ctrl+P: Global Search
+      if (
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p')
+      ) {
+        e.preventDefault()
+        setIsSearchModalOpen(true)
+        return
+      }
 
-      addTab(fakePath, fileName, content)
-      setCurrentContent(content)
-    }
-    reader.readAsText(file)
-  }, [addTab])
+      // Ctrl+B: Toggle Sidebar
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault()
+        setIsSidebarOpen((prev) => !prev)
+        return
+      }
+
+      // Ctrl+Shift+T: Toggle TOC Outline
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 't') {
+        e.preventDefault()
+        setIsTocOpen((prev) => !prev)
+        return
+      }
+
+      // Ctrl+1 ~ Ctrl+9: Switch to Tab
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key >= '1' && e.key <= '9') {
+        e.preventDefault()
+        const index = parseInt(e.key, 10) - 1
+        selectTabByIndex(index)
+        return
+      }
+
+      // Ctrl+Tab / Ctrl+Shift+Tab: Cycle tabs
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          prevTab()
+        } else {
+          nextTab()
+        }
+        return
+      }
+    },
+    [
+      pickAndOpenWorkspace,
+      saveActiveTab,
+      activeTabId,
+      closeTab,
+      selectTabByIndex,
+      nextTab,
+      prevTab,
+    ]
+  )
 
   useEffect(() => {
-    if (activeTabId) {
-      const activeTab = tabs.find(t => t.id === activeTabId)
-      if (activeTab?.content) {
-        setCurrentContent(activeTab.content)
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [handleGlobalKeyDown])
+
+  // 4. File Drag and Drop Support
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingFileOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingFileOver(false)
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingFileOver(false)
+
+    const files = e.dataTransfer.files
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        // In electron, file.path is the native file path
+        const filePath = (file as any).path
+        if (filePath) {
+          await openFile(filePath)
+        } else {
+          // Web fallback
+          const text = await file.text()
+          await openFile(`virtual://${file.name}`, file.name, text)
+        }
       }
     }
-  }, [activeTabId, tabs])
+  }
+
+  const activeTab = getActiveTab()
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <Header
-        onOpenFile={openFile}
-        onDrop={handleFileDrop}
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans select-none relative"
+    >
+      {/* 1. Title Bar */}
+      <TitleBar
+        onOpenGlobalSearch={() => setIsSearchModalOpen(true)}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onToggleToc={() => setIsTocOpen((prev) => !prev)}
+        isTocOpen={isTocOpen}
       />
 
-      <TabBar onTabChange={handleTabChange} />
+      {/* 2. Tab Bar */}
+      <TabBar />
 
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar
-          isOpen={sidebarOpen}
-          onToggle={() => setSidebarOpen(!sidebarOpen)}
-        >
-          <FileTree onFileSelect={openFile} />
-        </Sidebar>
+      {/* 3. Main Workspace Split Layout */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left: Collapsible File Tree Sidebar */}
+        {isSidebarOpen && (
+          <aside className="w-64 h-full flex-shrink-0">
+            <FileTree />
+          </aside>
+        )}
 
-        <main className="flex-1 overflow-hidden">
-          {error ? (
-            <div className="h-full flex items-center justify-center text-destructive">
-              <p>{error}</p>
-            </div>
-          ) : isLoading ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : (
-            <MarkdownPreview content={currentContent} />
-          )}
+        {/* Center: Dynamic Markdown View */}
+        <main className="flex-1 h-full overflow-hidden bg-[var(--codex-editor)]">
+          <MarkdownView tab={activeTab} />
         </main>
+
+        {/* Right: TOC Outline Sidebar */}
+        <TocSidebar
+          content={activeTab?.content || ''}
+          isOpen={isTocOpen && Boolean(activeTab)}
+          onClose={() => setIsTocOpen(false)}
+        />
       </div>
+
+      {/* Drag & Drop Overlay */}
+      {isDraggingFileOver && (
+        <div className="absolute inset-0 bg-sky-500/20 backdrop-blur-sm border-2 border-dashed border-sky-400 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-card px-6 py-4 rounded-xl shadow-2xl border border-sky-400 text-center space-y-1">
+            <p className="text-sm font-semibold text-sky-400">松开以打开 Markdown 文件</p>
+            <p className="text-xs text-muted-foreground">支持直接拖拽单个或多个文档</p>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Global Search Modal */}
+      <GlobalSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+      />
+
+      {/* 5. Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
+
+      {/* 6. Close Confirmation Modal */}
+      <CloseConfirmModal
+        isOpen={isCloseConfirmModalOpen}
+        onClose={() => setIsCloseConfirmModalOpen(false)}
+      />
     </div>
   )
 }
 
-export default App
