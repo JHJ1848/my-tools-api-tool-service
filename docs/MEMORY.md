@@ -611,4 +611,4 @@ localStorage 关键键包括：
 2. **斜体转义缺陷彻底根治**：
    - 多下划线 URL 路径（如 `/ssda/grading_standard/delete_by_name`）与蛇形命名标识符（`delete_by_name`、`is_deleted`）通过前置占位保护，严格保持字面量，杜绝斜体误转。
 3. **Windows 一键初始化与跨机部署**：
-   - 提供 `setup.bat` 与 `setup.ps1`，在新机器上双击即可全自动完成依赖安装、构建发包与桌面快捷方式创建。
+   - 提供 `scripts/setup.bat` 与 `scripts/setup.ps1`，在新机器上双击即可全自动完成依赖安装、构建发包与桌面快捷方式创建。

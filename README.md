@@ -20,11 +20,11 @@
 在新电脑上拉取代码后，**无需手动执行繁琐命令**，直接使用项目内置的 Windows 初始化脚本：
 
 ### 方式一：双击初始化 (推荐)
-直接双击项目根目录下的 **`setup.bat`** 即可。
+直接双击项目根目录下的 **`scripts\setup.bat`** 即可。
 
 ### 方式二：PowerShell 终端一键初始化
 ```powershell
-.\setup.ps1
+.\scripts\setup.ps1
 ```
 
 > **脚本自动完成的工作**：
@@ -45,7 +45,7 @@ npm run dev
 npm run dist:app
 
 # 3. 直接运行已编译的桌面客户端
-.\start-desktop.bat
+.\scripts\start-desktop.bat
 ```
 
 ---

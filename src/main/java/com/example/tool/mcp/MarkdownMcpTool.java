@@ -20,7 +20,7 @@ public class MarkdownMcpTool {
     private static final Logger logger = LoggerFactory.getLogger(MarkdownMcpTool.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${markdown.base-path:D:\\adas\\项目}")
+    @Value("${markdown.base-path:C:\\workspace}")
     private String basePath;
 
     @Autowired

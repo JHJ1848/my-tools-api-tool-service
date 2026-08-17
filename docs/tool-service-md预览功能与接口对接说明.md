@@ -474,8 +474,8 @@ GET /md-view?path=docs/README.md
 
 ```json
 {
-  "configuredPath": "D:\\docs",
-  "effectivePath": "D:\\docs",
+  "configuredPath": "C:\\workspace\\docs",
+  "effectivePath": "C:\\workspace\\docs",
   "exists": true,
   "fallbackToDesktop": false,
   "supportsDirectoryPicker": true
@@ -490,7 +490,7 @@ GET /md-view?path=docs/README.md
 
 ```json
 {
-  "path": "D:\\docs"
+  "path": "C:\\workspace\\docs"
 }
 ```
 
@@ -840,7 +840,7 @@ fetch(fullUrl, options)
 | 配置 | 默认值 | 说明 |
 |---|---|---|
 | `PORT` | `3001` | Node 文件服务端口 |
-| `BASE_PATH` | `D:\adas\项目` | 文件访问基础目录 |
+| `BASE_PATH` | `C:\workspace` | 文件访问基础目录 |
 | `CORS` | `*` | 跨域配置 |
 
 ### 9.2 Node API 清单
@@ -866,7 +866,7 @@ fetch(fullUrl, options)
 ```json
 {
   "success": true,
-  "basePath": "D:\\adas\\项目",
+  "basePath": "C:\\workspace",
   "port": 3001
 }
 ```

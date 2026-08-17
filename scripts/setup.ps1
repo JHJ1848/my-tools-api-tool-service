@@ -57,7 +57,7 @@ Write-Host "  [OK] Desktop executable generated: dist-app\MD Preview Tool.exe" -
 Write-Host ""
 Write-Host "== [4/4] Creating Desktop Shortcut..." -ForegroundColor Yellow
 try {
-    $root = (Get-Item .).FullName
+    $root = Split-Path $PSScriptRoot -Parent
     $targetExe = Join-Path $root "dist-app\MD Preview Tool.exe"
     $iconPath = Join-Path $root "resources\icon.ico"
     $desktop = [System.Environment]::GetFolderPath('Desktop')
@@ -81,7 +81,7 @@ Write-Host ""
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host "       Setup & Initialization Complete!" -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
-Write-Host "  * Desktop App: Launch via desktop shortcut or .\start-desktop.bat"
+Write-Host "  * Desktop App: Launch via desktop shortcut or .\scripts\start-desktop.bat"
 Write-Host "  * Dev Mode:    npm run dev"
 Write-Host "  * LAN Service: http://<Your-IP>:9527/md-view"
 Write-Host "========================================================" -ForegroundColor Cyan

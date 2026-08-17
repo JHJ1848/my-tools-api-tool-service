@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 
 title tool-service
-pushd "%~dp0" || (
+pushd "%~dp0.." || (
   echo [ERROR] Cannot enter project directory.
   pause
   exit /b 1

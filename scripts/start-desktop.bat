@@ -7,7 +7,7 @@ echo 🚀 正在启动 MD Preview 桌面端应用 (类似 Codex)...
 echo 🌐 本地服务端口: 9527 (支持局域网内网共享)
 echo ===================================================
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 :: 检查 node_modules
 if not exist "node_modules" (

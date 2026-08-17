@@ -51,3 +51,9 @@ src/main/resources/*.yml
 .trae/
 .claude/
 openspec/
+
+# 本地私有文档与配置 (仅本机保留, 不随仓库分发)
+/AGENTS.md
+/CLAUDE.md
+/ARCHITECTURE_ANALYSIS.md
+/mcp-config/env-config-template.env

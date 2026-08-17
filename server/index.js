@@ -17,7 +17,7 @@ const url = require('url');
 // 配置
 const CONFIG = {
     PORT: process.env.PORT || 3001,
-    BASE_PATH: process.env.BASE_PATH || 'D:\\adas\\项目',
+    BASE_PATH: process.env.BASE_PATH || 'C:\\workspace',
     CORS: '*'
 };
 

@@ -1,6 +1,6 @@
 export const config = {
   API_BASE: 'http://localhost:3001/api',
-  BASE_PATH: 'D:\\adas\\项目',
+  BASE_PATH: 'C:\\workspace',
   DEFAULT_THEME: 'system' as 'light' | 'dark' | 'system',
   MAX_RECENT_FILES: 10,
   AUTO_SAVE: true,
