@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Pure white circular badge -->
+  <circle cx="256" cy="256" r="236" fill="#FFFFFF" />
+
+  <!-- ==================== LETTER "M" (Geometric Constructivist) ==================== -->
+  <!-- Left Pillar with Top Chamfer -->
+  <polygon points="96,156 134,156 134,364 96,364" fill="#050505" />
+  
+  <!-- Right Pillar of M -->
+  <polygon points="222,156 260,156 260,364 222,364" fill="#050505" />
+  
+  <!-- Center Sharp V-Apex of M -->
+  <polygon points="134,156 178,284 178,284 222,156 194,156 178,206 162,156" fill="#050505" />
+  
+  <!-- Style Element from Image 3: Left Top & Bottom Geometric Accent Trapezoids -->
+  <polygon points="102,122 128,122 134,142 96,142" fill="#050505" />
+  <polygon points="96,378 134,378 128,398 102,398" fill="#050505" />
+
+  <!-- Style Element from Image 3: Diagonal Double-Rail Accent Lines across M's central valley -->
+  <line x1="148" y1="172" x2="194" y2="308" stroke="#050505" stroke-width="5" stroke-linecap="square" />
+  <line x1="158" y1="172" x2="204" y2="308" stroke="#050505" stroke-width="5" stroke-linecap="square" />
+
+  <!-- ==================== LETTER "D" (Sharp Angular Chamfered) ==================== -->
+  <!-- Left Vertical Spine of D -->
+  <polygon points="284,156 322,156 322,364 284,364" fill="#050505" />
+
+  <!-- Outer Chamfered Loop of D -->
+  <path d="M 322,156 L 378,156 L 420,198 L 420,322 L 378,364 L 322,364 L 322,326 L 370,326 L 392,304 L 392,216 L 370,194 L 322,194 Z" fill="#050505" />
+
+  <!-- Style Element from Image 3: Top/Bottom Stepped Bracket Notch on D -->
+  <path d="M 284,122 L 340,122 L 340,142 L 312,142 L 312,156 L 284,156 Z" fill="#050505" />
+  <path d="M 284,364 L 312,364 L 312,378 L 340,378 L 340,398 L 284,398 Z" fill="#050505" />
+
+  <!-- Style Element from Image 3: Parallel Horizontal Notch Accents inside D -->
+  <line x1="334" y1="244" x2="380" y2="244" stroke="#050505" stroke-width="7" stroke-linecap="square" />
+  <line x1="334" y1="274" x2="380" y2="274" stroke="#050505" stroke-width="7" stroke-linecap="square" />
+</svg>

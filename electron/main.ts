@@ -1,10 +1,10 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, clipboard, Notification } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, clipboard, Notification, NativeImage } from 'electron'
 import path, { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
 import os from 'os'
 import chokidar, { FSWatcher } from 'chokidar'
-import { startHttpServer, stopHttpServer, getLanIpAddress, getWorkspaceConfig, saveWorkspacePath } from './server'
+import { startHttpServer, stopHttpServer, isHttpServerRunning, getServerStatus, setServerOptions, getLanIpAddress, getWorkspaceConfig, saveWorkspacePath, isLanSharingEnabled, setLanSharing, clearAllCache } from './server'
 
 const _currentFilename = fileURLToPath(import.meta.url)
 const _currentDirname = dirname(_currentFilename)
@@ -15,6 +15,12 @@ process.env.VITE_PUBLIC = app.isPackaged
   ? process.env.DIST
   : path.join(process.env.DIST, '../public')
 
+// 显式设置 Windows AppUserModelID 以确保任务栏图标与系统通知精准生效
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.toolservice.mdpreview')
+}
+
+const allWindows: Set<BrowserWindow> = new Set()
 let mainWindow: BrowserWindow | null = null
 let currentWatcher: FSWatcher | null = null
 let tray: Tray | null = null
@@ -72,19 +78,22 @@ let inMemoryConfig: Record<string, any> = loadConfig()
 /**
  * 解析并获取可用的应用图标路径
  */
-function getAppIconPath(): string {
+function getAppIconPath(ext = 'png'): string {
   const candidatePaths = [
-    path.join(_currentDirname, '../resources/icon.png'),
-    path.join(_currentDirname, '../../resources/icon.png'),
-    path.join(process.resourcesPath || '', 'resources/icon.png'),
-    path.join(process.resourcesPath || '', 'icon.png'),
-    path.join(process.cwd(), 'resources/icon.png'),
+    path.join(_currentDirname, `../resources/icon.${ext}`),
+    path.join(_currentDirname, `../../resources/icon.${ext}`),
+    path.join(process.resourcesPath || '', `resources/icon.${ext}`),
+    path.join(process.resourcesPath || '', `icon.${ext}`),
+    path.join(process.cwd(), `resources/icon.${ext}`),
   ]
 
   for (const candidate of candidatePaths) {
     if (fs.existsSync(candidate)) {
       return candidate
     }
+  }
+  if (ext !== 'png') {
+    return getAppIconPath('png')
   }
   return ''
 }
@@ -111,6 +120,16 @@ function showMainWindow() {
  * 复制内网分享链接并提示
  */
 function copyLanShareUrl() {
+  if (!isLanSharingEnabled()) {
+    if (Notification.isSupported()) {
+      new Notification({
+        title: '内网共享已暂停',
+        body: '内网 HTTP 共享服务当前已由管理员暂停，请在工作台开启服务后再分享',
+        icon: getAppIconPath('png') || undefined,
+      }).show()
+    }
+    return
+  }
   const lanIp = getLanIpAddress()
   const port = 9527
   const lanUrl = `http://${lanIp}:${port}/md-view`
@@ -120,7 +139,7 @@ function copyLanShareUrl() {
     new Notification({
       title: '内网分享链接已复制',
       body: lanUrl,
-      icon: getAppIconPath() || undefined,
+      icon: getAppIconPath('png') || undefined,
     }).show()
   }
 }
@@ -144,15 +163,19 @@ function quitApp() {
 function createTray() {
   if (tray) return
 
-  const iconPath = getAppIconPath()
-  let trayIcon: nativeImage | null = null
+  // 优先加载带有 16x16/24x24/32x32 优化图层的 ICO 或进行高质量平滑抗锯齿缩放
+  const icoPath = getAppIconPath('ico')
+  const pngPath = getAppIconPath('png')
+  let trayIcon: NativeImage | null = null
 
-  if (iconPath && fs.existsSync(iconPath)) {
-    trayIcon = nativeImage.createFromPath(iconPath)
+  if (icoPath && fs.existsSync(icoPath)) {
+    trayIcon = nativeImage.createFromPath(icoPath)
+  } else if (pngPath && fs.existsSync(pngPath)) {
+    const rawImage = nativeImage.createFromPath(pngPath)
+    trayIcon = rawImage.resize({ width: 16, height: 16, quality: 'best' })
   }
 
   if (!trayIcon || trayIcon.isEmpty()) {
-    // 兜底创建 16x16 纯色图标避免崩溃
     trayIcon = nativeImage.createEmpty()
   }
 
@@ -174,7 +197,7 @@ function createTray() {
     },
     { type: 'separator' },
     {
-      label: '彻底退出',
+      label: '退出',
       click: () => {
         quitApp()
       },
@@ -193,9 +216,9 @@ function createTray() {
   })
 }
 
-function createWindow() {
-  const iconPath = getAppIconPath()
-  mainWindow = new BrowserWindow({
+function createWindow(pathParam?: string): BrowserWindow {
+  const iconPath = getAppIconPath('ico') || getAppIconPath('png')
+  const win = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 960,
@@ -216,22 +239,47 @@ function createWindow() {
     },
   })
 
+  allWindows.add(win)
+  if (!mainWindow) {
+    mainWindow = win
+  }
+
+  if (iconPath && fs.existsSync(iconPath)) {
+    try {
+      const img = nativeImage.createFromPath(iconPath)
+      if (!img.isEmpty()) {
+        win.setIcon(img)
+      }
+    } catch (e) {
+      console.warn('Set icon error:', e)
+    }
+  }
+
   // Prevent white flash when loading
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
+  win.once('ready-to-show', () => {
+    win.show()
   })
 
-  mainWindow.on('maximize', () => {
-    mainWindow?.webContents.send('window:maximize-change', true)
+  win.on('focus', () => {
+    mainWindow = win
   })
 
-  mainWindow.on('unmaximize', () => {
-    mainWindow?.webContents.send('window:maximize-change', false)
+  win.on('maximize', () => {
+    win.webContents.send('window:maximize-change', true)
+  })
+
+  win.on('unmaximize', () => {
+    win.webContents.send('window:maximize-change', false)
   })
 
   // 拦截窗口关闭事件，支持记住选择与最小化到托盘
-  mainWindow.on('close', (e) => {
+  win.on('close', (e) => {
     if (isQuitting) {
+      return
+    }
+
+    if (allWindows.size > 1) {
+      // 存在多个窗口时，直接关闭当前子窗口
       return
     }
 
@@ -239,7 +287,7 @@ function createWindow() {
 
     const closePref = inMemoryConfig['closePreference'] // 'minimize-to-tray' | 'exit'
     if (closePref === 'minimize-to-tray') {
-      mainWindow?.hide()
+      win.hide()
       return
     } else if (closePref === 'exit') {
       quitApp()
@@ -247,21 +295,37 @@ function createWindow() {
     }
 
     // 未记住偏好设置，唤起前端确认弹窗
-    mainWindow?.webContents.send('app:confirm-close')
+    win.webContents.send('app:confirm-close')
   })
 
-  mainWindow.on('closed', () => {
-    mainWindow = null
-    if (currentWatcher) {
+  win.on('closed', () => {
+    allWindows.delete(win)
+    if (mainWindow === win) {
+      mainWindow = allWindows.size > 0 ? Array.from(allWindows)[0] : null
+    }
+    if (allWindows.size === 0 && currentWatcher) {
       currentWatcher.close()
       currentWatcher = null
     }
   })
 
-  if (process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
+  // 统一加载嵌入式 HTTP 服务工作台 (http://127.0.0.1:9527/md-view)
+  // 保证开发环境 (npm run dev) 与打包 exe 保持完全同源与等效体验
+  const targetUrl = pathParam
+    ? `http://127.0.0.1:9527/md-view?path=${encodeURIComponent(pathParam)}`
+    : 'http://127.0.0.1:9527/md-view'
+
+  if (!isHttpServerRunning()) {
+    startHttpServer()
+      .then(() => {
+        win.loadURL(targetUrl)
+      })
+      .catch((err) => {
+        console.error('Failed to start embedded server before loadURL:', err)
+        win.loadURL(targetUrl)
+      })
   } else {
-    mainWindow.loadURL('http://127.0.0.1:9527/md-view')
+    win.loadURL(targetUrl)
   }
 }
 
@@ -587,33 +651,72 @@ ipcMain.handle('config:setAll', (_, newConfig: Record<string, any>) => {
 })
 
 // Window Controls & State IPC
-ipcMain.handle('window:minimize', () => {
-  mainWindow?.minimize()
+ipcMain.handle('window:new', (_, pathParam?: string) => {
+  createWindow(pathParam)
+  return true
 })
 
-ipcMain.handle('window:maximize', () => {
-  if (!mainWindow) return
-  if (mainWindow.isMaximized()) {
-    mainWindow.unmaximize()
+ipcMain.handle('window:minimize', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+  win?.minimize()
+})
+
+ipcMain.handle('window:maximize', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+  if (!win) return
+  if (win.isMaximized()) {
+    win.unmaximize()
   } else {
-    mainWindow.maximize()
+    win.maximize()
   }
 })
 
-ipcMain.handle('window:close', () => {
-  if (!mainWindow) return
+ipcMain.handle('window:close', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+  if (!win) return
+  if (allWindows.size > 1) {
+    win.close()
+    return
+  }
   const pref = inMemoryConfig['closePreference']
   if (pref === 'minimize-to-tray') {
-    mainWindow.hide()
+    win.hide()
   } else if (pref === 'exit') {
     quitApp()
   } else {
-    mainWindow.webContents.send('app:confirm-close')
+    win.webContents.send('app:confirm-close')
   }
 })
 
-ipcMain.handle('window:isMaximized', () => {
-  return mainWindow?.isMaximized() ?? false
+ipcMain.handle('window:isMaximized', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+  return win?.isMaximized() ?? false
+})
+
+ipcMain.handle('app:restart', () => {
+  app.relaunch()
+  app.exit(0)
+})
+
+ipcMain.handle('app:zoomIn', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+  if (win) {
+    win.webContents.setZoomLevel(win.webContents.getZoomLevel() + 0.5)
+  }
+})
+
+ipcMain.handle('app:zoomOut', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+  if (win) {
+    win.webContents.setZoomLevel(win.webContents.getZoomLevel() - 0.5)
+  }
+})
+
+ipcMain.handle('app:zoomReset', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+  if (win) {
+    win.webContents.setZoomLevel(0)
+  }
 })
 
 // App Close Preference IPC
@@ -653,10 +756,58 @@ ipcMain.handle('server:getWorkspaceConfig', () => {
   return getWorkspaceConfig()
 })
 
+ipcMain.handle('server:getStatus', () => {
+  return getServerStatus()
+})
+
+ipcMain.handle('server:start', async () => {
+  try {
+    if (!isHttpServerRunning()) {
+      await startHttpServer()
+    }
+    setLanSharing(true)
+    inMemoryConfig['lanServerEnabled'] = true
+    saveConfig(inMemoryConfig)
+    return { success: true, running: true, status: getServerStatus() }
+  } catch (err: any) {
+    return { success: false, running: isLanSharingEnabled(), error: err.message || String(err), status: getServerStatus() }
+  }
+})
+
+ipcMain.handle('server:stop', async () => {
+  try {
+    setLanSharing(false)
+    inMemoryConfig['lanServerEnabled'] = false
+    saveConfig(inMemoryConfig)
+    return { success: true, running: false, status: getServerStatus() }
+  } catch (err: any) {
+    return { success: false, running: isLanSharingEnabled(), error: err.message || String(err), status: getServerStatus() }
+  }
+})
+
+ipcMain.handle('server:toggle', async (_, targetState?: boolean) => {
+  try {
+    if (!isHttpServerRunning()) {
+      await startHttpServer()
+    }
+    const isRunning = isLanSharingEnabled()
+    const shouldRun = typeof targetState === 'boolean' ? targetState : !isRunning
+    setLanSharing(shouldRun)
+    if (shouldRun) {
+      clearAllCache()
+    }
+    inMemoryConfig['lanServerEnabled'] = shouldRun
+    saveConfig(inMemoryConfig)
+    return { success: true, running: shouldRun, reloaded: shouldRun, status: getServerStatus() }
+  } catch (err: any) {
+    return { success: false, running: isLanSharingEnabled(), error: err.message || String(err), status: getServerStatus() }
+  }
+})
+
 // App Lifecycle
-app.whenReady().then(() => {
-  // Start embedded LAN HTTP sharing server (port 9527)
-  startHttpServer({
+app.whenReady().then(async () => {
+  // Register callbacks for embedded server
+  setServerOptions({
     port: 9527,
     onDirectoryPick: async () => {
       if (!mainWindow) return null
@@ -669,7 +820,52 @@ app.whenReady().then(() => {
       }
       return result.filePaths[0]
     },
+    onMinimize: () => {
+      mainWindow?.minimize()
+    },
+    onMaximize: () => {
+      if (!mainWindow) return false
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize()
+        return false
+      } else {
+        mainWindow.maximize()
+        return true
+      }
+    },
+    onClose: (action?: 'minimize-to-tray' | 'exit', remember?: boolean) => {
+      if (remember && action) {
+        inMemoryConfig['closePreference'] = action
+        saveConfig(inMemoryConfig)
+      }
+      const pref = action || inMemoryConfig['closePreference']
+      if (pref === 'minimize-to-tray') {
+        mainWindow?.hide()
+      } else if (pref === 'exit') {
+        quitApp()
+      } else {
+        mainWindow?.webContents.send('app:confirm-close')
+      }
+    },
+    getClosePreference: () => inMemoryConfig['closePreference'] || null,
+    isMaximized: () => mainWindow?.isMaximized() ?? false,
+    onNewWindow: (pathParam?: string) => {
+      createWindow(pathParam)
+    },
+    onRestart: () => {
+      app.relaunch()
+      app.exit(0)
+    },
   })
+
+  // Start embedded LAN HTTP sharing server (port 9527) and apply sharing preference
+  const lanServerEnabled = inMemoryConfig['lanServerEnabled'] !== false
+  setLanSharing(lanServerEnabled)
+  try {
+    await startHttpServer()
+  } catch (err) {
+    console.error('Failed to start HTTP server on launch:', err)
+  }
 
   createTray()
   createWindow()

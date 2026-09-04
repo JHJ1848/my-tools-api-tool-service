@@ -26,10 +26,15 @@ const electronAPI = {
   setAllConfig: (config: Record<string, any>) => ipcRenderer.invoke('config:setAll', config),
 
   // Window Controls & Lifecycle
+  newWindow: (path?: string) => ipcRenderer.invoke('window:new', path),
+  restartApp: () => ipcRenderer.invoke('app:restart'),
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
   isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  zoomIn: () => ipcRenderer.invoke('app:zoomIn'),
+  zoomOut: () => ipcRenderer.invoke('app:zoomOut'),
+  zoomReset: () => ipcRenderer.invoke('app:zoomReset'),
   getClosePreference: () => ipcRenderer.invoke('app:getClosePreference'),
   setClosePreference: (pref: string) => ipcRenderer.invoke('app:setClosePreference', pref),
   performCloseAction: (action: 'minimize-to-tray' | 'exit', remember?: boolean) =>
@@ -52,6 +57,10 @@ const electronAPI = {
   // Server & LAN
   getLanInfo: () => ipcRenderer.invoke('server:getLanInfo'),
   getServerWorkspaceConfig: () => ipcRenderer.invoke('server:getWorkspaceConfig'),
+  getServerStatus: () => ipcRenderer.invoke('server:getStatus'),
+  startServer: () => ipcRenderer.invoke('server:start'),
+  stopServer: () => ipcRenderer.invoke('server:stop'),
+  toggleServer: (targetState?: boolean) => ipcRenderer.invoke('server:toggle', targetState),
 
   // Platform
   platform: process.platform,

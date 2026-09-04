@@ -64,6 +64,17 @@ export interface DocumentData {
   fileSize: number
 }
 
+export interface ServerStatus {
+  running: boolean
+  lanSharing?: boolean
+  port: number
+  lanIp: string
+  lanUrl: string
+  workspace: WorkspaceConfig
+  timestamp: string
+  uptime: number
+}
+
 // ---------------- Constants & SVGs ----------------
 
 const WORKSPACE_CONFIG_KEY = 'markdown.workspace.path'
@@ -627,13 +638,31 @@ function processBlockquote(content: string): string {
   if (alertMatch) {
     const type = alertMatch[1].toLowerCase()
     const titleMap: Record<string, { title: string; icon: string }> = {
-      note: { title: 'Note', icon: 'ℹ️' },
-      tip: { title: 'Tip', icon: '💡' },
-      important: { title: 'Important', icon: '📌' },
-      warning: { title: 'Warning', icon: '⚠️' },
-      caution: { title: 'Caution', icon: '🛑' },
+      note: {
+        title: 'Note',
+        icon: '<svg class="octicon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>',
+      },
+      tip: {
+        title: 'Tip',
+        icon: '<svg class="octicon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.09-.1-.18-.2-.26-.297C3.12 7.75 2.5 6.781 2.5 5.25 2.5 2.31 4.97 0 8 0s5.5 2.31 5.5 5.25c0 1.531-.62 2.5-1.336 3.282-.08.097-.17.197-.26.297-.162.18-.344.38-.542.68-.207.3-.33.565-.37.847a.75.75 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5Zm1 3h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1 0-1.5Z"></path></svg>',
+      },
+      important: {
+        title: 'Important',
+        icon: '<svg class="octicon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>',
+      },
+      warning: {
+        title: 'Warning',
+        icon: '<svg class="octicon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>',
+      },
+      caution: {
+        title: 'Caution',
+        icon: '<svg class="octicon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>',
+      },
     }
-    const alertInfo = titleMap[type] || { title: type.toUpperCase(), icon: 'ℹ️' }
+    const alertInfo = titleMap[type] || {
+      title: type.toUpperCase(),
+      icon: '<svg class="octicon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>',
+    }
     let bodyHtml = ''
     for (let i = 1; i < lines.length; i++) {
       bodyHtml += `<p>${processInline(lines[i])}</p>\n`
@@ -679,7 +708,7 @@ export function convertMarkdownToHtml(rawMd: string): string {
   let tableAlign: string[] | null = null
   let inTable = false
 
-  const codeBlockPattern = /^```\s*(.*?)\s*$/
+  const codeBlockPattern = /^\s*```\s*(.*?)\s*$/
   const unorderedListPattern = /^(\s*)([-*+])(?:\s+(.*)|((?![-*+])\S.*))$/
   const orderedListPattern = /^(\s*)(\d+)\.\s+(.*)$/
   const taskListPattern = /^(\s*)([-*+])\s*\[([ xX])\]\s+(.*)$/
@@ -983,7 +1012,7 @@ export function renderTocHtml(toc: TocItem[]): string {
   if (!toc || toc.length === 0) {
     return '<div class="toc-empty">暂无标题目录</div>'
   }
-  let html = '<div class="toc-header">目录</div><div class="toc-list">'
+  let html = '<div class="toc-header"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px; vertical-align:-2px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>目录</div><div class="toc-list">'
   let currentLevel = 0
 
   for (const heading of toc) {
@@ -1247,9 +1276,20 @@ export function extractApiSections(md: string): ApiSectionItem[] {
 
 // ---------------- Sidebar & Document Builders ----------------
 
+/**
+ * 递归构建左侧树 HTML 结构（目录优先展示，同类型按名称排序）
+ */
 function buildTreeHtmlRecursive(node: Record<string, any>, pathStr: string, currentPath: string): string {
   const keys = Object.keys(node)
-  keys.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+  // 优先展示目录（值为对象），后展示文件（值为字符串）；各自内部按字母升序排序
+  keys.sort((a, b) => {
+    const isDirA = typeof node[a] === 'object' && node[a] !== null
+    const isDirB = typeof node[b] === 'object' && node[b] !== null
+    if (isDirA !== isDirB) {
+      return isDirA ? -1 : 1
+    }
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  })
   let sb = ''
 
   for (const key of keys) {
@@ -1300,10 +1340,20 @@ export function buildTreeHtml(files: string[], currentPath: string, currentScope
     }
   }
 
+  const lanIp = getLanIpAddress()
+  const lanPort = currentPort || SERVER_PORT
+
   let sb = ''
   sb += `<div class="sidebar-header"><div class="directory-switcher" id="directory-switcher" data-scope="${escapeHtml(currentScope)}"></div>`
-  sb += `<div class="sidebar-header-row"><span class="sidebar-title">Markdown 文件列表</span></div></div>`
-  sb += `<div class="search-box"><input type="text" class="search-input" id="search-input" placeholder="搜索..."><button class="locate-btn" id="locate-btn" title="定位到当前文件">⌖</button></div>`
+  sb += `<div class="sidebar-header-row">`
+  sb += `<span class="sidebar-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px; vertical-align:-2px;"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>Markdown 文件列表</span>`
+  sb += `<div class="sidebar-lan-badge" id="sidebar-lan-badge" title="局域网内网地址: http://${escapeHtml(lanIp)}:${lanPort}/md-view&#10;点击直接复制完整内网访问链接" onclick="copyLanShareUrl()">`
+  sb += `<svg class="lan-badge-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`
+  sb += `<span class="lan-label">IP:</span>`
+  sb += `<span class="lan-address" id="sidebar-lan-address">${escapeHtml(lanIp)}:${lanPort}</span>`
+  sb += `</div>`
+  sb += `</div></div>`
+  sb += `<div class="search-box"><input type="text" class="search-input" id="search-input" placeholder="搜索..."><button class="locate-btn" id="locate-btn" title="定位到当前文件"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg></button></div>`
   sb += `<div class="file-list">`
   sb += buildTreeHtmlRecursive(tree, '', currentPath)
   sb += `</div>`
@@ -1400,15 +1450,17 @@ export function buildDocumentData(decodedPath: string): DocumentData {
 // ---------------- Resource File Resolver ----------------
 
 function findResourceFile(relativePath: string): string | null {
+  const resourcesPath = (process as any).resourcesPath || ''
   const candidates = [
     path.join(_currentDirname, '..', relativePath),
     path.join(_currentDirname, relativePath),
     path.join(process.cwd(), relativePath),
     path.join(_currentDirname, '../../', relativePath),
-    path.join((process as any).resourcesPath || '', relativePath),
+    path.join(resourcesPath, relativePath),
+    path.join(resourcesPath, 'app', relativePath),
   ]
   for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
+    if (candidate && fs.existsSync(candidate)) {
       return candidate
     }
   }
@@ -1416,7 +1468,9 @@ function findResourceFile(relativePath: string): string | null {
 }
 
 function loadTemplateHtml(): string {
-  const filePath = findResourceFile('src/main/resources/templates/md-preview.html')
+  const filePath =
+    findResourceFile('resources/templates/md-preview.html') ||
+    findResourceFile('templates/md-preview.html')
   if (filePath && fs.existsSync(filePath)) {
     return fs.readFileSync(filePath, 'utf-8')
   }
@@ -1424,7 +1478,9 @@ function loadTemplateHtml(): string {
 }
 
 function loadSearchJs(): string {
-  const filePath = findResourceFile('src/main/resources/static/md-search.js')
+  const filePath =
+    findResourceFile('resources/static/md-search.js') ||
+    findResourceFile('static/md-search.js')
   if (filePath && fs.existsSync(filePath)) {
     return fs.readFileSync(filePath, 'utf-8')
   }
@@ -1436,335 +1492,639 @@ function loadSearchJs(): string {
 export interface ServerOptions {
   port?: number
   onDirectoryPick?: () => Promise<string | null>
+  onMinimize?: () => void
+  onMaximize?: () => boolean
+  onClose?: (action?: 'minimize-to-tray' | 'exit', remember?: boolean) => void
+  getClosePreference?: () => string | null
+  isMaximized?: () => boolean
+  onNewWindow?: (path?: string) => void
+  onRestart?: () => void
 }
 
 let runningServer: http.Server | null = null
+let currentPort = SERVER_PORT
+let serverStartTime = 0
+let savedOptions: ServerOptions = {}
+let isLanSharingState = true
 
-export function startHttpServer(options: ServerOptions = {}): http.Server {
-  if (runningServer) {
-    return runningServer
+/**
+ * 检查远程请求地址是否为本地环回 (127.0.0.1 / localhost / ::1)
+ */
+export function isLocalIp(remoteAddress: string | undefined): boolean {
+  if (!remoteAddress) return true
+  const cleanIp = remoteAddress.replace(/^.*:/, '')
+  return cleanIp === '127.0.0.1' || cleanIp === 'localhost' || remoteAddress === '::1'
+}
+
+/**
+ * 检查内网共享服务是否允许外部局域网访问
+ */
+export function isLanSharingEnabled(): boolean {
+  return isLanSharingState
+}
+
+/**
+ * 设置内网局域网共享开关
+ */
+export function setLanSharing(enabled: boolean): void {
+  isLanSharingState = Boolean(enabled)
+}
+
+/**
+ * 检查底层 HTTP 服务是否正在运行
+ */
+export function isHttpServerRunning(): boolean {
+  return Boolean(runningServer && runningServer.listening)
+}
+
+/**
+ * 获取内网 HTTP 服务运行状态详情
+ */
+export function getServerStatus(): ServerStatus {
+  const serverRunning = isHttpServerRunning()
+  const running = serverRunning && isLanSharingState
+  const port = currentPort || SERVER_PORT
+  const lanIp = getLanIpAddress()
+  return {
+    running,
+    lanSharing: isLanSharingState,
+    port,
+    lanIp,
+    lanUrl: `http://${lanIp}:${port}/md-view`,
+    workspace: getWorkspaceConfig(),
+    timestamp: new Date().toISOString(),
+    uptime: serverRunning && serverStartTime > 0 ? Math.floor((Date.now() - serverStartTime) / 1000) : 0,
+  }
+}
+
+/**
+ * 配置服务启动参数（如选择目录的回调等）
+ */
+export function setServerOptions(options: ServerOptions): void {
+  savedOptions = { ...savedOptions, ...options }
+  if (options.port) {
+    currentPort = options.port
+  }
+}
+
+/**
+ * 启动内网 HTTP 共享服务 (端口 9527)
+ */
+export function startHttpServer(options: ServerOptions = {}): Promise<http.Server> {
+  if (options && (options.port || options.onDirectoryPick)) {
+    savedOptions = { ...savedOptions, ...options }
+  }
+  if (savedOptions.port) {
+    currentPort = savedOptions.port
   }
 
-  const port = options.port || SERVER_PORT
+  if (runningServer && runningServer.listening) {
+    return Promise.resolve(runningServer)
+  }
+
+  const port = currentPort || SERVER_PORT
   const lanIp = getLanIpAddress()
 
-  const server = http.createServer(async (req, res) => {
-    // CORS Headers
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, HEAD')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+  return new Promise((resolve, reject) => {
+    const server = http.createServer(async (req, res) => {
+      // CORS Headers
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, HEAD')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
 
-    if (req.method === 'OPTIONS') {
-      res.writeHead(200)
-      res.end()
-      return
-    }
+      if (req.method === 'OPTIONS') {
+        res.writeHead(200)
+        res.end()
+        return
+      }
 
-    const parsedUrl = new URL(req.url || '/', `http://${req.headers.host || '127.0.0.1'}`)
-    const pathname = parsedUrl.pathname || '/'
-    const query: Record<string, string> = {}
-    parsedUrl.searchParams.forEach((val, key) => {
-      query[key] = val
-    })
-
-    const sendJson = (statusCode: number, data: any) => {
-      res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' })
-      res.end(JSON.stringify(data))
-    }
-
-    const sendHtml = (statusCode: number, htmlContent: string) => {
-      res.writeHead(statusCode, { 'Content-Type': 'text/html; charset=utf-8' })
-      res.end(htmlContent)
-    }
-
-    const sendText = (statusCode: number, textContent: string) => {
-      res.writeHead(statusCode, { 'Content-Type': 'text/plain; charset=utf-8' })
-      res.end(textContent)
-    }
-
-    const parseBodyJson = (): Promise<any> => {
-      return new Promise((resolve, reject) => {
-        let body = ''
-        req.on('data', (chunk) => {
-          body += chunk
-          if (body.length > 50 * 1024 * 1024) {
-            // 50MB limit
-            reject(new Error('Payload too large'))
-          }
-        })
-        req.on('end', () => {
-          if (!body.trim()) {
-            resolve({})
-            return
-          }
-          try {
-            resolve(JSON.parse(body))
-          } catch (err) {
-            resolve({ rawBody: body })
-          }
-        })
-        req.on('error', reject)
+      const parsedUrl = new URL(req.url || '/', `http://${req.headers.host || '127.0.0.1'}`)
+      const pathname = parsedUrl.pathname || '/'
+      const query: Record<string, string> = {}
+      parsedUrl.searchParams.forEach((val, key) => {
+        query[key] = val
       })
-    }
 
-    try {
-      // 1. Root / Page Routes
-      if (pathname === '/' || pathname === '/md-view') {
-        const html = loadTemplateHtml()
-        sendHtml(200, html)
-        return
+      const sendJson = (statusCode: number, data: any) => {
+        res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify(data))
       }
 
-      // 2. Static Scripts
-      if (pathname === '/md-search.js' || pathname === '/static/md-search.js') {
-        const script = loadSearchJs()
-        res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' })
-        res.end(script)
-        return
+      const sendHtml = (statusCode: number, htmlContent: string) => {
+        res.writeHead(statusCode, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.end(htmlContent)
       }
 
-      // 3. Workspace Config API
-      if (pathname === '/api/md/workspace-config') {
-        if (req.method === 'GET') {
-          sendJson(200, getWorkspaceConfig())
-          return
-        }
-        if (req.method === 'POST') {
-          const body = await parseBodyJson()
-          const workspacePath = String(body.path || '').trim()
-          const directory = normalizeAbsoluteDirectory(workspacePath)
-          if (!directory) {
-            sendJson(400, { success: false, message: '目录不存在或不是有效文件夹' })
-            return
-          }
-          saveWorkspacePath(directory)
-          clearAllCache()
-          sendJson(200, { success: true, message: '工作目录已更新', config: getWorkspaceConfig() })
-          return
-        }
+      const sendText = (statusCode: number, textContent: string) => {
+        res.writeHead(statusCode, { 'Content-Type': 'text/plain; charset=utf-8' })
+        res.end(textContent)
       }
 
-      // 4. Directory Picker API
-      if (pathname === '/api/md/workspace-config/pick-directory' && req.method === 'POST') {
-        if (options.onDirectoryPick) {
-          try {
-            const selected = await options.onDirectoryPick()
-            if (!selected) {
-              sendJson(200, { success: false, cancelled: true, config: getWorkspaceConfig() })
+      const parseBodyJson = (): Promise<any> => {
+        return new Promise((resolve, reject) => {
+          let body = ''
+          req.on('data', (chunk) => {
+            body += chunk
+            if (body.length > 50 * 1024 * 1024) {
+              // 50MB limit
+              reject(new Error('Payload too large'))
+            }
+          })
+          req.on('end', () => {
+            if (!body.trim()) {
+              resolve({})
               return
             }
-            const directory = normalizeAbsoluteDirectory(selected)
+            try {
+              resolve(JSON.parse(body))
+            } catch (err) {
+              resolve({ rawBody: body })
+            }
+          })
+          req.on('error', reject)
+        })
+      }
+
+      try {
+        const clientIp = req.socket.remoteAddress
+        const isLocal = isLocalIp(clientIp)
+
+        // 局域网访问控制：若关闭了内网共享且请求来自外部非本机 IP
+        if (!isLanSharingState && !isLocal) {
+          if (pathname === '/api/health') {
+            sendJson(200, {
+              status: 'ok',
+              running: false,
+              lanSharing: false,
+              message: '内网共享服务已由主机管理员暂停',
+              port,
+              timestamp: new Date().toISOString(),
+            })
+            return
+          }
+
+          if (pathname.startsWith('/api/')) {
+            sendJson(403, {
+              success: false,
+              error: 'Forbidden',
+              message: '内网共享服务已由主机管理员暂停。如需访问，请联系主机管理员开启共享。',
+              lanSharing: false,
+            })
+            return
+          }
+
+          sendHtml(403, `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>内网共享已暂停 - MD Preview Tool</title>
+<style>
+  * { box-sizing: border-box; }
+  body { background: #121316; color: #d4d4d4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
+  .card { background: #1e1e24; border: 1px solid #33343d; border-radius: 12px; padding: 40px 36px; text-align: center; max-width: 480px; width: 100%; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4); }
+  .icon { font-size: 48px; margin-bottom: 16px; }
+  h2 { color: #f59e0b; margin: 0 0 12px 0; font-size: 20px; }
+  p { line-height: 1.6; color: #9ca3af; font-size: 14px; margin: 0 0 20px 0; }
+  .tip { font-size: 12px; color: #6b7280; border-top: 1px solid #2d2e37; padding-top: 16px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+    </div>
+    <h2>内网共享已暂停</h2>
+    <p>当前主机管理员已关闭 Markdown 服务的局域网共享访问权限。<br>如需查看文档，请联系主机管理员在工作台顶部重新开启「内网服务」。</p>
+    <div class="tip">主机本机 (127.0.0.1) 仍可正常访问与管理</div>
+  </div>
+</body>
+</html>`)
+          return
+        }
+
+        // 1. Root / Page Routes
+        if (pathname === '/' || pathname === '/md-view') {
+          const html = loadTemplateHtml()
+          sendHtml(200, html)
+          return
+        }
+
+        // 2. Static Scripts
+        if (pathname === '/md-search.js' || pathname === '/static/md-search.js') {
+          const script = loadSearchJs()
+          res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' })
+          res.end(script)
+          return
+        }
+
+        // 3. Workspace Config API
+        if (pathname === '/api/md/workspace-config') {
+          if (req.method === 'GET') {
+            sendJson(200, getWorkspaceConfig())
+            return
+          }
+          if (req.method === 'POST') {
+            if (!isLocalIp(clientIp)) {
+              sendJson(403, { success: false, message: '权限不足：仅本机管理员可修改工作区路径' })
+              return
+            }
+            const body = await parseBodyJson()
+            const workspacePath = String(body.path || '').trim()
+            const directory = normalizeAbsoluteDirectory(workspacePath)
             if (!directory) {
-              sendJson(400, { success: false, message: '所选目录无效' })
+              sendJson(400, { success: false, message: '目录不存在或不是有效文件夹' })
               return
             }
             saveWorkspacePath(directory)
             clearAllCache()
-            sendJson(200, { success: true, config: getWorkspaceConfig() })
-            return
-          } catch (err: any) {
-            sendJson(500, { success: false, message: err.message || '选择工作目录失败' })
+            sendJson(200, { success: true, message: '工作目录已更新', config: getWorkspaceConfig() })
             return
           }
-        } else {
-          sendJson(200, {
-            success: false,
-            unsupported: true,
-            message: '当前运行环境不支持弹出目录选择框',
-            config: getWorkspaceConfig(),
-          })
+        }
+
+        // 4. Directory Picker API
+        if (pathname === '/api/md/workspace-config/pick-directory' && req.method === 'POST') {
+          if (!isLocalIp(clientIp)) {
+            sendJson(403, { success: false, message: '权限不足：仅本机管理员可调起目录选择器' })
+            return
+          }
+          const picker = savedOptions.onDirectoryPick || options.onDirectoryPick
+          if (picker) {
+            try {
+              const selected = await picker()
+              if (!selected) {
+                sendJson(200, { success: false, cancelled: true, config: getWorkspaceConfig() })
+                return
+              }
+              const directory = normalizeAbsoluteDirectory(selected)
+              if (!directory) {
+                sendJson(400, { success: false, message: '所选目录无效' })
+                return
+              }
+              saveWorkspacePath(directory)
+              clearAllCache()
+              sendJson(200, { success: true, config: getWorkspaceConfig() })
+              return
+            } catch (err: any) {
+              sendJson(500, { success: false, message: err.message || '选择工作目录失败' })
+              return
+            }
+          } else {
+            sendJson(200, {
+              success: false,
+              unsupported: true,
+              message: '当前运行环境不支持弹出目录选择框',
+              config: getWorkspaceConfig(),
+            })
+            return
+          }
+        }
+
+        // 5. Sidebar Data API
+        if (pathname === '/api/md/sidebar-data') {
+          const scope = normalizeRelativePath(query.scope as string)
+          const currentPath = normalizeRelativePath(query.currentPath as string)
+          const data = buildSidebarData(scope, currentPath)
+          sendJson(200, data)
           return
         }
-      }
 
-      // 5. Sidebar Data API
-      if (pathname === '/api/md/sidebar-data') {
-        const scope = normalizeRelativePath(query.scope as string)
-        const currentPath = normalizeRelativePath(query.currentPath as string)
-        const data = buildSidebarData(scope, currentPath)
-        sendJson(200, data)
-        return
-      }
-
-      // 6. Document Data API
-      if (pathname === '/api/md/document-data') {
-        const rawPath = query.path as string
-        const decodedPath = normalizeRelativePath(rawPath)
-        if (!decodedPath) {
-          sendJson(400, { message: 'path 不能为空' })
-          return
-        }
-        const fullPath = resolveMarkdownPath(decodedPath)
-        if (!fullPath || !fs.existsSync(fullPath)) {
-          sendJson(404, { message: 'Markdown 文件不存在' })
-          return
-        }
-        const data = buildDocumentData(decodedPath)
-        sendJson(200, data)
-        return
-      }
-
-      // 7. Preview Aggregation API
-      if (pathname === '/api/md/preview-data') {
-        const decodedPath = normalizeRelativePath(query.path as string)
-        const scope = normalizeRelativePath(query.scope as string)
-        if (decodedPath) {
+        // 6. Document Data API
+        if (pathname === '/api/md/document-data') {
+          const rawPath = query.path as string
+          const decodedPath = normalizeRelativePath(rawPath)
+          if (!decodedPath) {
+            sendJson(400, { message: 'path 不能为空' })
+            return
+          }
           const fullPath = resolveMarkdownPath(decodedPath)
           if (!fullPath || !fs.existsSync(fullPath)) {
             sendJson(404, { message: 'Markdown 文件不存在' })
             return
           }
-        }
-        const sidebarData = buildSidebarData(scope, decodedPath)
-        const documentData = buildDocumentData(decodedPath)
-        sendJson(200, {
-          ...sidebarData,
-          ...documentData,
-          apiSectionsVersion: 1,
-        })
-        return
-      }
-
-      // 8. Raw Content API
-      if (pathname === '/md-content') {
-        const decodedPath = normalizeRelativePath(query.path as string)
-        const fullPath = resolveMarkdownPath(decodedPath)
-        if (!fullPath || !fs.existsSync(fullPath)) {
-          sendText(404, 'Markdown 文件不存在')
+          const data = buildDocumentData(decodedPath)
+          sendJson(200, data)
           return
         }
-        const content = fs.readFileSync(fullPath, 'utf-8')
-        sendText(200, content)
-        return
-      }
 
-      // 9. File Download API
-      if (pathname === '/md-download') {
-        const decodedPath = normalizeRelativePath(query.path as string)
-        const fullPath = resolveMarkdownPath(decodedPath)
-        if (!fullPath || !fs.existsSync(fullPath)) {
-          sendText(404, 'Markdown 文件不存在')
+        // 7. Preview Aggregation API
+        if (pathname === '/api/md/preview-data') {
+          const decodedPath = normalizeRelativePath(query.path as string)
+          const scope = normalizeRelativePath(query.scope as string)
+          if (decodedPath) {
+            const fullPath = resolveMarkdownPath(decodedPath)
+            if (!fullPath || !fs.existsSync(fullPath)) {
+              sendJson(404, { message: 'Markdown 文件不存在' })
+              return
+            }
+          }
+          const sidebarData = buildSidebarData(scope, decodedPath)
+          const documentData = buildDocumentData(decodedPath)
+          sendJson(200, {
+            ...sidebarData,
+            ...documentData,
+            apiSectionsVersion: 1,
+          })
           return
         }
-        const filename = path.basename(fullPath)
-        const encodedFilename = encodeURIComponent(filename).replace(/%20/g, '+')
-        const fileStream = fs.createReadStream(fullPath)
-        res.writeHead(200, {
-          'Content-Type': 'application/octet-stream',
-          'Content-Disposition': `attachment; filename*=UTF-8''${encodedFilename}`,
-        })
-        fileStream.pipe(res)
-        return
-      }
 
-      // 10. File List API
-      if (pathname === '/md-list') {
-        const scope = normalizeRelativePath(query.scope as string)
-        const files = scanMdFiles(scope)
-        sendJson(200, files)
-        return
-      }
-
-      // 11. Directories List API
-      if (pathname === '/api/md/directories') {
-        const files = scanMdFiles('')
-        const dirs = computeDirectoriesFromFiles(files)
-        sendJson(200, dirs)
-        return
-      }
-
-      // 12. Save Content API
-      if (pathname === '/api/md/save-content' && req.method === 'POST') {
-        const decodedPath = normalizeRelativePath(query.path as string)
-        if (!decodedPath) {
-          sendJson(400, { success: false, message: 'path 不能为空' })
+        // 8. Raw Content API
+        if (pathname === '/md-content') {
+          const decodedPath = normalizeRelativePath(query.path as string)
+          const fullPath = resolveMarkdownPath(decodedPath)
+          if (!fullPath || !fs.existsSync(fullPath)) {
+            sendText(404, 'Markdown 文件不存在')
+            return
+          }
+          const content = fs.readFileSync(fullPath, 'utf-8')
+          sendText(200, content)
           return
         }
-        const fullPath = resolveMarkdownPath(decodedPath)
-        if (!fullPath) {
-          sendJson(400, { success: false, message: '无效的文件路径' })
+
+        // 9. File Download API
+        if (pathname === '/md-download') {
+          const decodedPath = normalizeRelativePath(query.path as string)
+          const fullPath = resolveMarkdownPath(decodedPath)
+          if (!fullPath || !fs.existsSync(fullPath)) {
+            sendText(404, 'Markdown 文件不存在')
+            return
+          }
+          const filename = path.basename(fullPath)
+          const encodedFilename = encodeURIComponent(filename).replace(/%20/g, '+')
+          const fileStream = fs.createReadStream(fullPath)
+          res.writeHead(200, {
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': `attachment; filename*=UTF-8''${encodedFilename}`,
+          })
+          fileStream.pipe(res)
           return
         }
-        const dir = path.dirname(fullPath)
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true })
+
+        // 10. File List API
+        if (pathname === '/md-list') {
+          const scope = normalizeRelativePath(query.scope as string)
+          const files = scanMdFiles(scope)
+          sendJson(200, files)
+          return
         }
-        const body = await parseBodyJson()
-        const content = typeof body.content === 'string' ? body.content : ''
-        fs.writeFileSync(fullPath, content, 'utf-8')
-        evictDocument(fullPath)
-        sendJson(200, { success: true, path: decodedPath })
-        return
-      }
 
-      // 13. Health Check & LAN IP Reporting API
-      if (pathname === '/api/health') {
-        sendJson(200, {
-          status: 'ok',
-          lanIp,
-          port,
-          lanUrl: `http://${lanIp}:${port}/md-view`,
-          workspace: getWorkspaceConfig(),
-          timestamp: new Date().toISOString(),
-          uptime: process.uptime(),
-        })
-        return
-      }
-
-      // 14. Static Workspace Image Asset Serving (e.g. ./images/foo.png)
-      const baseDir = getEffectiveWorkspaceBase()
-      const candidateAssetPath = path.join(baseDir, pathname.replace(/^\//, ''))
-      if (fs.existsSync(candidateAssetPath) && fs.statSync(candidateAssetPath).isFile()) {
-        const ext = path.extname(candidateAssetPath).toLowerCase()
-        const mimeTypes: Record<string, string> = {
-          '.png': 'image/png',
-          '.jpg': 'image/jpeg',
-          '.jpeg': 'image/jpeg',
-          '.gif': 'image/gif',
-          '.svg': 'image/svg+xml',
-          '.webp': 'image/webp',
-          '.bmp': 'image/bmp',
-          '.ico': 'image/x-icon',
-          '.css': 'text/css; charset=utf-8',
-          '.js': 'application/javascript; charset=utf-8',
-          '.json': 'application/json; charset=utf-8',
-          '.txt': 'text/plain; charset=utf-8',
+        // 11. Directories List API
+        if (pathname === '/api/md/directories') {
+          const files = scanMdFiles('')
+          const dirs = computeDirectoriesFromFiles(files)
+          sendJson(200, dirs)
+          return
         }
-        const contentType = mimeTypes[ext] || 'application/octet-stream'
-        res.writeHead(200, { 'Content-Type': contentType })
-        fs.createReadStream(candidateAssetPath).pipe(res)
-        return
-      }
 
-      // 15. 404 Fallback
-      sendJson(404, { error: 'Not Found', pathname })
-    } catch (err: any) {
-      console.error('Server error on', pathname, err)
-      sendJson(500, { error: 'Internal Server Error', message: err.message || String(err) })
-    }
+        // 12. Save Content API
+        if (pathname === '/api/md/save-content' && req.method === 'POST') {
+          const decodedPath = normalizeRelativePath(query.path as string)
+          if (!decodedPath) {
+            sendJson(400, { success: false, message: 'path 不能为空' })
+            return
+          }
+          const fullPath = resolveMarkdownPath(decodedPath)
+          if (!fullPath) {
+            sendJson(400, { success: false, message: '无效的文件路径' })
+            return
+          }
+          const dir = path.dirname(fullPath)
+          if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true })
+          }
+          const body = await parseBodyJson()
+          const content = typeof body.content === 'string' ? body.content : ''
+          fs.writeFileSync(fullPath, content, 'utf-8')
+          evictDocument(fullPath)
+          sendJson(200, { success: true, path: decodedPath })
+          return
+        }
+
+        // 13. Health Check & LAN IP Reporting API
+        if (pathname === '/api/health') {
+          sendJson(200, {
+            status: 'ok',
+            running: isLanSharingState,
+            lanSharing: isLanSharingState,
+            serverRunning: isHttpServerRunning(),
+            lanIp,
+            port,
+            lanUrl: `http://${lanIp}:${port}/md-view`,
+            workspace: getWorkspaceConfig(),
+            timestamp: new Date().toISOString(),
+            uptime: serverStartTime > 0 ? (Date.now() - serverStartTime) / 1000 : process.uptime(),
+          })
+          return
+        }
+
+        // 14. Server Status API (GET /api/server/status)
+        if (pathname === '/api/server/status') {
+          sendJson(200, getServerStatus())
+          return
+        }
+
+        // 15. Server Toggle / Start / Stop API (POST /api/server/toggle, /start, /stop)
+        if (
+          (pathname === '/api/server/toggle' || pathname === '/api/server/start' || pathname === '/api/server/stop') &&
+          req.method === 'POST'
+        ) {
+          // 仅允许本地请求操作启停，防止外部局域网访客恶意控制主机服务
+          if (!isLocalIp(req.socket.remoteAddress)) {
+            sendJson(403, {
+              success: false,
+              message: '仅允许主机本机 (127.0.0.1) 或桌面端控制服务启停',
+            })
+            return
+          }
+
+          const body = await parseBodyJson()
+          let targetRunning: boolean
+          if (pathname === '/api/server/start') {
+            targetRunning = true
+          } else if (pathname === '/api/server/stop') {
+            targetRunning = false
+          } else {
+            targetRunning = typeof body.enable === 'boolean' ? body.enable : !isLanSharingState
+          }
+
+          setLanSharing(targetRunning)
+          if (targetRunning) {
+            clearAllCache()
+          }
+
+          sendJson(200, {
+            success: true,
+            running: isLanSharingState,
+            lanSharing: isLanSharingState,
+            reloaded: targetRunning,
+            message: isLanSharingState ? '内网共享服务已开启（缓存已重载）' : '内网共享已暂停（仅限本机访问）',
+            status: getServerStatus(),
+          })
+          return
+        }
+
+        // 15.1 Window Controls HTTP API Fallback
+        if (pathname === '/api/window/minimize' && req.method === 'POST') {
+          if (!isLocalIp(clientIp)) {
+            sendJson(403, { success: false, message: '权限不足：仅本机窗口可控制窗口状态' })
+            return
+          }
+          savedOptions.onMinimize?.()
+          sendJson(200, { success: true })
+          return
+        }
+
+        if (pathname === '/api/window/maximize' && req.method === 'POST') {
+          if (!isLocalIp(clientIp)) {
+            sendJson(403, { success: false, message: '权限不足：仅本机窗口可控制窗口状态' })
+            return
+          }
+          const isMax = savedOptions.onMaximize ? savedOptions.onMaximize() : false
+          sendJson(200, { success: true, isMaximized: isMax })
+          return
+        }
+
+        if (pathname === '/api/window/is-maximized' && req.method === 'GET') {
+          const isMax = savedOptions.isMaximized ? savedOptions.isMaximized() : false
+          sendJson(200, { isMaximized: isMax })
+          return
+        }
+
+        if (pathname === '/api/window/close-preference' && req.method === 'GET') {
+          const pref = savedOptions.getClosePreference ? savedOptions.getClosePreference() : null
+          sendJson(200, { pref })
+          return
+        }
+
+        if (pathname === '/api/window/perform-close' && req.method === 'POST') {
+          if (!isLocalIp(clientIp)) {
+            sendJson(403, { success: false, message: '权限不足：仅本机窗口可控制窗口状态' })
+            return
+          }
+          const body = await parseBodyJson()
+          savedOptions.onClose?.(body.action, body.remember)
+          sendJson(200, { success: true })
+          return
+        }
+
+        if (pathname === '/api/window/close' && req.method === 'POST') {
+          if (!isLocalIp(clientIp)) {
+            sendJson(403, { success: false, message: '权限不足：仅本机窗口可控制窗口状态' })
+            return
+          }
+          savedOptions.onClose?.()
+          sendJson(200, { success: true })
+          return
+        }
+
+        if (pathname === '/api/window/new' && req.method === 'POST') {
+          if (!isLocalIp(clientIp)) {
+            sendJson(403, { success: false, message: '权限不足：仅本机管理员可新建窗口' })
+            return
+          }
+          const body = await parseBodyJson()
+          savedOptions.onNewWindow?.(body.path)
+          sendJson(200, { success: true })
+          return
+        }
+
+        if (pathname === '/api/app/restart' && req.method === 'POST') {
+          if (!isLocalIp(clientIp)) {
+            sendJson(403, { success: false, message: '权限不足：仅本机管理员可重启应用' })
+            return
+          }
+          sendJson(200, { success: true, message: 'Restarting...' })
+          setTimeout(() => {
+            savedOptions.onRestart?.()
+          }, 100)
+          return
+        }
+
+        // 16. Static Workspace Image Asset Serving (e.g. ./images/foo.png)
+        const baseDir = getEffectiveWorkspaceBase()
+        const candidateAssetPath = path.resolve(baseDir, pathname.replace(/^\//, ''))
+        const relativePath = path.relative(baseDir, candidateAssetPath)
+        const isContained = !relativePath.startsWith('..') && !path.isAbsolute(relativePath)
+
+        if (isContained && fs.existsSync(candidateAssetPath) && fs.statSync(candidateAssetPath).isFile()) {
+          const ext = path.extname(candidateAssetPath).toLowerCase()
+          const mimeTypes: Record<string, string> = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.svg': 'image/svg+xml',
+            '.webp': 'image/webp',
+            '.bmp': 'image/bmp',
+            '.ico': 'image/x-icon',
+            '.css': 'text/css; charset=utf-8',
+            '.js': 'application/javascript; charset=utf-8',
+            '.json': 'application/json; charset=utf-8',
+            '.txt': 'text/plain; charset=utf-8',
+          }
+          const contentType = mimeTypes[ext] || 'application/octet-stream'
+          res.writeHead(200, { 'Content-Type': contentType })
+          fs.createReadStream(candidateAssetPath).pipe(res)
+          return
+        }
+
+        // 17. 404 Fallback
+        sendJson(404, { error: 'Not Found', pathname })
+      } catch (err: any) {
+        console.error('Server error on', pathname, err)
+        sendJson(500, { error: 'Internal Server Error', message: err.message || String(err) })
+      }
+    })
+
+    server.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.warn(`[HTTP Server] Port ${port} is already in use. Retrying or sharing service.`)
+      } else {
+        console.error('[HTTP Server] Error:', err)
+      }
+      reject(err)
+    })
+
+    server.listen(port, '0.0.0.0', () => {
+      serverStartTime = Date.now()
+      runningServer = server
+      console.log(`[HTTP Server] Markdown Preview service is running at:`)
+      console.log(`  > Local:   http://127.0.0.1:${port}/md-view`)
+      console.log(`  > Network: http://${lanIp}:${port}/md-view`)
+      resolve(server)
+    })
   })
-
-  server.listen(port, '0.0.0.0', () => {
-    console.log(`[HTTP Server] Markdown Preview service is running at:`)
-    console.log(`  > Local:   http://127.0.0.1:${port}/md-view`)
-    console.log(`  > Network: http://${lanIp}:${port}/md-view`)
-  })
-
-  server.on('error', (err: any) => {
-    if (err.code === 'EADDRINUSE') {
-      console.warn(`[HTTP Server] Port ${port} is already in use. Retrying or sharing service.`)
-    } else {
-      console.error('[HTTP Server] Error:', err)
-    }
-  })
-
-  runningServer = server
-  return server
 }
 
-export function stopHttpServer(): void {
-  if (runningServer) {
-    runningServer.close()
+/**
+ * 停止内网 HTTP 共享服务并释放端口
+ */
+export function stopHttpServer(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!runningServer) {
+      resolve(true)
+      return
+    }
+    const s = runningServer
     runningServer = null
-  }
+    serverStartTime = 0
+
+    try {
+      if (typeof (s as any).closeAllConnections === 'function') {
+        (s as any).closeAllConnections()
+      }
+    } catch (e) {
+      console.warn('[HTTP Server] closeAllConnections error:', e)
+    }
+
+    s.close((err) => {
+      if (err) {
+        console.warn('[HTTP Server] Error closing server:', err)
+      } else {
+        console.log('[HTTP Server] Stopped successfully.')
+      }
+      resolve(true)
+    })
+  })
 }

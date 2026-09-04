@@ -1,22 +1,14 @@
-# Node & Electron 依赖与构建产物
+# Node & Electron & Java 依赖与构建产物
 node_modules/
 dist/
 dist-electron/
 dist-app/
 release/
+target/
+*.class
 .vite/
 test-results/
 
-# Maven 与 Java 构建
-target/
-*.class
-*.jar
-*.war
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
 
 # IDE & 编辑器
 .idea/

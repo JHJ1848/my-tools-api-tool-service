@@ -4,6 +4,14 @@
   "version": "1.0.0",
   "type": "module",
   "main": "dist-electron/main.js",
+  "description": "现代化纯前端与内网协同 Markdown 实时预览及 API 调试桌面工具",
+  "author": "ToolService Team <support@toolservice.com>",
+  "homepage": "https://github.com/toolservice/md-preview-tool",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/toolservice/md-preview-tool.git"
+  },
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -11,28 +19,70 @@
     "preview": "vite preview",
     "electron:dev": "vite",
     "electron:build": "tsc && vite build",
-    "dist:app": "vite build && powershell -ExecutionPolicy Bypass -Command \"$root = (Get-Item .).FullName; $targetDir = Join-Path $root 'dist-app'; $appDir = Join-Path $targetDir 'resources\\app'; if (Test-Path (Join-Path $appDir 'dist')) { Remove-Item -Recurse -Force (Join-Path $appDir 'dist') }; if (Test-Path (Join-Path $appDir 'dist-electron')) { Remove-Item -Recurse -Force (Join-Path $appDir 'dist-electron') }; Copy-Item -Recurse -Force (Join-Path $root 'dist') (Join-Path $appDir 'dist'); Copy-Item -Recurse -Force (Join-Path $root 'dist-electron') (Join-Path $appDir 'dist-electron'); Copy-Item -Recurse -Force (Join-Path $root 'resources') (Join-Path $appDir 'resources'); $pkgJson = '{\\\"name\\\":\\\"md-preview-tool\\\",\\\"version\\\":\\\"1.0.0\\\",\\\"type\\\":\\\"module\\\",\\\"main\\\":\\\"dist-electron/main.js\\\"}'; [System.IO.File]::WriteAllText((Join-Path $appDir 'package.json'), $pkgJson, [System.Text.Encoding]::UTF8);\"",
-    "dist:dir": "vite build && electron-builder --dir",
-    "dist": "vite build && electron-builder"
+    "dist:app": "vite build && powershell -ExecutionPolicy Bypass -Command \"$root = (Get-Item .).FullName; $targetDir = Join-Path $root 'dist-app'; $appDir = Join-Path $targetDir 'resources\\app'; if (Test-Path (Join-Path $appDir 'dist')) { Remove-Item -Recurse -Force (Join-Path $appDir 'dist') }; if (Test-Path (Join-Path $appDir 'dist-electron')) { Remove-Item -Recurse -Force (Join-Path $appDir 'dist-electron') }; if (Test-Path (Join-Path $appDir 'resources')) { Remove-Item -Recurse -Force (Join-Path $appDir 'resources') }; Copy-Item -Recurse -Force (Join-Path $root 'dist') (Join-Path $appDir 'dist'); Copy-Item -Recurse -Force (Join-Path $root 'dist-electron') (Join-Path $appDir 'dist-electron'); Copy-Item -Recurse -Force (Join-Path $root 'resources') (Join-Path $appDir 'resources'); $pkgJson = '{\\\"name\\\":\\\"md-preview-tool\\\",\\\"version\\\":\\\"1.0.0\\\",\\\"type\\\":\\\"module\\\",\\\"main\\\":\\\"dist-electron/main.js\\\"}'; [System.IO.File]::WriteAllText((Join-Path $appDir 'package.json'), $pkgJson, [System.Text.Encoding]::UTF8);\" && node scripts/patch-exe-icon.js",
+    "dist:msi": "node scripts/build-dist.js --target=msi",
+    "dist:nsis": "node scripts/build-dist.js --target=nsis",
+    "dist:portable": "node scripts/build-dist.js --target=portable",
+    "dist:dir": "node scripts/build-dist.js --target=dir",
+    "dist:all": "node scripts/build-dist.js --target=all",
+    "dist": "npm run dist:all"
   },
   "build": {
     "appId": "com.toolservice.mdpreview",
     "productName": "MD Preview Tool",
+    "copyright": "Copyright © 2026 MD Preview Tool. All rights reserved.",
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
-      "src/main/resources/templates/**/*",
-      "src/main/resources/static/**/*",
       "resources/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "resources/templates",
+        "to": "resources/templates"
+      },
+      {
+        "from": "resources/static",
+        "to": "resources/static"
+      },
+      {
+        "from": "resources/icon.ico",
+        "to": "resources/icon.ico"
+      },
+      {
+        "from": "resources/icon.png",
+        "to": "resources/icon.png"
+      }
+    ],
     "win": {
-      "target": [
-        "dir"
-      ],
-      "icon": "resources/icon.ico"
+      "icon": "resources/icon.ico",
+      "legalTrademarks": "MD Preview Tool",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MD Preview Tool",
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
+      "installerHeaderIcon": "resources/icon.ico",
+      "artifactName": "${productName}-Setup-${version}-${arch}.exe"
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": true,
+      "shortcutName": "MD Preview Tool",
+      "artifactName": "${productName}-${version}-${arch}.msi"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-${arch}-portable.exe"
     }
   },
   "dependencies": {
@@ -78,6 +128,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "postcss": "^8.4.33",
+    "resedit": "^1.7.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
     "vite": "^5.0.12",

@@ -17,18 +17,18 @@
 
 ### 2.1 Primary：当前有效主链路
 
-- `pom.xml`
-  - 当前主构建入口，Spring Boot + Maven。
-- `src/main/java/com/example/tool/**`
-  - 当前后端主实现。
-- `src/main/resources/application*.yml`
-  - 当前配置体系。
-- `src/main/resources/templates/md-preview.html`
-  - 当前 Markdown 预览页面。
-- `src/main/resources/static/md-search.js`
+- `package.json` / `vite.config.ts`
+  - 当前主构建入口与 Electron 打包配置。
+- `electron/**` (`main.ts`, `server.ts`, `preload.ts`)
+  - 当前桌面端主进程与内置轻量 Node.js HTTP 协同服务。
+- `resources/templates/md-preview.html`
+  - 当前 Markdown 预览主页面。
+- `resources/static/md-search.js`
   - 当前页面的本地全文搜索脚本。
 - `docs/MEMORY.md`
   - 当前事实手册。
+
+> 提示：原 `src/main/java/**`、`pom.xml` 及 Spring Boot 达梦数据库历史模块已彻底剥离移除。
 
 ### 2.2 Secondary：并存但未接入当前主发布链路的原型
 
@@ -405,6 +405,9 @@ localStorage 关键键包括：
 
 关键交互：
 
+- 树节点排序规则
+  - 目录（文件夹）优先排在最前，Markdown 文件排在后面
+  - 目录与文件各自内部按名称字母升序（忽略大小写、自然数字顺序）独立排序
 - 文件夹展开/收起
   - 有 0.2 秒动画
   - 展开状态持久化
@@ -606,9 +609,73 @@ localStorage 关键键包括：
 1. **Windows 原生桌面集成**：
    - 绿色独立可执行程序 `dist-app\MD Preview Tool.exe`，带 Markdown 专属高分辨率 ICON。
    - 标题栏支持鼠标左键拖动窗口（`-webkit-app-region: drag`），集成最小化、最大化/还原、关闭控制。
-   - **智能关闭拦截与系统托盘**：关闭时弹出确认框（最小化到托盘或彻底退出，支持“记住选择”），托盘支持双击唤醒与右键菜单。
-   - **Windows 原生目录选择**：点击 `📁` 图标呼出原生文件夹选择器，自动递归全量扫描子层级 `.md` 文件并自动定位打开首篇文档。
+   - **智能关闭拦截与系统托盘**：托盘右键菜单规范为“打开工作台”、“复制内网分享链接”、“退出”；关闭时弹出决策框或按首选项配置自动执行。
+   - **全量矢量图标重构与专业组件库规范 (Lucide & Octicon Zero-Emoji)**：
+     - 全面清理并替换了顶部标题栏、菜单栏、URL 栏、工具栏、侧边栏、大纲目录、代码复制按钮、API 浮动面板、空状态欢迎页、403 页面以及设置模态弹窗中的所有 Emoji 图标，全面接入标准 Lucide / Octicon 矢量 SVG 图标与现代极简排版（实测运行时 0 噪点 Emoji）；
+     - **资源打包同步与覆盖机制修复**：
+       - 彻底清除了遗留的 `src/main/resources` 历史资产；
+       - 修复了 PowerShell 构建脚本中 `Copy-Item` 针对 `$appDir\resources` 的嵌套副本缺陷，构建前自动深度清理目标目录，确保开发源码与可执行程序运行包 100% 同步生效。
+     - **Windows EXE 文件 PE 二进制内嵌图标注入**：
+       - 新增 [`scripts/patch-exe-icon.js`](../scripts/patch-exe-icon.js)，基于 `resedit` 在打包构建流中直接将多尺寸几何 MD 专属 `resources/icon.ico` 写入 `MD Preview Tool.exe` 的 Windows PE Header，彻底生效文件资源管理器与桌面图标。
+   - **Task-Loop 任务调度器挂载**：
+     - 本会话（`86e8ae20-773d-4f9e-8d5d-77aa8631bc6f`）已注册为项目持久主会话，全面接入 `.agents/task-loop/` 调度框架。
+   - **Windows 原生目录选择**：点击 `📁` 图标呼出原生选择器，自动递归全量扫描子层级 `.md` 文件并自动定位打开首篇文档。
 2. **斜体转义缺陷彻底根治**：
    - 多下划线 URL 路径（如 `/ssda/grading_standard/delete_by_name`）与蛇形命名标识符（`delete_by_name`、`is_deleted`）通过前置占位保护，严格保持字面量，杜绝斜体误转。
 3. **Windows 一键初始化与跨机部署**：
    - 提供 `scripts/setup.bat` 与 `scripts/setup.ps1`，在新机器上双击即可全自动完成依赖安装、构建发包与桌面快捷方式创建。
+
+### 11.3 局域网 IP 展示、URL 标题定位与开发同源升级 (2026-08)
+1. **侧栏本机 IP 组件**：
+   - 侧边栏“Markdown 文件列表”标题右侧新增 `sidebar-lan-badge` 徽标组件，直观呈现 `IP(本机的): <LAN_IP>:9527`。
+   - 点击徽章可直接复制当前文档与阅读进度的完整局域网分享 URL，并提供视觉反馈。
+2. **URL 标题与首行定位全链路联动**：
+   - 支持复合参数 `#h=...&l1=...` 及传统 anchor 锚点，正文区平滑滚动并闪烁高亮。
+   - 右侧 TOC 标题树自动展开所有祖先折叠层级，激活高亮并调用 `scrollIntoView` 确保目录树同步滚动到当前标题。
+   - 若 URL 中无标题 hash，正文和右侧 TOC 自动定位到首行（顶部）。
+   - 增加 `hashchange` 事件监听与多次微调补偿，避免代码高亮或媒体加载后的高度偏移。
+3. **开发环境与 EXE 启动同源等效**：
+   - 修改 `electron/main.ts`，主窗口统一加载 `http://127.0.0.1:9527/md-view`，彻底解决 `npm run dev` 弹出旧版 React 原型黑底混乱界面的问题，确保开发与生产完全同源同质。
+
+### 11.4 服务启停控制架构升级与 Failed to fetch 死锁根治 (2026-08)
+1. **故障根因根治（服务永续性与共享权限解耦）**：
+   - 历史缺陷：旧版将页面“内网服务”开关直接绑定到底层 `server.close()`。在 Web 端关闭服务后，底层 TCP Socket 被释放，再次点击开启时发起的 HTTP 请求被系统拒绝（`ECONNREFUSED`），导致前端报错 `服务启停切换失败: Failed to fetch` 并造成通信死锁。
+   - 架构升级：将“局域网共享控制”与“底层 HTTP 服务”彻底解耦。底层 HTTP 服务（`127.0.0.1:9527`）始终保持运行，保障主机 Electron 窗口及本机浏览器的数据接口（加载文件树、文档内容、保存等）永远畅通可用。
+2. **安全中间件与访客模式**：
+   - **局域网访问控制**：当“内网服务”关闭时，拦截所有非 `127.0.0.1` / `localhost` 的外部局域网请求（返回 403 Forbidden 友好的暂停说明页与 JSON 拦截），本地 `127.0.0.1` 仍可正常访问与随时重新开启。
+   - **局域网访客保护**：外部局域网设备访问时自动设为访客模式，开关禁用，仅主机管理员可启停内网共享，杜绝误关。
+3. **全端兼容与平滑启停**：
+   - 更新 `electron/server.ts`、`electron/main.ts`、`md-preview.html`，开关切换瞬间生效，绝不再出现网络断连或死锁。
+
+### 11.5 Markdown 代码块统一轻量展示规范 (2026-08)
+1. **统一展示规范**：正文 Markdown 代码块采用现代等宽字体，右上角配备动态 SVG 复制按钮，无额外冗余边框。
+
+### 11.6 标准化可发行应用发布体系 (MSI/NSIS/Portable Pipeline - 2026-08)
+1. **发行包矩阵（对标 CC Switch）**：
+   - **Windows MSI 安装包**：基于 WiX 4.0 生成 `release/MD Preview Tool-1.0.0-x64.msi`，提供原生 Windows Installer 安装进度弹窗与 GPO 企业级静默部署；
+   - **Windows NSIS 安装向导**：生成 `release/MD Preview Tool-Setup-1.0.0-x64.exe`，支持自定义安装路径、桌面与开始菜单快捷方式以及控制面板一键卸载；
+   - **绿色便携单文件**：生成 `release/MD Preview Tool-1.0.0-x64-portable.exe`，免安装即开即用。
+2. **自动化构建与镜像加速流水线**：
+   - 核心构建脚本：[`scripts/build-dist.js`](../scripts/build-dist.js) 统一注入国内镜像（`ELECTRON_MIRROR`, `ELECTRON_BUILDER_BINARIES_MIRROR`），规避海外网络超时；
+   - 指令体系：`npm run dist:msi`、`npm run dist:nsis`、`npm run dist:portable`、`npm run dist:all`。
+3. **运行时资源寻址加固**：
+   - `electron/server.ts` 中的 `findResourceFile` 扩展对 `process.resourcesPath` 与 `process.resourcesPath/app` 的检索，确保无论在解压态还是 MSI/NSIS 安装态均能 100% 稳定读取模板与静态文件。
+   - 所有 Markdown 代码块（包括 JSON、SQL、各类代码片段及非标准文档伪代码）统一采用**图 1 风格的极简、轻量高亮代码框**展示，杜绝笨重复杂的外层卡片与多余的表格切换栏，保持文档阅读的紧凑与连贯性。
+2. **核心特性与实现机制**：
+   - **深色优雅高亮**：由 `highlight.js` 统一完成语法高亮与语法着色（键名、字符串、数值、布尔值精准渲染）；
+   - **轻量浮动复制**：每个代码块右上角保留精致小巧的 `📋 复制` 按钮（悬浮浮现，点击反馈 `✓ 已复制`）；
+   - **嵌套与缩进兼容**：服务端正则已全面支持缩进代码块（`^\s*```\s*(.*?)\s*$`），确保无序列表、有序列表项内部的代码块均能准确解析为标准代码框。
+
+
+### 11.6 正常的开关重启与全链路缓存热重载机制 (2026-08)
+1. **交互定位与操作模型**：
+   - 用户无需进入命令行打命令重启进程，支持在桌面端/Web 端右上角通过标准的“关 -> 开”两次点击逻辑（即正常的开/关循环）实现服务与缓存的热重载。
+2. **服务端缓存即时清除**：
+   - 当开关由关闭切换至开启（`reloaded: true`）时，服务端（Node `electron/server.ts`、Electron 主进程 `electron/main.ts` 及 Spring Boot 控制器）立即执行 `clearAllCache()` 清空所有文档与侧边栏内存缓存（`documentCache` 与 `sidebarCache`）。
+3. **前端文档与视图自动刷新**：
+   - 前端监听到开启成功后，自动调用 `loadShellData()` 刷新文件列表，并对当前已打开的 `currentFilePath` 触发 `loadDocumentData()` 重新加载渲染，使最新的 Markdown 语法和表格解析结果立即呈现在屏幕上。
+
+
+
+
+

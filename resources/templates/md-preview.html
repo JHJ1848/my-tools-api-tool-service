@@ -26,7 +26,7 @@
             height: 100%;
         }
         .sidebar {
-            width: 300px;
+            width: 320px;
             background-color: #252526;
             border-right: 1px solid #333;
             display: flex;
@@ -50,6 +50,13 @@
             color: #cccccc;
             background-color: #2d2d2d;
             border-bottom: 1px solid #333;
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+        .toc-header button,
+        .toc-header a,
+        .toc-header input {
+            -webkit-app-region: no-drag;
         }
         .toc-list {
             flex: 1;
@@ -270,22 +277,91 @@
             text-align: center;
         }
         .sidebar-header {
-            padding: 10px 16px;
+            padding: 10px 12px;
             font-weight: 600;
             font-size: 14px;
             color: #cccccc;
             background-color: #2d2d2d;
             border-bottom: 1px solid #333;
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+        .sidebar-header input,
+        .sidebar-header button,
+        .sidebar-header a,
+        .directory-switcher,
+        .sidebar-lan-badge {
+            -webkit-app-region: no-drag;
         }
         .sidebar-header-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
+            gap: 4px;
             margin-top: 8px;
+            flex-wrap: nowrap;
+            white-space: nowrap;
         }
         .sidebar-title {
             flex-shrink: 0;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .sidebar-lan-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            background: #1c222c;
+            border: 1px solid #3b4656;
+            border-radius: 6px;
+            color: #79c0ff;
+            font-size: 11px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.16s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+            line-height: 1.4;
+        }
+        .sidebar-lan-badge:hover {
+            background: #253346;
+            border-color: #007fd4;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 127, 212, 0.3);
+        }
+        .sidebar-lan-badge:active {
+            transform: scale(0.96);
+        }
+        .sidebar-lan-badge.copied {
+            background: #143823 !important;
+            border-color: #238636 !important;
+            color: #7ee787 !important;
+        }
+        .lan-badge-icon {
+            font-size: 11px;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .lan-label {
+            color: #8b949e;
+            font-size: 11px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .lan-address {
+            color: #58a6ff;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .lan-copy-hint {
+            font-size: 10px;
+            opacity: 0.75;
+            flex-shrink: 0;
+            margin-left: 1px;
         }
         .directory-switcher {
             display: flex;
@@ -735,11 +811,28 @@
         }
         .tabs-bar {
             display: flex;
+            align-items: center;
             background-color: #252526;
             border-bottom: 1px solid #333;
-            overflow-x: auto;
+            overflow: hidden;
             flex-shrink: 0;
             height: 35px;
+            -webkit-app-region: drag;
+            user-select: none;
+            position: relative;
+        }
+        .tabs-list {
+            display: flex;
+            align-items: center;
+            overflow-x: auto;
+            overflow-y: hidden;
+            flex: 0 1 auto;
+            height: 100%;
+            -webkit-app-region: no-drag;
+            scrollbar-width: none;
+        }
+        .tabs-list::-webkit-scrollbar {
+            display: none;
         }
         .tab {
             padding: 0 12px;
@@ -755,6 +848,7 @@
             height: 100%;
             min-width: 100px;
             max-width: 200px;
+            -webkit-app-region: no-drag;
         }
         .tab:hover {
             background-color: #3e3e42;
@@ -782,11 +876,575 @@
             font-size: 14px;
             line-height: 1;
             opacity: 0.7;
+            -webkit-app-region: no-drag;
         }
         .tab-close:hover {
             background-color: #4e4e52;
             color: white;
             opacity: 1;
+        }
+        .tabs-drag-spacer {
+            flex: 1 1 auto;
+            min-width: 20px;
+            height: 100%;
+            -webkit-app-region: drag;
+        }
+        /* Desktop Top Navbar (URL address bar & window controls) - Always Visible */
+        .desktop-navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 38px;
+            background-color: #1a1c23;
+            border-bottom: 1px solid #2b2e38;
+            padding: 0 0 0 10px;
+            user-select: none;
+            -webkit-app-region: drag;
+            z-index: 1000;
+            gap: 10px;
+            box-sizing: border-box;
+            width: 100%;
+            flex-shrink: 0;
+        }
+        .layout {
+            display: flex;
+            height: calc(100vh - 38px);
+        }
+        .app-window-controls {
+            display: none !important;
+        }
+        .desktop-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            -webkit-app-region: no-drag !important;
+        }
+        .desktop-app-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #58a6ff;
+            background: rgba(88, 166, 255, 0.12);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(88, 166, 255, 0.25);
+            line-height: 1.4;
+            user-select: none;
+            -webkit-app-region: no-drag !important;
+        }
+        /* App Menubar (File / View / Window) */
+        .app-menubar {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            -webkit-app-region: no-drag !important;
+            user-select: none;
+            gap: 2px;
+        }
+        .menubar-item {
+            position: relative;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+        .menubar-trigger {
+            padding: 0 9px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            color: #c9d1d9;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer !important;
+            transition: all 0.15s ease;
+            outline: none;
+            -webkit-app-region: no-drag !important;
+        }
+        .menubar-trigger:hover,
+        .menubar-item.active .menubar-trigger {
+            background: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+        }
+        .menubar-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            min-width: 240px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+            padding: 4px 0;
+            z-index: 2000;
+            -webkit-app-region: no-drag !important;
+        }
+        .menubar-item.active .menubar-dropdown {
+            display: block;
+        }
+        .menu-action-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 14px;
+            font-size: 12px;
+            color: #c9d1d9;
+            cursor: pointer !important;
+            transition: background 0.1s ease, color 0.1s ease;
+            white-space: nowrap;
+            user-select: none;
+        }
+        .menu-action-item:hover {
+            background: #1f6feb;
+            color: #ffffff;
+        }
+        .menu-action-item.danger:hover {
+            background: #da3633;
+            color: #ffffff;
+        }
+        .menu-action-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .menu-shortcut {
+            font-size: 11px;
+            color: #8b949e;
+            margin-left: 18px;
+        }
+        .menu-action-item:hover .menu-shortcut {
+            color: rgba(255, 255, 255, 0.85);
+        }
+        .menu-divider {
+            height: 1px;
+            background: #30363d;
+            margin: 4px 0;
+        }
+        :root {
+            --md-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "微软雅黑", sans-serif;
+            --md-font-size: 16px;
+            --md-code-font: Consolas, "Courier New", monospace;
+        }
+        .markdown-body {
+            font-family: var(--md-font-family) !important;
+            font-size: var(--md-font-size) !important;
+        }
+        .markdown-body pre, .markdown-body code {
+            font-family: var(--md-code-font) !important;
+        }
+        /* Light Theme Styles */
+        body.theme-light {
+            background: #ffffff !important;
+            color: #24292f !important;
+        }
+        body.theme-light .sidebar {
+            background: #f6f8fa !important;
+            border-right-color: #d0d7de !important;
+        }
+        body.theme-light .desktop-titlebar-container {
+            background: #eef1f5 !important;
+            border-bottom-color: #d0d7de !important;
+            color: #24292f !important;
+        }
+        body.theme-light .desktop-title-text {
+            color: #24292f !important;
+        }
+        body.theme-light .toolbar {
+            background: #f6f8fa !important;
+            border-bottom-color: #d0d7de !important;
+        }
+        body.theme-light .markdown-body {
+            background: #ffffff !important;
+            color: #24292f !important;
+        }
+        body.theme-light .tool-btn {
+            background: #eef1f5 !important;
+            color: #24292f !important;
+            border-color: #d0d7de !important;
+        }
+        body.theme-light .tool-btn:hover {
+            background: #e1e4e8 !important;
+            border-color: #58a6ff !important;
+        }
+        body.theme-light .tool-btn.active {
+            background: #0969da !important;
+            color: #ffffff !important;
+            border-color: #0969da !important;
+        }
+        body.theme-light .toc-sidebar {
+            background: #fcfcfc !important;
+            border-left-color: #d0d7de !important;
+        }
+        body.theme-light .toc-title {
+            color: #24292f !important;
+        }
+        body.theme-light .toc-item {
+            color: #57606a !important;
+        }
+        body.theme-light .toc-item:hover, body.theme-light .toc-item.active {
+            color: #0969da !important;
+        }
+        body.theme-light .settings-modal-card {
+            background: #ffffff !important;
+            border-color: #d0d7de !important;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2) !important;
+        }
+        body.theme-light .settings-modal-header {
+            background: #f6f8fa !important;
+            border-bottom-color: #d0d7de !important;
+        }
+        body.theme-light .settings-modal-header h3 {
+            color: #24292f !important;
+        }
+        body.theme-light .settings-input {
+            background: #ffffff !important;
+            border-color: #d0d7de !important;
+            color: #24292f !important;
+        }
+        body.theme-light .settings-modal-footer {
+            background: #f6f8fa !important;
+            border-top-color: #d0d7de !important;
+        }
+        /* Settings Modal */
+        .settings-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            -webkit-app-region: no-drag !important;
+        }
+        .settings-modal-card {
+            background: #1e222b;
+            border: 1px solid #363d4d;
+            border-radius: 8px;
+            width: 620px;
+            max-width: 92vw;
+            box-shadow: 0 16px 36px rgba(0,0,0,0.6);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .settings-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 18px;
+            background: #252a36;
+            border-bottom: 1px solid #363d4d;
+        }
+        .settings-modal-header h3 {
+            margin: 0;
+            font-size: 15px;
+            color: #f0f6fc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .settings-tab-nav {
+            display: flex;
+            gap: 2px;
+            padding: 0 18px;
+            background: #191c24;
+            border-bottom: 1px solid #2b313e;
+        }
+        body.theme-light .settings-tab-nav {
+            background: #eef1f5 !important;
+            border-bottom-color: #d0d7de !important;
+        }
+        .settings-tab-btn {
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #8b949e;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .settings-tab-btn:hover {
+            color: #f0f6fc;
+        }
+        body.theme-light .settings-tab-btn:hover {
+            color: #0969da !important;
+        }
+        .settings-tab-btn.active {
+            color: #58a6ff;
+            border-bottom-color: #58a6ff;
+            font-weight: 600;
+        }
+        body.theme-light .settings-tab-btn.active {
+            color: #0969da !important;
+            border-bottom-color: #0969da !important;
+        }
+        .settings-modal-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 65vh;
+            overflow-y: auto;
+        }
+        .settings-tab-pane {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .settings-tab-pane.active {
+            display: flex;
+        }
+        .settings-field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .settings-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #8b949e;
+        }
+        body.theme-light .settings-label {
+            color: #57606a !important;
+        }
+        .settings-input {
+            background: #13161c;
+            border: 1px solid #363d4d;
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: #f0f6fc;
+            font-size: 13px;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+            transition: all 0.15s ease;
+        }
+        .settings-input:focus {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+        }
+        .settings-help {
+            font-size: 11px;
+            color: #8b949e;
+            line-height: 1.4;
+        }
+        .settings-theme-radios {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .theme-radio-card {
+            border: 1px solid #363d4d;
+            border-radius: 6px;
+            padding: 10px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: #13161c;
+            color: #c9d1d9;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+        body.theme-light .theme-radio-card {
+            background: #f6f8fa !important;
+            border-color: #d0d7de !important;
+            color: #24292f !important;
+        }
+        .theme-radio-card:hover {
+            border-color: #58a6ff;
+            color: #58a6ff;
+        }
+        .theme-radio-card.active {
+            border-color: #58a6ff;
+            background: rgba(88, 166, 255, 0.15);
+            color: #58a6ff;
+            font-weight: 600;
+        }
+        body.theme-light .theme-radio-card.active {
+            border-color: #0969da !important;
+            background: rgba(9, 105, 218, 0.1) !important;
+            color: #0969da !important;
+        }
+        .settings-modal-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 18px;
+            background: #181b22;
+            border-top: 1px solid #2b313e;
+            gap: 10px;
+        }
+        .desktop-nav-center {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            max-width: 860px;
+            height: 28px;
+            background: #252831;
+            border: 1px solid #383d4c;
+            border-radius: 6px;
+            padding: 0 4px 0 8px;
+            gap: 6px;
+            transition: all 0.15s ease;
+            -webkit-app-region: no-drag;
+            margin: 0 auto;
+        }
+        .desktop-nav-center:focus-within {
+            border-color: #58a6ff;
+            background: #1e2129;
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.25);
+        }
+        .desktop-url-prefix-icon {
+            font-size: 12px;
+            color: #8b949e;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .desktop-url-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #e1e4e8;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 12px;
+            width: 100%;
+            min-width: 0;
+        }
+        .desktop-url-input::placeholder {
+            color: #6e7681;
+        }
+        .desktop-url-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 22px;
+            padding: 0 7px;
+            background: #323642;
+            border: 1px solid #444856;
+            border-radius: 4px;
+            color: #c9d1d9;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .desktop-url-action-btn:hover {
+            background: #3f4453;
+            border-color: #58a6ff;
+            color: #ffffff;
+        }
+        .desktop-url-action-btn.primary {
+            background: #238636;
+            border-color: #2ea043;
+            color: #ffffff;
+            font-weight: 500;
+        }
+        .desktop-url-action-btn.primary:hover {
+            background: #2ea043;
+        }
+        .desktop-win-controls {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            flex-shrink: 0;
+            -webkit-app-region: no-drag !important;
+            pointer-events: auto !important;
+            margin-left: auto;
+        }
+        .win-nav-btn {
+            width: 46px;
+            height: 100%;
+            border: none;
+            background: transparent;
+            color: #9da5b4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer !important;
+            outline: none;
+            transition: background 0.15s ease, color 0.15s ease;
+            -webkit-app-region: no-drag !important;
+            pointer-events: auto !important;
+            padding: 0;
+        }
+        .win-nav-btn svg {
+            display: block;
+            pointer-events: none !important;
+        }
+        .win-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+        .win-nav-btn.win-close:hover {
+            background: #e81123 !important;
+            color: #ffffff !important;
+        }
+        .win-nav-btn:active {
+            background: rgba(255, 255, 255, 0.14);
+        }
+        .win-nav-btn.win-close:active {
+            background: #bf0f1d !important;
+        }
+        .app-window-controls {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            flex-shrink: 0;
+            margin-left: auto;
+            -webkit-app-region: no-drag !important;
+            pointer-events: auto !important;
+            z-index: 50;
+        }
+        .win-btn {
+            width: 46px;
+            height: 100%;
+            border: none;
+            background: transparent;
+            color: #9da5b4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer !important;
+            outline: none;
+            transition: background 0.15s ease, color 0.15s ease;
+            -webkit-app-region: no-drag !important;
+            pointer-events: auto !important;
+            padding: 0;
+        }
+        .win-btn svg {
+            display: block;
+            pointer-events: none !important;
+        }
+        .win-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+        .win-btn.win-close:hover {
+            background: #e81123 !important;
+            color: #ffffff !important;
+        }
+        .win-btn:active {
+            background: rgba(255, 255, 255, 0.14);
+        }
+        .win-btn.win-close:active {
+            background: #bf0f1d !important;
         }
         .toolbar {
             display: flex;
@@ -1687,17 +2345,129 @@
             stroke-linecap: round;
             stroke-linejoin: round;
         }
+        .lan-server-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: #252526;
+            border: 1px solid #3e3e42;
+            font-size: 12px;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+        .lan-server-control:hover {
+            border-color: #55555c;
+            background: #2a2a2d;
+        }
+        .lan-status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .lan-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+            transition: all 0.25s ease;
+        }
+        .lan-status-dot.running {
+            background-color: #3fb950;
+            box-shadow: 0 0 6px rgba(63, 185, 80, 0.6);
+            animation: lanPulse 2s infinite ease-in-out;
+        }
+        .lan-status-dot.stopped {
+            background-color: #8b949e;
+            box-shadow: none;
+            animation: none;
+        }
+        @keyframes lanPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.18); opacity: 0.75; }
+        }
+        .lan-status-text {
+            color: #cccccc;
+            font-size: 12px;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        .lan-switch {
+            position: relative;
+            display: inline-block;
+            width: 28px;
+            height: 16px;
+            margin: 0;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .lan-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            margin: 0;
+            position: absolute;
+        }
+        .lan-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #484f58;
+            transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 16px;
+        }
+        .lan-slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 2px;
+            bottom: 2px;
+            background-color: #ffffff;
+            transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        .lan-switch input:checked + .lan-slider {
+            background-color: #238636;
+        }
+        .lan-switch input:checked + .lan-slider:before {
+            transform: translateX(12px);
+        }
+        .lan-switch input:disabled + .lan-slider {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .tool-btn.lan-share-btn {
             background: linear-gradient(135deg, #183756 0%, #20507b 100%);
             border-color: #3b7bb5;
             color: #dbeaff;
             font-weight: 500;
+            transition: all 0.2s ease;
         }
         .tool-btn.lan-share-btn:hover {
             background: linear-gradient(135deg, #234c74 0%, #29649b 100%);
             border-color: #58a6ff;
             color: #ffffff;
             box-shadow: 0 0 8px rgba(88, 166, 255, 0.35);
+        }
+        .tool-btn.lan-share-btn.disabled {
+            background: #252526;
+            border-color: #3e3e42;
+            color: #6e7681;
+            opacity: 0.55;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .tool-btn.lan-share-btn.disabled:hover {
+            background: #252526;
+            border-color: #3e3e42;
+            color: #6e7681;
+            box-shadow: none;
         }
         .back-to-top-btn {
             position: fixed;
@@ -1857,50 +2627,7 @@
         }
         .md-badge-warning .md-badge-dot { background: #d29922; box-shadow: 0 0 6px #d29922; }
 
-        /* Desktop Titlebar */
-        .app-titlebar {
-            height: 32px;
-            background: #16171b;
-            border-bottom: 1px solid #28292d;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            user-select: none;
-            z-index: 10000;
-            width: 100%;
-        }
-        .app-titlebar-drag {
-            flex: 1;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            padding-left: 12px;
-            gap: 8px;
-            -webkit-app-region: drag;
-            cursor: default;
-        }
-        .app-titlebar-icon { font-size: 14px; }
-        .app-titlebar-title { font-size: 12px; color: #9da5b4; font-weight: 500; letter-spacing: 0.3px; }
-        .app-titlebar-controls {
-            display: flex;
-            height: 100%;
-            -webkit-app-region: no-drag;
-        }
-        .win-btn {
-            width: 44px;
-            height: 100%;
-            border: none;
-            background: transparent;
-            color: #9da5b4;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            cursor: pointer;
-            transition: background 0.15s, color 0.15s;
-        }
-        .win-btn:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
-        .win-btn.win-close:hover { background: #e81123; color: #ffffff; }
+
 
         /* Close Confirm Modal */
         .modal-overlay {
@@ -1978,22 +2705,162 @@
     </style>
 </head>
 <body>
-    <header class="app-titlebar" id="app-titlebar" style="display:none;">
-        <div class="app-titlebar-drag">
-            <span class="app-titlebar-icon">📝</span>
-            <span class="app-titlebar-title">MD Preview Tool</span>
+    <header class="desktop-navbar" id="desktop-navbar">
+        <div class="desktop-nav-left">
+            <div class="desktop-app-badge" title="MD 预览工具桌面版">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <span>MD Preview</span>
+            </div>
+            <nav class="app-menubar" id="app-menubar">
+                <!-- 文件 (File) 菜单 -->
+                <div class="menubar-item" id="menu-item-file">
+                    <button type="button" class="menubar-trigger" onclick="toggleMenuDropdown('menu-item-file', event)">文件</button>
+                    <div class="menubar-dropdown">
+                        <div class="menu-action-item" onclick="handleNewWindow()">
+                            <span class="menu-action-label">新建窗口</span>
+                            <span class="menu-shortcut">Ctrl+Shift+N</span>
+                        </div>
+                        <div class="menu-action-item" onclick="handleRestartApp()">
+                            <span class="menu-action-label">重启 (窗口+服务)</span>
+                            <span class="menu-shortcut">Ctrl+Shift+R</span>
+                        </div>
+                        <div class="menu-divider"></div>
+                        <div class="menu-action-item" onclick="openSettingsModal('network')">
+                            <span class="menu-action-label">设置目标 IP / 路径</span>
+                        </div>
+                        <div class="menu-action-item" onclick="openWorkspaceDirPicker()">
+                            <span class="menu-action-label">切换工作目录...</span>
+                            <span class="menu-shortcut">Ctrl+O</span>
+                        </div>
+                        <div class="menu-action-item" onclick="openSettingsModal('basic')">
+                            <span class="menu-action-label">首选项设置...</span>
+                            <span class="menu-shortcut">Ctrl+Alt+S</span>
+                        </div>
+                        <div class="menu-divider"></div>
+                        <div class="menu-action-item danger" onclick="handleWindowClose(event)">
+                            <span class="menu-action-label">退出</span>
+                            <span class="menu-shortcut">Alt+F4</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 视图 (View) 菜单 -->
+                <div class="menubar-item" id="menu-item-view">
+                    <button type="button" class="menubar-trigger" onclick="toggleMenuDropdown('menu-item-view', event)">视图</button>
+                    <div class="menubar-dropdown">
+                        <div class="menu-action-item" onclick="toggleSidebarView()">
+                            <span class="menu-action-label">切换侧边栏</span>
+                            <span class="menu-shortcut">Ctrl+B</span>
+                        </div>
+                        <div class="menu-action-item" onclick="toggleTocView()">
+                            <span class="menu-action-label">切换大纲目录</span>
+                        </div>
+                        <div class="menu-action-item" onclick="toggleRequestPanel()">
+                            <span class="menu-action-label">切换 API 调试面板</span>
+                        </div>
+                        <div class="menu-divider"></div>
+                        <div class="menu-action-item" onclick="toggleView('preview')">
+                            <span class="menu-action-label">预览模式</span>
+                        </div>
+                        <div class="menu-action-item" onclick="toggleView('raw')">
+                            <span class="menu-action-label">原文本模式</span>
+                        </div>
+                        <div class="menu-divider"></div>
+                        <div class="menu-action-item" onclick="handleZoomIn()">
+                            <span class="menu-action-label">放大</span>
+                            <span class="menu-shortcut">Ctrl+=</span>
+                        </div>
+                        <div class="menu-action-item" onclick="handleZoomOut()">
+                            <span class="menu-action-label">缩小</span>
+                            <span class="menu-shortcut">Ctrl+-</span>
+                        </div>
+                        <div class="menu-action-item" onclick="handleZoomReset()">
+                            <span class="menu-action-label">重置缩放</span>
+                            <span class="menu-shortcut">Ctrl+0</span>
+                        </div>
+                        <div class="menu-divider"></div>
+                        <div class="menu-action-item" onclick="refreshCurrentDocument()">
+                            <span class="menu-action-label">刷新文档</span>
+                            <span class="menu-shortcut">F5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 窗口 (Window) 菜单 -->
+                <div class="menubar-item" id="menu-item-window">
+                    <button type="button" class="menubar-trigger" onclick="toggleMenuDropdown('menu-item-window', event)">窗口</button>
+                    <div class="menubar-dropdown">
+                        <div class="menu-action-item" onclick="handleWindowMinimize(event)">
+                            <span class="menu-action-label">最小化</span>
+                            <span class="menu-shortcut">Ctrl+M</span>
+                        </div>
+                        <div class="menu-action-item" onclick="handleWindowMaximize(event)">
+                            <span class="menu-action-label">最大化 / 还原</span>
+                        </div>
+                        <div class="menu-divider"></div>
+                        <div class="menu-action-item" onclick="closeTab(currentFilePath)">
+                            <span class="menu-action-label">关闭当前标签</span>
+                            <span class="menu-shortcut">Ctrl+W</span>
+                        </div>
+                        <div class="menu-action-item" onclick="closeOtherTabs(currentFilePath)">
+                            <span class="menu-action-label">关闭其他标签</span>
+                        </div>
+                        <div class="menu-action-item" onclick="closeAllTabs()">
+                            <span class="menu-action-label">关闭所有标签</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            <button type="button" class="desktop-url-action-btn" onclick="refreshCurrentDocument()" title="刷新当前文档">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            </button>
         </div>
-        <div class="app-titlebar-controls" id="app-window-controls">
-            <button type="button" class="win-btn win-min" id="win-btn-min" title="最小化">─</button>
-            <button type="button" class="win-btn win-max" id="win-btn-max" title="最大化">🗖</button>
-            <button type="button" class="win-btn win-close" id="win-btn-close" title="关闭">✕</button>
+        <div class="desktop-nav-center">
+            <span class="desktop-url-prefix-icon" title="文档访问 URL">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </span>
+            <input type="text" id="desktop-url-input" class="desktop-url-input" list="desktop-url-history-list" placeholder="输入或粘贴完整 URL / 路径 (按 Enter 识别跳转并自动同步 IP)" spellcheck="false" autocomplete="off">
+            <datalist id="desktop-url-history-list"></datalist>
+            <button type="button" class="desktop-url-action-btn" id="desktop-url-copy-btn" onclick="copyDesktopUrl()" title="复制当前文档完整访问 URL">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> 复制
+            </button>
+            <button type="button" class="desktop-url-action-btn primary" id="desktop-url-go-btn" onclick="handleDesktopUrlGo()" title="跳转到指定文档">
+                跳转 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+            </button>
+        </div>
+        <div class="desktop-win-controls" id="desktop-win-controls">
+            <button type="button" class="win-nav-btn win-min action-btn-min" id="win-nav-btn-min" onclick="handleWindowMinimize(event)" title="最小化" aria-label="最小化">
+                <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+            </button>
+            <button type="button" class="win-nav-btn win-max action-btn-max" id="win-nav-btn-max" onclick="handleWindowMaximize(event)" title="最大化" aria-label="最大化">
+                <svg class="icon-max" width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor"/></svg>
+                <svg class="icon-restore" style="display:none;" width="10" height="10" viewBox="0 0 10 10"><path d="M2.5 0.5h7v7h-2v2h-7v-7h2v-2z" fill="none" stroke="currentColor"/><path d="M0.5 2.5h7v7h-7z" fill="#1a1c23" stroke="currentColor"/></svg>
+            </button>
+            <button type="button" class="win-nav-btn win-close action-btn-close" id="win-nav-btn-close" onclick="handleWindowClose(event)" title="关闭" aria-label="关闭">
+                <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8m0-8L1 9" stroke="currentColor" stroke-width="1.2"/></svg>
+            </button>
         </div>
     </header>
-    <div class="layout" style="height: calc(100vh - 32px);">
+    <div class="layout">
         <aside class="sidebar" id="sidebar-container"></aside>
         <aside class="toc-sidebar" id="toc-container"></aside>
         <main class="content">
-            <div class="tabs-bar"></div>
+            <div class="tabs-bar">
+                <div class="tabs-list" id="tabs-list"></div>
+                <div class="tabs-drag-spacer" id="tabs-drag-spacer"></div>
+                <div class="app-window-controls" id="app-window-controls">
+                    <button type="button" class="win-btn win-min action-btn-min" id="win-btn-min" onclick="handleWindowMinimize(event)" title="最小化" aria-label="最小化">
+                        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+                    </button>
+                    <button type="button" class="win-btn win-max action-btn-max" id="win-btn-max" onclick="handleWindowMaximize(event)" title="最大化" aria-label="最大化">
+                        <svg class="icon-max" width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor"/></svg>
+                        <svg class="icon-restore" style="display:none;" width="10" height="10" viewBox="0 0 10 10"><path d="M2.5 0.5h7v7h-2v2h-7v-7h2v-2z" fill="none" stroke="currentColor"/><path d="M0.5 2.5h7v7h-7z" fill="#252526" stroke="currentColor"/></svg>
+                    </button>
+                    <button type="button" class="win-btn win-close action-btn-close" id="win-btn-close" onclick="handleWindowClose(event)" title="关闭" aria-label="关闭">
+                        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8m0-8L1 9" stroke="currentColor" stroke-width="1.2"/></svg>
+                    </button>
+                </div>
+            </div>
             <div class="toolbar">
                 <div class="toolbar-left">
                     <div class="current-path" id="breadcrumb-path"></div>
@@ -2002,14 +2869,34 @@
                     <div class="tool-btn active" id="btn-preview" onclick="toggleView('preview')">预览模式</div>
                     <div class="tool-btn" id="btn-raw" onclick="toggleView('raw')">原文本</div>
                     <div style="width: 1px; height: 16px; background: #3e3e42; margin: 0 4px;"></div>
-                    <div class="tool-btn" onclick="downloadFile()">📥 下载</div>
+                    <div class="tool-btn" onclick="downloadFile()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>下载
+                    </div>
                     <div style="width: 1px; height: 16px; background: #3e3e42; margin: 0 4px;"></div>
-                    <div class="tool-btn lan-share-btn" id="btn-lan-share" onclick="copyLanShareUrl()" title="复制当前局域网分享链接">🌐 内网分享</div>
+                    <div class="lan-server-control" id="lan-server-control" title="内网 HTTP 共享服务 (端口 9527)">
+                        <div class="lan-status-indicator" id="lan-status-indicator">
+                            <span class="lan-status-dot running" id="lan-status-dot"></span>
+                            <span class="lan-status-text" id="lan-status-text">内网服务: 运行中</span>
+                        </div>
+                        <label class="lan-switch" title="开启/关闭内网服务">
+                            <input type="checkbox" id="lan-server-toggle" checked onchange="handleLanServerToggle(this.checked)">
+                            <span class="lan-slider"></span>
+                        </label>
+                    </div>
+                    <div class="tool-btn lan-share-btn" id="btn-lan-share" onclick="copyLanShareUrl()" title="复制当前局域网分享链接">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>内网分享
+                    </div>
+                    <div style="width: 1px; height: 16px; background: #3e3e42; margin: 0 4px;"></div>
+                    <div class="tool-btn" id="btn-settings" onclick="openSettingsModal('basic')" title="首选项设置 (快捷键: Ctrl+Alt+S)">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>设置
+                    </div>
                 </div>
             </div>
             <div class="markdown-body" id="markdown-body">正在加载数据...</div>
             <div class="raw-body" id="raw-body"></div>
-            <button type="button" class="back-to-top-btn" id="back-to-top-btn" title="回到顶部" aria-label="回到顶部" onclick="scrollToTop()">🚀</button>
+            <button type="button" class="back-to-top-btn" id="back-to-top-btn" title="回到顶部" aria-label="回到顶部" onclick="scrollToTop()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            </button>
         </main>
         <aside class="request-panel" id="request-panel">
             <div class="request-panel-header">
@@ -2119,8 +3006,9 @@
                 </div>
             </div>
             </div>
-        </aside>
-        <div class="request-panel-toggle" onclick="toggleRequestPanel()" title="API请求工具">🚀</div>
+        <div class="request-panel-toggle" onclick="toggleRequestPanel()" title="API调试面板">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        </div>
     </div>
     <div id="tab-context-menu" class="context-menu">
         <div class="menu-item" id="menu-close-current">关闭当前 (Ctrl+W)</div>
@@ -2322,7 +3210,7 @@
                     const copyBtn = document.createElement('button');
                     copyBtn.type = 'button';
                     copyBtn.className = 'copy-code-btn';
-                    copyBtn.innerHTML = '📋 复制';
+                    copyBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制';
                     copyBtn.title = '复制代码内容';
                     copyBtn.addEventListener('click', async (e) => {
                         e.stopPropagation();
@@ -2338,11 +3226,11 @@
                                 document.execCommand('copy');
                                 document.body.removeChild(ta);
                             }
-                            copyBtn.innerHTML = '✓ 已复制';
+                            copyBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7ee787" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polyline points="20 6 9 17 4 12"/></svg>已复制';
                             copyBtn.classList.add('copied');
                             pushRequestMessage('代码已复制到剪贴板', 'success');
                             setTimeout(() => {
-                                copyBtn.innerHTML = '📋 复制';
+                                copyBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制';
                                 copyBtn.classList.remove('copied');
                             }, 2000);
                         } catch (err) {
@@ -2363,14 +3251,7 @@
         }
 
         function ensureSidebarAndTocHeaderIcons() {
-            const sidebarTitle = document.querySelector('.sidebar-title');
-            if (sidebarTitle && !/[\u{1F300}-\u{1FAFF}]/u.test(sidebarTitle.textContent || '')) {
-                sidebarTitle.textContent = `📚 ${sidebarTitle.textContent || ''}`.trim();
-            }
-            const tocHeader = document.querySelector('.toc-header');
-            if (tocHeader && !/[\u{1F300}-\u{1FAFF}]/u.test(tocHeader.textContent || '')) {
-                tocHeader.textContent = `🧭 ${tocHeader.textContent || ''}`.trim();
-            }
+            // 纯净排版，不额外注入 emoji 前缀
         }
 
         function createBreadcrumbSegment(text, className, options = {}) {
@@ -2576,42 +3457,98 @@
                 .trim();
         }
 
+        function stripPunctuation(str) {
+            return String(str || '').toLowerCase().replace(/[^\u4e00-\u9fa5a-z0-9]/g, '');
+        }
+
         function resolveHeadingLocationTarget(parsedLocation) {
+            if (!parsedLocation) return '';
             const headingId = String(parsedLocation?.headingId || '').trim();
+            const legacyId = String(parsedLocation?.legacyId || '').trim();
+            const l1 = String(parsedLocation?.levels?.[1] || '').trim();
+            const l2 = String(parsedLocation?.levels?.[2] || '').trim();
+            const l3 = String(parsedLocation?.levels?.[3] || '').trim();
+
+            const hasTarget = Boolean(headingId || legacyId || l1 || l2 || l3);
+            if (!hasTarget) return '';
+
+            // 1. 直接 ID 匹配
             if (headingId) {
                 if (document.getElementById(headingId)) return headingId;
                 const slugId = normalizeHeadingTextToAnchorId(headingId);
                 if (slugId && document.getElementById(slugId)) return slugId;
-                const foundToc = Array.from(document.querySelectorAll('.toc-item')).find(item => {
-                    const itemText = (item.querySelector('.toc-label')?.textContent || item.textContent || '').trim();
-                    const itemId = item.getAttribute('data-id') || '';
-                    return itemText.toLowerCase() === headingId.toLowerCase() || itemId.toLowerCase() === headingId.toLowerCase();
-                });
-                if (foundToc) {
-                    const fid = foundToc.getAttribute('data-id');
-                    if (fid && document.getElementById(fid)) return fid;
-                }
             }
-            const legacyId = String(parsedLocation?.legacyId || '').trim();
             if (legacyId) {
                 if (document.getElementById(legacyId)) return legacyId;
                 const slugLegacy = normalizeHeadingTextToAnchorId(legacyId);
                 if (slugLegacy && document.getElementById(slugLegacy)) return slugLegacy;
             }
-            return findHeadingByChain(parsedLocation);
+
+            // 2. 通过 TOC 层级链查找
+            const chainTarget = findHeadingByChain(parsedLocation);
+            if (chainTarget && document.getElementById(chainTarget)) return chainTarget;
+
+            // 3. 在 TOC 节点中查找（支持中英符号、空格容错）
+            const targetPunc = stripPunctuation(headingId || legacyId || l3 || l2 || l1);
+            if (targetPunc) {
+                const tocItems = Array.from(document.querySelectorAll('.toc-item'));
+                for (const item of tocItems) {
+                    const itemText = (item.querySelector('.toc-label')?.textContent || item.textContent || '').trim();
+                    const itemId = item.getAttribute('data-id') || '';
+                    if (itemId && stripPunctuation(itemId) === targetPunc) {
+                        if (document.getElementById(itemId)) return itemId;
+                    }
+                    if (itemText && stripPunctuation(itemText) === targetPunc) {
+                        if (itemId && document.getElementById(itemId)) return itemId;
+                    }
+                }
+
+                // 4. 在正文所有标题元素中查找
+                const headings = Array.from(document.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6'));
+                for (const h of headings) {
+                    if (h.id && stripPunctuation(h.id) === targetPunc) return h.id;
+                    if (stripPunctuation(h.textContent) === targetPunc && h.id) return h.id;
+                }
+            }
+
+            return '';
         }
 
         function applyHeadingLocationFromUrl() {
             if (!currentFilePath) return;
-            const targetId = resolveHeadingLocationTarget(parseHeadingLocation());
-            if (!targetId) return;
-            window.setTimeout(() => {
+            const parsed = parseHeadingLocation();
+            const hasTarget = Boolean(parsed.headingId || parsed.legacyId || parsed.levels[1] || parsed.levels[2] || parsed.levels[3]);
+            
+            if (!hasTarget) {
+                // URL 中无标题 -> 定位到首行
+                const contentArea = document.querySelector('.markdown-body');
+                if (contentArea) contentArea.scrollTop = 0;
+                const tocList = document.querySelector('.toc-list');
+                if (tocList) tocList.scrollTop = 0;
+                document.querySelectorAll('.toc-item.active, .toc-item.toc-active-l3').forEach(el => el.classList.remove('active', 'toc-active-l3'));
+                renderBreadcrumb();
+                return;
+            }
+
+            const targetId = resolveHeadingLocationTarget(parsed);
+            if (!targetId) {
+                // 未能匹配到对应标题 -> 安全定位到首行
+                const contentArea = document.querySelector('.markdown-body');
+                if (contentArea) contentArea.scrollTop = 0;
+                return;
+            }
+
+            const doLocate = () => {
                 suspendHeadingHashSync = true;
                 scrollToHeading(targetId, { skipUrlSync: true });
                 window.setTimeout(() => {
                     suspendHeadingHashSync = false;
-                }, 180);
-            }, 0);
+                }, 220);
+            };
+
+            doLocate();
+            window.setTimeout(doLocate, 100);
+            window.setTimeout(doLocate, 320);
         }
 
         async function loadRawContent(force = false) {
@@ -2885,17 +3822,17 @@
             if (markdownBody) {
                 markdownBody.innerHTML = `
                     <div class="markdown-empty-wrapper" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; text-align:center; color:#969faf;">
-                        <div style="font-size:48px; margin-bottom:16px;">📂</div>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                         <h2 style="font-size:20px; color:#e1e4e8; margin-bottom:8px; font-weight:600;">欢迎使用 Markdown 预览工具</h2>
                         <p style="font-size:14px; margin-bottom:12px; max-width:560px;">当前工作目录：<code style="background:#2d333b; color:#58a6ff; padding:2px 8px; border-radius:4px; font-size:13px;">${escapeHtmlText(effectivePath)}</code></p>
                         <p style="font-size:13px; color:#768390; margin-bottom:24px; max-width:560px;">${escapeHtmlText(message)}</p>
                         <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
                             <button type="button" class="tool-btn active" style="padding:8px 18px; font-size:14px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;" onclick="document.getElementById('workspace-pick-btn')?.click()">
-                                📁 选择工作区文件夹
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 选择工作区文件夹
                             </button>
                         </div>
                         <div style="margin-top:32px; font-size:12px; color:#636e7b; line-height:1.6;">
-                            💡 提示：本工具会自动深度递归扫描所选目录下的所有子文件夹及 .md 文件。
+                            提示：本工具会自动深度递归扫描所选目录下的所有子文件夹及 .md 文件。
                         </div>
                     </div>
                 `;
@@ -3041,6 +3978,9 @@
             } else {
                 window.history.pushState({ path }, '', nextUrl);
             }
+            if (typeof syncDesktopUrlBar === 'function') {
+                syncDesktopUrlBar();
+            }
         }
 
         function updateHeadingHash(headingId, levelData = {}) {
@@ -3049,6 +3989,9 @@
             const hashValue = encodeHeadingLocation(headingId, levelData);
             const hash = hashValue ? `#${hashValue}` : '';
             window.history.replaceState({ path: currentFilePath, headingId: headingId || '' }, '', `${baseUrl}${hash}`);
+            if (typeof syncDesktopUrlBar === 'function') {
+                syncDesktopUrlBar();
+            }
         }
 
         async function openFile(path, options = {}) {
@@ -3202,6 +4145,10 @@
                 applyOverflowTooltips(document.getElementById('sidebar-container'));
                 renderWorkspaceControls();
                 ensureSidebarAndTocHeaderIcons();
+                const sidebarLanAddr = document.getElementById('sidebar-lan-address');
+                if (sidebarLanAddr) {
+                    sidebarLanAddr.textContent = `${currentLanIp || window.location.hostname || '127.0.0.1'}:${currentLanPort || 9527}`;
+                }
                 restoreSidebarScrollSnapshot(lastSidebarScrollSnapshot);
                 lastSidebarScrollSnapshot = null;
                 initGlobalUiOnce();
@@ -3213,7 +4160,7 @@
                     if (firstPath) {
                         await openFile(firstPath, { replaceHistory: true });
                     } else {
-                        renderEmptyPreviewState('当前目录下未检测到任何 Markdown (.md) 文件，请点击上方 📁 切换工作区目录');
+                        renderEmptyPreviewState('当前目录下未检测到任何 Markdown (.md) 文件，请点击上方文件夹图标切换工作区目录');
                     }
                 }
             } finally {
@@ -4526,26 +5473,38 @@
             const tocItem = document.querySelector(`.toc-item[data-id="${escapeSelectorValue(id)}"]`);
             if (tocItem) {
                 expandTocAncestorsForItem(tocItem);
+                document.querySelectorAll('.toc-item.active').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.toc-item.toc-active-l3').forEach(el => el.classList.remove('toc-active-l3'));
+                tocItem.classList.add('active');
+                if (getTocLevel(tocItem) === 3) {
+                    tocItem.classList.add('toc-active-l3');
+                }
                 revealTocItemFeedback(tocItem, { flash: true, force: true });
+                try {
+                    tocItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                } catch (e) {}
             }
             if (target && contentArea) {
                 expandCollapsedAncestorsForHeading(target);
                 const mainRect = document.querySelector('main').getBoundingClientRect();
                 const targetRect = target.getBoundingClientRect();
-                const tabsHeight = document.querySelector('.tabs-bar').offsetHeight || 0;
-                const toolbarHeight = document.querySelector('.toolbar').offsetHeight || 0;
+                const tabsHeight = document.querySelector('.tabs-bar')?.offsetHeight || 0;
+                const toolbarHeight = document.querySelector('.toolbar')?.offsetHeight || 0;
                 const offset = tabsHeight + toolbarHeight + 20;
                 const deltaY = targetRect.top - mainRect.top - offset;
                 contentArea.scrollTop = contentArea.scrollTop + deltaY;
+
+                const level = tocItem ? getTocLevel(tocItem) : 0;
+                const levelData = { 1: null, 2: null, 3: null };
+                if (level >= 1 && level <= 3 && tocItem) {
+                    levelData[level] = {
+                        text: String(tocItem.querySelector('.toc-label')?.textContent || tocItem.textContent || '').trim(),
+                        id
+                    };
+                }
+                renderBreadcrumb(levelData);
+
                 if (!options.skipUrlSync) {
-                    const level = getTocLevel(tocItem);
-                    const levelData = { 1: null, 2: null, 3: null };
-                    if (level >= 1 && level <= 3) {
-                        levelData[level] = {
-                            text: String(tocItem.querySelector('.toc-label')?.textContent || tocItem.textContent || '').trim(),
-                            id
-                        };
-                    }
                     updateHeadingHash(id, levelData);
                 }
                 setTimeout(() => {
@@ -4649,7 +5608,33 @@
         let targetTabPath = null;
         function renderTabs() {
             const tabs = getTabs();
-            const container = document.querySelector('.tabs-bar');
+            let container = document.getElementById('tabs-list');
+            if (!container) {
+                const tabsBar = document.querySelector('.tabs-bar');
+                if (tabsBar) {
+                    let list = tabsBar.querySelector('#tabs-list');
+                    if (!list) {
+                        tabsBar.innerHTML = `
+                            <div class="tabs-list" id="tabs-list"></div>
+                            <div class="tabs-drag-spacer" id="tabs-drag-spacer"></div>
+                            <div class="app-window-controls" id="app-window-controls">
+                                <button type="button" class="win-btn win-min" id="win-btn-min" title="最小化" aria-label="最小化">
+                                    <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+                                </button>
+                                <button type="button" class="win-btn win-max" id="win-btn-max" title="最大化" aria-label="最大化">
+                                    <svg class="icon-max" width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor"/></svg>
+                                    <svg class="icon-restore" style="display:none;" width="10" height="10" viewBox="0 0 10 10"><path d="M2.5 0.5h7v7h-2v2h-7v-7h2v-2z" fill="none" stroke="currentColor"/><path d="M0.5 2.5h7v7h-7z" fill="#252526" stroke="currentColor"/></svg>
+                                </button>
+                                <button type="button" class="win-btn win-close" id="win-btn-close" title="关闭" aria-label="关闭">
+                                    <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8m0-8L1 9" stroke="currentColor" stroke-width="1.2"/></svg>
+                                </button>
+                            </div>
+                        `;
+                        initElectronWindowControls();
+                    }
+                    container = document.getElementById('tabs-list');
+                }
+            }
             if (!container) return;
             container.innerHTML = '';
             tabs.forEach(path => {
@@ -5059,26 +6044,171 @@
 
         function downloadFile() { if (currentFilePath) window.location.href = `/md-download?path=${encodeURIComponent(currentFilePath)}`; }
 
+        let isLanServerRunning = true;
         let currentLanIp = '';
+        let currentLanPort = 9527;
+
+        function isLanVisitor() {
+            if (window.electronAPI) return false;
+            const host = window.location.hostname;
+            return host && host !== '127.0.0.1' && host !== 'localhost' && host !== '::1';
+        }
+
+        function updateLanServerUI(running, lanIp, port) {
+            isLanServerRunning = Boolean(running);
+            if (lanIp) currentLanIp = lanIp;
+            if (port) currentLanPort = port;
+
+            const toggle = document.getElementById('lan-server-toggle');
+            const dot = document.getElementById('lan-status-dot');
+            const text = document.getElementById('lan-status-text');
+            const lanBtn = document.getElementById('btn-lan-share');
+            const sidebarLanAddr = document.getElementById('sidebar-lan-address');
+            const lanControl = document.getElementById('lan-server-control');
+
+            const isVisitor = isLanVisitor();
+            if (toggle) {
+                toggle.checked = isLanServerRunning;
+                if (isVisitor) {
+                    toggle.disabled = true;
+                    toggle.title = '局域网访客模式 (仅主机管理员可启停内网共享)';
+                } else {
+                    toggle.disabled = false;
+                    toggle.title = isLanServerRunning ? '点击暂停内网共享' : '点击开启内网共享';
+                }
+            }
+
+            if (lanControl && isVisitor) {
+                lanControl.title = '内网 HTTP 共享服务 (局域网访客模式)';
+            }
+
+            if (dot) {
+                dot.className = isLanServerRunning ? 'lan-status-dot running' : 'lan-status-dot stopped';
+            }
+            if (text) {
+                text.textContent = isLanServerRunning ? '内网服务: 运行中' : '内网服务: 已暂停(仅本机)';
+            }
+            if (sidebarLanAddr) {
+                sidebarLanAddr.textContent = `${currentLanIp || window.location.hostname || '127.0.0.1'}:${currentLanPort || 9527}`;
+            }
+            if (lanBtn) {
+                if (isLanServerRunning) {
+                    lanBtn.classList.remove('disabled');
+                    lanBtn.title = `局域网地址: http://${currentLanIp || '127.0.0.1'}:${currentLanPort}/md-view (点击复制分享链接)`;
+                } else {
+                    lanBtn.classList.add('disabled');
+                    lanBtn.title = '内网服务已暂停 (仅限本机 127.0.0.1 访问)，请开启服务后再分享';
+                }
+            }
+        }
+
         async function initLanInfo() {
             try {
-                const res = await fetch('/api/health');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.lanIp) {
-                        currentLanIp = data.lanIp;
-                        const lanBtn = document.getElementById('btn-lan-share');
-                        if (lanBtn) {
-                            lanBtn.title = `局域网地址: http://${data.lanIp}:${data.port || 9527}/md-view (点击复制分享链接)`;
-                        }
+                // 1. Electron IPC Check
+                if (window.electronAPI && typeof window.electronAPI.getServerStatus === 'function') {
+                    const status = await window.electronAPI.getServerStatus();
+                    if (status) {
+                        updateLanServerUI(status.running, status.lanIp, status.port);
+                        return;
                     }
                 }
-            } catch (e) {}
+                // 2. HTTP Server Status Check
+                const res = await fetch('/api/server/status').catch(() => null);
+                if (res && res.ok) {
+                    const data = await res.json();
+                    if (data) {
+                        updateLanServerUI(data.running, data.lanIp, data.port);
+                        return;
+                    }
+                }
+                // 3. HTTP Health Check Fallback
+                const healthRes = await fetch('/api/health').catch(() => null);
+                if (healthRes && healthRes.ok) {
+                    const data = await healthRes.json();
+                    if (data) {
+                        updateLanServerUI(data.running ?? true, data.lanIp, data.port);
+                        return;
+                    }
+                }
+                // Default fallback
+                updateLanServerUI(true, '', 9527);
+            } catch (e) {
+                updateLanServerUI(true, '', 9527);
+            }
+        }
+
+        async function handleLanServerToggle(checked) {
+            const toggle = document.getElementById('lan-server-toggle');
+            if (toggle) toggle.disabled = true;
+
+            try {
+                if (window.electronAPI && typeof window.electronAPI.toggleServer === 'function') {
+                    const res = await window.electronAPI.toggleServer(checked);
+                    if (res && res.success) {
+                        const isRunning = res.running !== undefined ? res.running : (res.status?.running ?? checked);
+                        const lanIp = res.status?.lanIp || currentLanIp;
+                        const port = res.status?.port || currentLanPort;
+                        updateLanServerUI(isRunning, lanIp, port);
+                        if (isRunning) {
+                            pushRequestMessage(`内网服务已启动: http://${lanIp || '127.0.0.1'}:${port}/md-view (服务已重载并刷新缓存)`, 'success');
+                            try {
+                                if (typeof loadShellData === 'function') loadShellData();
+                                if (currentFilePath && typeof loadDocumentData === 'function') {
+                                    loadDocumentData(currentFilePath);
+                                }
+                            } catch (e) {
+                                console.warn('Refresh data after restart failed:', e);
+                            }
+                        } else {
+                            pushRequestMessage('内网服务已暂停 (已关闭局域网访问，仅限本机 127.0.0.1 可用)', 'info');
+                        }
+                    } else {
+                        throw new Error(res?.error || '操作失败');
+                    }
+                } else {
+                    // Web HTTP fallback
+                    const res = await fetch('/api/server/toggle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ enable: checked }),
+                    });
+                    const data = await res.json();
+                    if (data && data.success) {
+                        const isRunning = data.running !== undefined ? data.running : (data.status?.running ?? checked);
+                        updateLanServerUI(isRunning, data.status?.lanIp, data.status?.port);
+                        if (isRunning) {
+                            pushRequestMessage(`内网服务已启动: http://${data.status?.lanIp || '127.0.0.1'}:${data.status?.port || 9527}/md-view (服务已重载并刷新缓存)`, 'success');
+                            try {
+                                if (typeof loadShellData === 'function') loadShellData();
+                                if (currentFilePath && typeof loadDocumentData === 'function') {
+                                    loadDocumentData(currentFilePath);
+                                }
+                            } catch (e) {
+                                console.warn('Refresh data after restart failed:', e);
+                            }
+                        } else {
+                            pushRequestMessage('内网服务已暂停 (已关闭局域网访问，仅限本机 127.0.0.1 可用)', 'info');
+                        }
+                    } else {
+                        throw new Error(data?.message || '操作失败');
+                    }
+                }
+            } catch (err) {
+                pushRequestMessage(`服务启停切换失败: ${err instanceof Error ? err.message : String(err)}`, 'error');
+                if (toggle) toggle.checked = !checked;
+                updateLanServerUI(!checked);
+            } finally {
+                if (toggle && !isLanVisitor()) toggle.disabled = false;
+            }
         }
 
         async function copyLanShareUrl() {
+            if (!isLanServerRunning) {
+                pushRequestMessage('内网服务已暂停，无法复制分享链接。请先开启内网服务！', 'error');
+                return;
+            }
             const host = currentLanIp || window.location.hostname || '127.0.0.1';
-            const port = window.location.port || '9527';
+            const port = currentLanPort || window.location.port || 9527;
             let shareUrl = `http://${host}:${port}/md-view`;
             if (currentFilePath) {
                 shareUrl += `?path=${encodeURIComponent(currentFilePath)}`;
@@ -5100,6 +6230,21 @@
                     document.body.removeChild(ta);
                 }
                 pushRequestMessage(`已复制局域网分享链接: ${shareUrl}`, 'success');
+
+                const badge = document.getElementById('sidebar-lan-badge');
+                if (badge) {
+                    badge.classList.add('copied');
+                    const origContent = badge.innerHTML;
+                    badge.innerHTML = `<span class="lan-badge-icon">✓</span><span class="lan-label" style="color:#7ee787;">已复制</span>`;
+                    setTimeout(() => {
+                        badge.classList.remove('copied');
+                        badge.innerHTML = origContent;
+                        const sidebarLanAddr = document.getElementById('sidebar-lan-address');
+                        if (sidebarLanAddr) {
+                            sidebarLanAddr.textContent = `${currentLanIp || window.location.hostname || '127.0.0.1'}:${currentLanPort || 9527}`;
+                        }
+                    }, 1400);
+                }
             } catch (err) {
                 pushRequestMessage(`复制失败，请手动复制: ${shareUrl}`, 'error');
             }
@@ -5189,70 +6334,764 @@
             }
             applyHeadingLocationFromUrl();
         });
-        function initElectronWindowControls() {
-            const hasElectron = typeof window.electronAPI !== 'undefined';
-            const titlebar = document.getElementById('app-titlebar');
-            if (!hasElectron) {
-                if (titlebar) titlebar.style.display = 'none';
-                const layout = document.querySelector('.layout');
-                if (layout) layout.style.height = '100vh';
+
+        window.addEventListener('hashchange', () => {
+            if (!suspendHeadingHashSync) {
+                applyHeadingLocationFromUrl();
+            }
+        });
+        // ---------------- Socket & URL History Manager ----------------
+        function getSocketHistory() {
+            try {
+                const stored = localStorage.getItem('md_preview_socket_history');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                }
+            } catch (e) {}
+            const defaultIp = currentLanIp || '192.168.81.163';
+            const defaultPort = currentLanPort || 9527;
+            return [`http://${defaultIp}:${defaultPort}`, 'http://127.0.0.1:9527', 'http://localhost:9527'];
+        }
+
+        function saveSocketHistory(socketStr) {
+            if (!socketStr) return;
+            const cleaned = socketStr.trim().replace(/\/+$/, '');
+            let list = getSocketHistory();
+            list = list.filter(item => item && item !== cleaned);
+            list.unshift(cleaned);
+            if (list.length > 10) list = list.slice(0, 10);
+            try {
+                localStorage.setItem('md_preview_socket_history', JSON.stringify(list));
+            } catch (e) {}
+            refreshSocketHistoryDatalist();
+        }
+
+        function refreshSocketHistoryDatalist() {
+            const datalist = document.getElementById('desktop-url-history-list');
+            if (!datalist) return;
+            const history = getSocketHistory();
+            let html = '';
+            const pathParam = currentFilePath ? encodeURIComponent(currentFilePath).replace(/%2F/g, '/') : '';
+            const hashStr = window.location.hash || '';
+            history.forEach(sock => {
+                const full = pathParam ? `${sock}/md-view?path=${pathParam}${hashStr}` : `${sock}/md-view`;
+                html += `<option value="${full}">${sock}</option>`;
+            });
+            datalist.innerHTML = html;
+        }
+
+        /**
+         * 构建当前文档的完整 URL (根据当前配置的 IP 与端口)
+         */
+        function getFullDocumentUrl(filePath = currentFilePath, headingHash = window.location.hash) {
+            if (!filePath) return '';
+            const ip = currentLanIp || window.location.hostname || '192.168.81.163';
+            const port = currentLanPort || window.location.port || 9527;
+            const encodedPath = encodeURIComponent(filePath).replace(/%2F/g, '/');
+            let hashStr = headingHash ? String(headingHash).trim() : '';
+            if (hashStr && !hashStr.startsWith('#')) {
+                hashStr = '#' + hashStr;
+            }
+            const socketPrefix = `http://${ip}:${port}`;
+            saveSocketHistory(socketPrefix);
+            return `${socketPrefix}/md-view?path=${encodedPath}${hashStr}`;
+        }
+
+        /**
+         * 实时同步桌面端顶部地址栏输入框内容
+         */
+        function syncDesktopUrlBar(customUrl) {
+            const input = document.getElementById('desktop-url-input');
+            if (!input) return;
+            if (document.activeElement === input) return; // 用户聚焦输入时不强制覆盖
+            input.value = customUrl !== undefined ? customUrl : getFullDocumentUrl();
+            refreshSocketHistoryDatalist();
+        }
+
+        /**
+         * 复制桌面端地址栏中的完整 URL
+         */
+        async function copyDesktopUrl() {
+            const input = document.getElementById('desktop-url-input');
+            const url = input?.value || getFullDocumentUrl();
+            if (!url) {
+                pushRequestMessage('当前暂无打开的文档链接', 'warning');
                 return;
             }
-            if (titlebar) titlebar.style.display = 'flex';
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(url);
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = url;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                pushRequestMessage(`已复制文档链接: ${url}`, 'success');
+                const btn = document.getElementById('desktop-url-copy-btn');
+                if (btn) {
+                    const origHtml = btn.innerHTML;
+                    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7ee787" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polyline points="20 6 9 17 4 12"/></svg> 已复制`;
+                    btn.style.color = '#7ee787';
+                    setTimeout(() => {
+                        btn.innerHTML = origHtml;
+                        btn.style.color = '';
+                    }, 1500);
+                }
+            } catch (err) {
+                pushRequestMessage(`复制链接失败: ${err instanceof Error ? err.message : String(err)}`, 'error');
+            }
+        }
 
-            const btnMin = document.getElementById('win-btn-min');
-            const btnMax = document.getElementById('win-btn-max');
-            const btnClose = document.getElementById('win-btn-close');
+        /**
+         * 智能解析任意粘贴的 URL / 相对路径，自动提取 socket 并双向绑定 IP，解析真实路径和标题锚点
+         */
+        function parseInputUrlToTarget(rawInput) {
+            let trimmed = String(rawInput || '').trim();
+            if (!trimmed) return null;
 
-            btnMin?.addEventListener('click', () => {
-                window.electronAPI.minimizeWindow();
-            });
+            // 1. 双向自动提取 socket 前缀 (http://<host>:<port>) 并同步至 IP/端口配置
+            const socketMatch = /^(https?:\/\/[^\/\?#]+)/i.exec(trimmed);
+            if (socketMatch) {
+                const socketPrefix = socketMatch[1];
+                try {
+                    const urlObj = new URL(socketPrefix);
+                    if (urlObj.hostname) {
+                        currentLanIp = urlObj.hostname;
+                        currentLanPort = urlObj.port ? Number(urlObj.port) : (urlObj.protocol === 'https:' ? 443 : 80);
 
-            btnMax?.addEventListener('click', async () => {
-                await window.electronAPI.maximizeWindow();
-            });
+                        // 实时双向同步至侧边栏 IP 徽章
+                        const sidebarLanAddr = document.getElementById('sidebar-lan-address');
+                        if (sidebarLanAddr) {
+                            sidebarLanAddr.textContent = `${currentLanIp}:${currentLanPort}`;
+                        }
+                        // 同步至设置弹窗
+                        const inputIp = document.getElementById('settings-target-ip');
+                        const inputPort = document.getElementById('settings-server-port');
+                        if (inputIp) inputIp.value = currentLanIp;
+                        if (inputPort) inputPort.value = currentLanPort;
 
-            window.electronAPI.onMaximizeChange?.((isMax) => {
-                if (btnMax) btnMax.textContent = isMax ? '🗗' : '🗖';
-            });
+                        // 记录历史 socket 前缀
+                        saveSocketHistory(socketPrefix);
+                    }
+                } catch (e) {}
+            }
 
-            btnClose?.addEventListener('click', async () => {
-                const pref = await window.electronAPI.getClosePreference?.();
-                if (pref === 'minimize-to-tray' || pref === 'exit') {
-                    window.electronAPI.performCloseAction(pref);
+            let pathParam = '';
+            let hashPart = '';
+
+            // 2. 提取 Hash 锚点
+            const hashIndex = trimmed.indexOf('#');
+            let mainPart = trimmed;
+            if (hashIndex !== -1) {
+                hashPart = trimmed.slice(hashIndex + 1).trim();
+                mainPart = trimmed.slice(0, hashIndex).trim();
+            }
+
+            // 3. 识别 ?path= 参数
+            const queryIndex = mainPart.indexOf('?');
+            if (queryIndex !== -1) {
+                const queryString = mainPart.slice(queryIndex + 1);
+                const searchParams = new URLSearchParams(queryString);
+                if (searchParams.has('path')) {
+                    pathParam = searchParams.get('path') || '';
+                }
+            } else if (mainPart.includes('path=')) {
+                const match = /path=([^&#\s]+)/.exec(mainPart);
+                if (match) {
+                    pathParam = match[1];
+                }
+            }
+
+            // 4. 若没有提取到 path 参数，尝试作为完整 URL 路径或纯文件相对路径
+            if (!pathParam) {
+                let cleaned = mainPart.replace(/^https?:\/\/[^\/]+/i, '').replace(/^\/?md-view\/?/i, '');
+                if (cleaned.startsWith('/')) cleaned = cleaned.slice(1);
+                pathParam = cleaned;
+            }
+
+            if (pathParam) {
+                try {
+                    pathParam = decodeURIComponent(pathParam);
+                } catch (e) {}
+            }
+
+            if (!pathParam) return null;
+            return { path: pathParam, hash: hashPart };
+        }
+
+        /**
+         * 执行桌面端 URL / 路径跳转
+         */
+        async function handleDesktopUrlGo() {
+            const input = document.getElementById('desktop-url-input');
+            if (!input) return;
+            const target = parseInputUrlToTarget(input.value);
+            if (!target || !target.path) {
+                pushRequestMessage('请输入或粘贴有效的文档路径或完整 URL', 'warning');
+                return;
+            }
+            try {
+                if (target.hash) {
+                    window.location.hash = target.hash.startsWith('#') ? target.hash : '#' + target.hash;
+                } else {
+                    history.replaceState(null, '', window.location.pathname + window.location.search);
+                }
+                await openFile(target.path);
+                syncDesktopUrlBar();
+                pushRequestMessage(`已打开: ${target.path}${target.hash ? ' (#' + target.hash + ')' : ''}`, 'success');
+            } catch (err) {
+                pushRequestMessage('打开文档失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
+            }
+        }
+
+        /**
+         * 刷新当前文档
+         */
+        async function refreshCurrentDocument() {
+            if (currentFilePath) {
+                await loadDocumentData(currentFilePath, { skipHeadingLocation: false });
+                pushRequestMessage('当前文档已刷新', 'info');
+            } else {
+                await loadShellData({ forceSidebarRefresh: true });
+            }
+        }
+
+        function initDesktopNavbarControls() {
+            const isElectron = typeof window.electronAPI !== 'undefined';
+            if (isElectron) {
+                document.body.classList.add('is-electron');
+            }
+
+            const input = document.getElementById('desktop-url-input');
+            if (input && input.dataset.bound !== 'true') {
+                input.dataset.bound = 'true';
+                input.addEventListener('keydown', async (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        await handleDesktopUrlGo();
+                        input.blur();
+                    }
+                });
+                input.addEventListener('change', () => {
+                    parseInputUrlToTarget(input.value);
+                });
+                input.addEventListener('paste', () => {
+                    setTimeout(() => {
+                        parseInputUrlToTarget(input.value);
+                    }, 50);
+                });
+            }
+
+            refreshSocketHistoryDatalist();
+            syncDesktopUrlBar();
+        }
+
+        async function handleWindowMinimize(event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            if (window.electronAPI?.minimizeWindow) {
+                try {
+                    await window.electronAPI.minimizeWindow();
+                    return;
+                } catch (e) {
+                    console.warn('[Window] IPC minimize failed:', e);
+                }
+            }
+            fetch('/api/window/minimize', { method: 'POST' }).catch(() => {});
+        }
+
+        async function handleWindowMaximize(event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            if (window.electronAPI?.maximizeWindow) {
+                try {
+                    await window.electronAPI.maximizeWindow();
+                    return;
+                } catch (e) {
+                    console.warn('[Window] IPC maximize failed:', e);
+                }
+            }
+            fetch('/api/window/maximize', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && typeof data.isMaximized === 'boolean') {
+                        updateAllMaxButtons(data.isMaximized);
+                    }
+                })
+                .catch(() => {
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen?.().catch(() => {});
+                        updateAllMaxButtons(true);
+                    } else {
+                        document.exitFullscreen?.().catch(() => {});
+                        updateAllMaxButtons(false);
+                    }
+                });
+        }
+
+        async function handleWindowClose(event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            if (window.electronAPI?.getClosePreference) {
+                try {
+                    const pref = await window.electronAPI.getClosePreference();
+                    if (pref === 'minimize-to-tray' || pref === 'exit') {
+                        await window.electronAPI.performCloseAction(pref);
+                        return;
+                    }
+                    showCloseModal();
+                    return;
+                } catch (e) {
+                    console.warn('[Window] IPC getClosePreference failed:', e);
+                }
+            }
+            try {
+                const res = await fetch('/api/window/close-preference');
+                const data = await res.json();
+                if (data && (data.pref === 'minimize-to-tray' || data.pref === 'exit')) {
+                    await fetch('/api/window/perform-close', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: data.pref })
+                    });
                     return;
                 }
-                showCloseModal();
-            });
+            } catch (e) {}
+            showCloseModal();
+        }
 
-            window.electronAPI.onConfirmClose?.(() => {
-                showCloseModal();
+        function updateAllMaxButtons(isMax) {
+            const maxButtons = document.querySelectorAll('.action-btn-max, .win-max, #win-nav-btn-max, #win-btn-max');
+            maxButtons.forEach(btn => {
+                btn.title = isMax ? '还原' : '最大化';
+                btn.setAttribute('aria-label', isMax ? '还原' : '最大化');
+                const iconMax = btn.querySelector('.icon-max');
+                const iconRestore = btn.querySelector('.icon-restore');
+                if (iconMax && iconRestore) {
+                    iconMax.style.display = isMax ? 'none' : 'block';
+                    iconRestore.style.display = isMax ? 'block' : 'none';
+                }
             });
         }
 
-        function showCloseModal() {
-            const modal = document.getElementById('close-modal-overlay');
-            if (modal) modal.style.display = 'flex';
+        function initElectronWindowControls() {
+            initDesktopNavbarControls();
+
+            if (window.electronAPI && typeof window.electronAPI.isMaximized === 'function') {
+                window.electronAPI.isMaximized().then(updateAllMaxButtons).catch(() => {});
+                window.electronAPI.onMaximizeChange?.((isMax) => {
+                    updateAllMaxButtons(isMax);
+                });
+            } else {
+                fetch('/api/window/is-maximized')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && typeof data.isMaximized === 'boolean') {
+                            updateAllMaxButtons(data.isMaximized);
+                        }
+                    })
+                    .catch(() => {});
+            }
+
+            window.electronAPI?.onConfirmClose?.(() => {
+                showCloseModal();
+            });
+
+            // 顶部拖拽空白区域双击最大化/还原
+            const dragRegions = document.querySelectorAll('.desktop-navbar, .tabs-drag-spacer, .toc-header');
+            dragRegions.forEach(el => {
+                el.ondblclick = async (e) => {
+                    if (e.target === el || el.classList.contains('desktop-navbar')) {
+                        await handleWindowMaximize(e);
+                    }
+                };
+            });
         }
 
-        function hideCloseModal() {
-            const modal = document.getElementById('close-modal-overlay');
+        // ---------------- App Menubar & Settings Functions ----------------
+        function toggleMenuDropdown(menuItemId, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const targetItem = document.getElementById(menuItemId);
+            const isActive = targetItem?.classList.contains('active');
+            closeAllMenuDropdowns();
+            if (!isActive && targetItem) {
+                targetItem.classList.add('active');
+            }
+        }
+
+        function closeAllMenuDropdowns() {
+            document.querySelectorAll('.menubar-item.active').forEach(el => el.classList.remove('active'));
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.menubar-item')) {
+                closeAllMenuDropdowns();
+            }
+        });
+
+        async function handleNewWindow(pathParam = currentFilePath) {
+            closeAllMenuDropdowns();
+            if (window.electronAPI?.newWindow) {
+                try {
+                    await window.electronAPI.newWindow(pathParam);
+                    return;
+                } catch (e) {
+                    console.warn('[Window] IPC newWindow failed:', e);
+                }
+            }
+            fetch('/api/window/new', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: pathParam })
+            }).catch(() => {});
+        }
+
+        async function handleRestartApp() {
+            closeAllMenuDropdowns();
+            pushRequestMessage('正在重启程序与服务...', 'info');
+            if (window.electronAPI?.restartApp) {
+                try {
+                    await window.electronAPI.restartApp();
+                    return;
+                } catch (e) {
+                    console.warn('[App] IPC restartApp failed:', e);
+                }
+            }
+            fetch('/api/app/restart', { method: 'POST' })
+                .then(() => {
+                    setTimeout(() => window.location.reload(), 1200);
+                })
+                .catch(() => {
+                    window.location.reload();
+                });
+        }
+
+        function toggleSidebarView() {
+            closeAllMenuDropdowns();
+            const sidebar = document.getElementById('sidebar-container');
+            if (!sidebar) return;
+            if (sidebar.style.display === 'none') {
+                sidebar.style.display = 'flex';
+                pushRequestMessage('工作目录侧边栏已显示', 'info');
+            } else {
+                sidebar.style.display = 'none';
+                pushRequestMessage('工作目录侧边栏已隐藏', 'info');
+            }
+        }
+
+        function toggleTocView() {
+            closeAllMenuDropdowns();
+            const toc = document.getElementById('toc-container');
+            if (!toc) return;
+            if (toc.style.display === 'none') {
+                toc.style.display = 'flex';
+                pushRequestMessage('大纲目录已显示', 'info');
+            } else {
+                toc.style.display = 'none';
+                pushRequestMessage('大纲目录已隐藏', 'info');
+            }
+        }
+
+        function handleZoomIn() {
+            closeAllMenuDropdowns();
+            if (window.electronAPI?.zoomIn) {
+                window.electronAPI.zoomIn();
+            } else {
+                const body = document.getElementById('markdown-body');
+                if (body) {
+                    const cur = parseFloat(body.style.zoom || '1');
+                    body.style.zoom = String(Math.min(cur + 0.1, 2.0));
+                }
+            }
+        }
+
+        function handleZoomOut() {
+            closeAllMenuDropdowns();
+            if (window.electronAPI?.zoomOut) {
+                window.electronAPI.zoomOut();
+            } else {
+                const body = document.getElementById('markdown-body');
+                if (body) {
+                    const cur = parseFloat(body.style.zoom || '1');
+                    body.style.zoom = String(Math.max(cur - 0.1, 0.6));
+                }
+            }
+        }
+
+        function handleZoomReset() {
+            closeAllMenuDropdowns();
+            if (window.electronAPI?.zoomReset) {
+                window.electronAPI.zoomReset();
+            } else {
+                const body = document.getElementById('markdown-body');
+                if (body) body.style.zoom = '1';
+            }
+        }
+
+        function openWorkspaceDirPicker() {
+            closeAllMenuDropdowns();
+            const pickerBtn = document.getElementById('btn-pick-dir') || document.querySelector('.workspace-pick-btn');
+            if (pickerBtn) {
+                pickerBtn.click();
+            } else if (window.electronAPI?.pickDirectory) {
+                window.electronAPI.pickDirectory().then(dir => {
+                    if (dir) {
+                        fetch('/api/workspace/set-dir', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ directory: dir })
+                        }).then(() => loadShellData({ forceSidebarRefresh: true }));
+                    }
+                });
+            } else {
+                openSettingsModal('network');
+            }
+        }
+
+        // ---------------- App Settings Manager ----------------
+        const DEFAULT_APP_SETTINGS = {
+            theme: 'dark', // 'dark' | 'light' | 'auto'
+            fontFamily: 'system',
+            fontSize: '16px',
+            codeFont: 'Consolas',
+            closeAction: '', // '' (always ask) | 'minimize-to-tray' | 'exit'
+            autoStartLan: true,
+        };
+
+        let currentAppSettings = { ...DEFAULT_APP_SETTINGS };
+
+        const FONT_FAMILY_MAP = {
+            'system': '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif',
+            'yahei': '"Microsoft YaHei", "微软雅黑", -apple-system, sans-serif',
+            'pingfang': '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+            'lxgw': '"LXGW WenKai", "霞鹜文楷", "Microsoft YaHei", sans-serif',
+            'segoe': '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+            'inter': 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+        };
+
+        const CODE_FONT_MAP = {
+            'Consolas': 'Consolas, "Courier New", monospace',
+            'JetBrains Mono': '"JetBrains Mono", Consolas, monospace',
+            'Fira Code': '"Fira Code", Consolas, monospace',
+            'Monaco': 'Monaco, Consolas, monospace',
+            'Courier New': '"Courier New", Courier, monospace'
+        };
+
+        function applyAppSettings(settings) {
+            if (!settings) return;
+            currentAppSettings = { ...currentAppSettings, ...settings };
+
+            // 1. 应用主题 (Theme)
+            let isDark = true;
+            if (currentAppSettings.theme === 'light') {
+                isDark = false;
+            } else if (currentAppSettings.theme === 'auto') {
+                isDark = !window.matchMedia('(prefers-color-scheme: light)').matches;
+            }
+            if (isDark) {
+                document.body.classList.remove('theme-light');
+            } else {
+                document.body.classList.add('theme-light');
+            }
+
+            // 2. 应用字体与字号
+            const root = document.documentElement;
+            const fontVal = FONT_FAMILY_MAP[currentAppSettings.fontFamily] || FONT_FAMILY_MAP['system'];
+            const codeVal = CODE_FONT_MAP[currentAppSettings.codeFont] || CODE_FONT_MAP['Consolas'];
+            root.style.setProperty('--md-font-family', fontVal);
+            root.style.setProperty('--md-font-size', currentAppSettings.fontSize || '16px');
+            root.style.setProperty('--md-code-font', codeVal);
+
+            // 3. 更新设置弹窗内的高亮状态
+            const radioCards = document.querySelectorAll('.theme-radio-card');
+            radioCards.forEach(card => {
+                if (card.dataset.theme === currentAppSettings.theme) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+        }
+
+        function loadAppSettings() {
+            try {
+                const stored = localStorage.getItem('md_preview_app_settings');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    currentAppSettings = { ...DEFAULT_APP_SETTINGS, ...parsed };
+                }
+            } catch (e) {}
+            applyAppSettings(currentAppSettings);
+        }
+
+        function switchSettingsTab(tabName) {
+            const tabs = ['basic', 'network'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`settings-tab-${t}`);
+                const pane = document.getElementById(`settings-pane-${t}`);
+                if (t === tabName) {
+                    if (btn) btn.classList.add('active');
+                    if (pane) pane.classList.add('active');
+                } else {
+                    if (btn) btn.classList.remove('active');
+                    if (pane) pane.classList.remove('active');
+                }
+            });
+        }
+
+        function selectSettingsTheme(themeName) {
+            currentAppSettings.theme = themeName;
+            applyAppSettings(currentAppSettings);
+        }
+
+        function openSettingsModal(focusSection = 'basic') {
+            closeAllMenuDropdowns();
+            const modal = document.getElementById('app-settings-modal');
+            if (!modal) return;
+
+            loadAppSettings();
+
+            // 填充基础设置表单
+            const selectFont = document.getElementById('settings-font-family');
+            const selectSize = document.getElementById('settings-font-size');
+            const selectCode = document.getElementById('settings-code-font');
+            const selectClose = document.getElementById('settings-close-pref');
+            const checkLanAuto = document.getElementById('settings-lan-autostart');
+
+            if (selectFont) selectFont.value = currentAppSettings.fontFamily || 'system';
+            if (selectSize) selectSize.value = currentAppSettings.fontSize || '16px';
+            if (selectCode) selectCode.value = currentAppSettings.codeFont || 'Consolas';
+            if (checkLanAuto) checkLanAuto.checked = currentAppSettings.autoStartLan !== false;
+
+            if (selectClose && window.electronAPI?.getClosePreference) {
+                window.electronAPI.getClosePreference().then(pref => {
+                    if (pref !== undefined && pref !== null) {
+                        selectClose.value = pref;
+                        currentAppSettings.closeAction = pref;
+                    }
+                }).catch(() => {});
+            }
+
+            // 填充网络与路径设置表单
+            const inputIp = document.getElementById('settings-target-ip');
+            const inputPort = document.getElementById('settings-server-port');
+            const inputDir = document.getElementById('settings-workspace-dir');
+
+            if (inputIp) inputIp.value = currentLanIp || window.location.hostname || '127.0.0.1';
+            if (inputPort) inputPort.value = currentLanPort || window.location.port || '9527';
+            if (inputDir) inputDir.value = currentWorkspaceConfig?.workspaceDirectory || '';
+
+            switchSettingsTab(focusSection);
+            modal.style.display = 'flex';
+        }
+
+        function hideSettingsModal() {
+            const modal = document.getElementById('app-settings-modal');
             if (modal) modal.style.display = 'none';
         }
 
-        async function confirmCloseAction() {
-            const selected = document.querySelector('input[name="close-action-option"]:checked')?.value || 'minimize-to-tray';
-            const remember = document.getElementById('close-remember-choice')?.checked || false;
-            hideCloseModal();
-            if (window.electronAPI && typeof window.electronAPI.performCloseAction === 'function') {
-                await window.electronAPI.performCloseAction(selected, remember);
+        async function saveAppSettings() {
+            const selectFont = document.getElementById('settings-font-family')?.value || 'system';
+            const selectSize = document.getElementById('settings-font-size')?.value || '16px';
+            const selectCode = document.getElementById('settings-code-font')?.value || 'Consolas';
+            const selectClose = document.getElementById('settings-close-pref')?.value || '';
+            const checkLanAuto = document.getElementById('settings-lan-autostart')?.checked ?? true;
+
+            const inputIp = document.getElementById('settings-target-ip')?.value?.trim();
+            const inputPort = document.getElementById('settings-server-port')?.value?.trim();
+
+            currentAppSettings.fontFamily = selectFont;
+            currentAppSettings.fontSize = selectSize;
+            currentAppSettings.codeFont = selectCode;
+            currentAppSettings.closeAction = selectClose;
+            currentAppSettings.autoStartLan = checkLanAuto;
+
+            try {
+                localStorage.setItem('md_preview_app_settings', JSON.stringify(currentAppSettings));
+            } catch (e) {}
+
+            applyAppSettings(currentAppSettings);
+
+            if (selectClose !== undefined && window.electronAPI?.setClosePreference) {
+                await window.electronAPI.setClosePreference(selectClose);
             }
+
+            if (inputIp) currentLanIp = inputIp;
+            if (inputPort && !isNaN(Number(inputPort))) currentLanPort = Number(inputPort);
+
+            hideSettingsModal();
+            syncDesktopUrlBar();
+            updateLanBadgeDisplay();
+            pushRequestMessage('首选项设置已保存并实时生效', 'success');
         }
+
+        function resetAppSettings() {
+            currentAppSettings = { ...DEFAULT_APP_SETTINGS };
+            try {
+                localStorage.removeItem('md_preview_app_settings');
+            } catch (e) {}
+            applyAppSettings(currentAppSettings);
+            openSettingsModal('basic');
+            pushRequestMessage('已恢复默认设置', 'info');
+        }
+
+        // 全局键盘快捷键捕获 (Ctrl+Alt+S, Ctrl+Shift+N, Ctrl+Shift+R, Esc)
+        document.addEventListener('keydown', async (e) => {
+            // Ctrl+Alt+S -> 打开设置
+            if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 's' || e.key === 'S')) {
+                e.preventDefault();
+                openSettingsModal('basic');
+                return;
+            }
+            // Ctrl+Shift+N -> 新建窗口
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'N' || e.key === 'n')) {
+                e.preventDefault();
+                await handleNewWindow();
+                return;
+            }
+            // Ctrl+Shift+R -> 重启
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
+                e.preventDefault();
+                await handleRestartApp();
+                return;
+            }
+            // Ctrl+O -> 切换目录
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'o' || e.key === 'O')) {
+                e.preventDefault();
+                openWorkspaceDirPicker();
+                return;
+            }
+            // Ctrl+B -> 切换侧边栏
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'b' || e.key === 'B')) {
+                e.preventDefault();
+                toggleSidebarView();
+                return;
+            }
+            // Esc -> 关闭菜单/模态框
+            if (e.key === 'Escape') {
+                closeAllMenuDropdowns();
+                hideSettingsModal();
+                hideCloseModal();
+            }
+        });
 
         fetchWorkspaceConfig()
             .catch(() => null)
             .finally(async () => {
                 try {
+                    loadAppSettings();
                     initElectronWindowControls();
                     await loadShellData({ preserveSidebar: false, forceSidebarRefresh: true });
                     await loadDocumentData(currentFilePath, { skipHeadingLocation: false });
@@ -5263,6 +7102,128 @@
                 }
             });
     </script>
+
+    <!-- App Settings Modal Overlay (Ctrl+Alt+S) -->
+    <div class="settings-modal-overlay" id="app-settings-modal" style="display:none;">
+        <div class="settings-modal-card">
+            <div class="settings-modal-header">
+                <h3>首选项设置</h3>
+                <button type="button" class="modal-close-btn" onclick="hideSettingsModal()">✕</button>
+            </div>
+            <div class="settings-tab-nav">
+                <button type="button" class="settings-tab-btn active" id="settings-tab-basic" onclick="switchSettingsTab('basic')">基础设置</button>
+                <button type="button" class="settings-tab-btn" id="settings-tab-network" onclick="switchSettingsTab('network')">网络与路径</button>
+            </div>
+            <div class="settings-modal-body">
+                <!-- Tab 1: 基础设置 (Basic) -->
+                <div class="settings-tab-pane active" id="settings-pane-basic">
+                    <!-- 外观主题 -->
+                    <div class="settings-field-group">
+                        <label class="settings-label">界面外观与背景主题</label>
+                        <div class="settings-theme-radios">
+                            <div class="theme-radio-card active" data-theme="dark" onclick="selectSettingsTheme('dark')">
+                                <span>深色主题</span>
+                            </div>
+                            <div class="theme-radio-card" data-theme="light" onclick="selectSettingsTheme('light')">
+                                <span>浅色主题</span>
+                            </div>
+                            <div class="theme-radio-card" data-theme="auto" onclick="selectSettingsTheme('auto')">
+                                <span>跟随系统</span>
+                            </div>
+                        </div>
+                        <span class="settings-help">切换后立即实时生效，并在下次启动时自动保持</span>
+                    </div>
+
+                    <!-- 字体选择 -->
+                    <div class="settings-field-group">
+                        <label class="settings-label" for="settings-font-family">界面与正文字体</label>
+                        <select id="settings-font-family" class="settings-input">
+                            <option value="system">系统默认 (System Default)</option>
+                            <option value="yahei">微软雅黑 (Microsoft YaHei)</option>
+                            <option value="pingfang">苹方 (PingFang SC)</option>
+                            <option value="lxgw">霞鹜文楷 (LXGW WenKai)</option>
+                            <option value="segoe">Segoe UI</option>
+                            <option value="inter">Inter</option>
+                        </select>
+                        <span class="settings-help">应用于 Markdown 渲染区域及大纲目录</span>
+                    </div>
+
+                    <!-- 字号大小 -->
+                    <div class="settings-field-group">
+                        <label class="settings-label" for="settings-font-size">正文字号大小</label>
+                        <select id="settings-font-size" class="settings-input">
+                            <option value="14px">14px (紧凑)</option>
+                            <option value="16px">16px (标准 - 默认)</option>
+                            <option value="18px">18px (舒适)</option>
+                            <option value="20px">20px (大号)</option>
+                            <option value="22px">22px (特大)</option>
+                        </select>
+                    </div>
+
+                    <!-- 代码字体 -->
+                    <div class="settings-field-group">
+                        <label class="settings-label" for="settings-code-font">代码块等宽字体</label>
+                        <select id="settings-code-font" class="settings-input">
+                            <option value="Consolas">Consolas (推荐)</option>
+                            <option value="JetBrains Mono">JetBrains Mono</option>
+                            <option value="Fira Code">Fira Code</option>
+                            <option value="Monaco">Monaco</option>
+                            <option value="Courier New">Courier New</option>
+                        </select>
+                    </div>
+
+                    <!-- 窗口关闭行为 -->
+                    <div class="settings-field-group">
+                        <label class="settings-label" for="settings-close-pref">窗口关闭默认行为</label>
+                        <select id="settings-close-pref" class="settings-input">
+                            <option value="">每次关闭时询问我的选择 (默认)</option>
+                            <option value="minimize-to-tray">自动隐藏并最小化到系统托盘 (保持后台服务运行)</option>
+                            <option value="exit">直接退出程序 (停止内网服务并释放资源)</option>
+                        </select>
+                        <span class="settings-help">设置后点击右上角关闭按钮将按此规则执行</span>
+                    </div>
+
+                    <!-- 启动开机自启内网服务 -->
+                    <div class="settings-field-group" style="flex-direction:row; align-items:center; justify-content:space-between; padding:4px 0;">
+                        <div>
+                            <div class="settings-label" style="font-size:13px; color:#f0f6fc;">启动时自动开启内网协同服务</div>
+                            <span class="settings-help">开启后应用启动时自动监听 0.0.0.0:9527，方便局域网用户直接访问</span>
+                        </div>
+                        <label class="lan-switch" title="启动时自动开启内网服务">
+                            <input type="checkbox" id="settings-lan-autostart" checked>
+                            <span class="lan-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Tab 2: 网络与路径 (Network) -->
+                <div class="settings-tab-pane" id="settings-pane-network">
+                    <div class="settings-field-group">
+                        <label class="settings-label" for="settings-target-ip">目标局域网 IP 地址</label>
+                        <input type="text" id="settings-target-ip" class="settings-input" placeholder="例如 192.168.81.163 或 127.0.0.1">
+                        <span class="settings-help">用于顶部完整 URL 地址拼接与内网文档链接分享</span>
+                    </div>
+                    <div class="settings-field-group">
+                        <label class="settings-label" for="settings-server-port">服务运行端口</label>
+                        <input type="number" id="settings-server-port" class="settings-input" placeholder="默认 9527" value="9527">
+                        <span class="settings-help">本地嵌入式 HTTP 服务监听的端口号 (默认 9527)</span>
+                    </div>
+                    <div class="settings-field-group">
+                        <label class="settings-label" for="settings-workspace-dir">当前工作目录绝对路径</label>
+                        <input type="text" id="settings-workspace-dir" class="settings-input" readonly placeholder="点击左侧侧边栏切换工作目录">
+                        <span class="settings-help">所有窗口共享当前工作目录及文档结构</span>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-modal-footer">
+                <button type="button" class="modal-btn secondary" style="color:#8b949e;" onclick="resetAppSettings()">恢复默认</button>
+                <div style="display:flex; gap:10px;">
+                    <button type="button" class="modal-btn secondary" onclick="hideSettingsModal()">取消</button>
+                    <button type="button" class="modal-btn primary" onclick="saveAppSettings()">保存并应用</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Close Confirm Modal Overlay -->
     <div class="modal-overlay" id="close-modal-overlay" style="display:none;">
