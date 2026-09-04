@@ -13,7 +13,7 @@
 | 产物 | 适用场景 | 使用方式 |
 | :--- | :--- | :--- |
 | **`MD Preview Tool-Setup-vX.Y.Z-x64.exe`** | 标准安装（推荐） | 双击安装向导，可选安装目录，自动创建桌面/开始菜单快捷方式，带卸载程序 |
-| **`MD Preview Tool-vX.Y.Z-x64-portable.zip`** | 绿色目录版 / 轻量安装 | **下载整个 zip 解压到任意目录，直接双击其中的 `MD Preview Tool.exe` 即可运行**，不写注册表，删目录即卸载 |
+| **`MD Preview Tool-vX.Y.Z-x64.zip`** | 绿色目录版 / 轻量安装 | **下载整个 zip 解压到任意目录，直接双击其中的 `MD Preview Tool.exe` 即可运行**，不写注册表，删目录即卸载 |
 | **`MD Preview Tool-vX.Y.Z-x64-portable.exe`** | 单文件便携版 | 双击即用的单文件，适合 U 盘/临时使用 |
 | **`MD Preview Tool-vX.Y.Z-x64.msi`** | 企业/域环境集中部署 | 支持 MSI 静默部署（`msiexec /i xxx.msi /qn`） |
 

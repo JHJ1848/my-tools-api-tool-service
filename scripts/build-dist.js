@@ -59,21 +59,34 @@ if (target === 'msi') {
   builderArgs = ['electron-builder', '--dir', '--x64']
 } else {
   // all: 标准安装器 (NSIS/MSI) + 单文件便携版 (Portable) + 绿色目录版 (Zip)
-  builderArgs = ['electron-builder', '--win', 'msi', 'nsis', 'portable', 'zip', '--x64']
+  // 逐个目标顺序构建：多目标合并到一次 electron-builder 调用时，
+  // 曾出现 zip 归档误用 msi 产物名等产物名串扰问题，顺序执行最稳妥
+  builderArgs = null
 }
 
-const builderResult = spawnSync('npx', builderArgs, {
-  cwd: projectRoot,
-  stdio: 'inherit',
-  shell: true,
-  env: {
-    ...process.env,
-  },
-})
+if (builderArgs) {
+  runBuilder(builderArgs)
+} else {
+  for (const t of ['nsis', 'msi', 'portable', 'zip']) {
+    console.log(`[BuildRelease] >>> 开始构建目标: ${t.toUpperCase()}`)
+    runBuilder(['electron-builder', '--win', t, '--x64'])
+  }
+}
 
-if (builderResult.status !== 0) {
-  console.error(`[BuildRelease] 打包失败，退出码: ${builderResult.status}`)
-  process.exit(builderResult.status || 1)
+function runBuilder(args) {
+  const result = spawnSync('npx', args, {
+    cwd: projectRoot,
+    stdio: 'inherit',
+    shell: true,
+    env: {
+      ...process.env,
+    },
+  })
+
+  if (result.status !== 0) {
+    console.error(`[BuildRelease] 打包失败，退出码: ${result.status}`)
+    process.exit(result.status || 1)
+  }
 }
 
 // 5. 检查输出文件并生成发布报告

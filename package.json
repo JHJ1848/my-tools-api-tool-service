@@ -86,9 +86,6 @@
     },
     "portable": {
       "artifactName": "${productName}-${version}-${arch}-portable.exe"
-    },
-    "zip": {
-      "artifactName": "${productName}-${version}-${arch}-portable.zip"
     }
   },
   "dependencies": {

@@ -14,9 +14,10 @@
 
 ### 新增
 - 标准发行体系：一键发布脚本 `npm run release -- <版本号>`，自动完成
-  版本号更新 → 全量构建 → 提交打标签 → 推送 → 创建 GitHub Release 并上传产物
+  版本号更新 → 本地全量构建验证 → 提交打标签 → 推送 → 写入 Release 说明，
+  发行产物由 GitHub Actions 自动构建并上传
 - CI 自动发布：推送 `v*` 标签触发 GitHub Actions，在 Windows 环境自动构建并发布
-- 绿色目录版安装方式（`*-portable.zip`）：整目录下载解压后直接运行 exe，免安装
+- 绿色目录版安装方式（`*-x64.zip`）：整目录下载解压后直接运行 exe，免安装
 - 单文件便携版（`*-portable.exe`）：无需安装，双击即用
 - CHANGELOG.md 版本变更记录
 

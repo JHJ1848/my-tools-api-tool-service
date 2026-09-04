@@ -28,8 +28,14 @@ jobs:
       - name: Build renderer & electron main
         run: npx vite build
 
+      # 逐个目标顺序构建并发布（合并到一次调用曾出现产物名串扰问题）
       # 产物: NSIS 安装器 / MSI / 单文件便携版 exe / 绿色目录版 zip
       - name: Package & publish
-        run: npx electron-builder --win msi nsis portable zip --x64 --publish always
+        shell: pwsh
+        run: |
+          npx electron-builder --win nsis --x64 --publish always
+          npx electron-builder --win msi --x64 --publish always
+          npx electron-builder --win portable --x64 --publish always
+          npx electron-builder --win zip --x64 --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

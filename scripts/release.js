@@ -86,7 +86,7 @@ const artifacts = [
   `MD Preview Tool-Setup-${version}-x64.exe`,
   `MD Preview Tool-${version}-x64.msi`,
   `MD Preview Tool-${version}-x64-portable.exe`,
-  `MD Preview Tool-${version}-x64-portable.zip`,
+  `MD Preview Tool-${version}-x64.zip`,
 ]
   .map((f) => path.join(releaseDir, f))
   .filter((p) => fs.existsSync(p))
@@ -113,14 +113,16 @@ if (dryRun) {
   process.exit(0)
 }
 
-// ---------- 5. 提交版本号变更并打标签 ----------
+// ---------- 5. 提交版本号变更并推送标签（触发 CI 构建并发布） ----------
 run('git', ['add', 'package.json', 'package-lock.json', 'CHANGELOG.md'])
 run('git', ['commit', '-m', `chore(release): ${tag}`])
 run('git', ['tag', '-a', tag, '-m', `MD Preview Tool ${tag}`])
 run('git', ['push', 'origin', 'main'])
 run('git', ['push', 'origin', tag])
 
-// ---------- 6. 创建 GitHub Release 并上传产物 ----------
+// ---------- 6. 预先创建 Release 并写入发布说明 ----------
+// 产物由 GitHub Actions（.github/workflows/release.yml，监听 v* 标签）自动构建
+// 并上传到该 Release；本地在第 4 步完成的全量构建仅作发布前验证。
 const notesFile = path.join(projectRoot, 'tmp', `release-notes-${version}.md`)
 fs.mkdirSync(path.dirname(notesFile), { recursive: true })
 fs.writeFileSync(notesFile, extractNotes(), 'utf8')
@@ -129,7 +131,7 @@ run('gh', [
   'release',
   'create',
   tag,
-  ...artifacts,
+  '--verify-tag',
   '--title',
   `MD Preview Tool ${tag}`,
   '--notes-file',
@@ -137,6 +139,9 @@ run('gh', [
 ])
 
 console.log(`[Release] ========================================`)
-console.log(`[Release] 🎉 ${tag} 发布完成！`)
-console.log(`[Release] 查看地址: https://github.com/JHJ1848/my-tools-api-tool-service/releases/tag/${tag}`)
+console.log(`[Release] 🎉 ${tag} 标签已推送，CI 正在构建并上传发行产物。`)
+console.log(`[Release] 进度查看: https://github.com/JHJ1848/my-tools-api-tool-service/actions`)
+console.log(`[Release] 发布页: https://github.com/JHJ1848/my-tools-api-tool-service/releases/tag/${tag}`)
+console.log(`[Release] 若 CI 不可用，可手动上传:`)
+artifacts.forEach((p) => console.log(`[Release]   gh release upload ${tag} "${path.basename(p)}" --clobber`))
 console.log(`[Release] ========================================`)
