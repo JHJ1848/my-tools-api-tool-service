@@ -1,15 +1,15 @@
 {
   "name": "md-preview-tool",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "description": "现代化纯前端与内网协同 Markdown 实时预览及 API 调试桌面工具",
-  "author": "ToolService Team <support@toolservice.com>",
-  "homepage": "https://github.com/toolservice/md-preview-tool",
+  "author": "JHJ1848 <JHJ1848@users.noreply.github.com>",
+  "homepage": "https://github.com/JHJ1848/my-tools-api-tool-service",
   "repository": {
     "type": "git",
-    "url": "https://github.com/toolservice/md-preview-tool.git"
+    "url": "https://github.com/JHJ1848/my-tools-api-tool-service.git"
   },
   "license": "MIT",
   "scripts": {
@@ -23,9 +23,12 @@
     "dist:msi": "node scripts/build-dist.js --target=msi",
     "dist:nsis": "node scripts/build-dist.js --target=nsis",
     "dist:portable": "node scripts/build-dist.js --target=portable",
+    "dist:zip": "node scripts/build-dist.js --target=zip",
     "dist:dir": "node scripts/build-dist.js --target=dir",
     "dist:all": "node scripts/build-dist.js --target=all",
-    "dist": "npm run dist:all"
+    "dist": "npm run dist:all",
+    "release": "node scripts/release.js",
+    "release:dry": "node scripts/release.js --dry-run"
   },
   "build": {
     "appId": "com.toolservice.mdpreview",
@@ -83,6 +86,9 @@
     },
     "portable": {
       "artifactName": "${productName}-${version}-${arch}-portable.exe"
+    },
+    "zip": {
+      "artifactName": "${productName}-${version}-${arch}-portable.zip"
     }
   },
   "dependencies": {

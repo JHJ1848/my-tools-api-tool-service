@@ -1,0 +1,35 @@
+name: Release
+
+# 推送 v* 标签时自动构建全部 Windows 发行产物并发布 GitHub Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer & electron main
+        run: npx vite build
+
+      # 产物: NSIS 安装器 / MSI / 单文件便携版 exe / 绿色目录版 zip
+      - name: Package & publish
+        run: npx electron-builder --win msi nsis portable zip --x64 --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

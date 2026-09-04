@@ -34,8 +34,10 @@ screenshot_*.png
 .env
 .env.*
 *.local
-*.yml
 src/main/resources/*.yml
+
+# CI 工作流不受 *.yml 忽略规则影响
+!.github/workflows/*.yml
 
 # AI 辅助临时目录
 .agents/

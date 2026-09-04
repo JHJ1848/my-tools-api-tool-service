@@ -4,6 +4,30 @@
 
 ---
 
+## 📦 下载安装（正式发行版）
+
+所有正式版本发布在
+[GitHub Releases](https://github.com/JHJ1848/my-tools-api-tool-service/releases)，
+每个版本提供以下四种发行产物，按需选择其一即可：
+
+| 产物 | 适用场景 | 使用方式 |
+| :--- | :--- | :--- |
+| **`MD Preview Tool-Setup-vX.Y.Z-x64.exe`** | 标准安装（推荐） | 双击安装向导，可选安装目录，自动创建桌面/开始菜单快捷方式，带卸载程序 |
+| **`MD Preview Tool-vX.Y.Z-x64-portable.zip`** | 绿色目录版 / 轻量安装 | **下载整个 zip 解压到任意目录，直接双击其中的 `MD Preview Tool.exe` 即可运行**，不写注册表，删目录即卸载 |
+| **`MD Preview Tool-vX.Y.Z-x64-portable.exe`** | 单文件便携版 | 双击即用的单文件，适合 U 盘/临时使用 |
+| **`MD Preview Tool-vX.Y.Z-x64.msi`** | 企业/域环境集中部署 | 支持 MSI 静默部署（`msiexec /i xxx.msi /qn`） |
+
+> 💡 **免安装轻量用法**：只需要 `*-portable.zip` 这一个文件 —— 整个目录下载（解压）后，
+> 进入目录运行 `MD Preview Tool.exe` 即可，无需任何安装步骤。
+
+### 版本与更新
+
+- 遵循 [语义化版本](https://semver.org/lang/zh-CN/)，变更记录见 [CHANGELOG.md](CHANGELOG.md)
+- 发布新版本：本地执行 `npm run release -- 1.2.0 "备注"`（自动构建全部产物并发布），
+  或直接推送 `v*` 标签由 GitHub Actions 自动构建发布
+
+---
+
 ## 💻 运行与开发环境要求 (Windows)
 
 | 依赖项 | 最低版本要求 | 说明 |
@@ -44,7 +68,20 @@ npm run dev
 # 2. 编译并打包为 Windows 独立绿色可执行程序 (输出至 dist-app)
 npm run dist:app
 
-# 3. 直接运行已编译的桌面客户端
+# 3. 构建标准发行产物 (输出至 release: Setup 安装器 / MSI / 便携版 exe / 绿色目录版 zip)
+npm run dist
+
+# 4. 只构建某一类产物
+npm run dist:nsis     # NSIS 安装器
+npm run dist:msi      # MSI 安装包
+npm run dist:portable # 单文件便携版 exe
+npm run dist:zip      # 绿色目录版 zip
+
+# 5. 一键发布新版本 (改版本号 → 构建 → 提交打 tag → 推送 → GitHub Release)
+npm run release -- 1.2.0
+npm run release -- 1.2.0 --dry-run   # 只构建演练，不提交不发布
+
+# 6. 直接运行已编译的桌面客户端
 .\scripts\start-desktop.bat
 ```
 

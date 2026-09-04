@@ -18,7 +18,7 @@ let target = 'all' // 默认全部生成
 for (const arg of args) {
   if (arg.startsWith('--target=')) {
     target = arg.split('=')[1].toLowerCase()
-  } else if (arg === 'msi' || arg === 'nsis' || arg === 'portable' || arg === 'all' || arg === 'dir') {
+  } else if (['msi', 'nsis', 'portable', 'zip', 'all', 'dir'].includes(arg)) {
     target = arg
   }
 }
@@ -52,11 +52,14 @@ if (target === 'msi') {
   builderArgs = ['electron-builder', '--win', 'nsis', '--x64']
 } else if (target === 'portable') {
   builderArgs = ['electron-builder', '--win', 'portable', '--x64']
+} else if (target === 'zip') {
+  // 绿色目录版：zip 内为完整应用目录，解压后直接运行 exe，无需安装
+  builderArgs = ['electron-builder', '--win', 'zip', '--x64']
 } else if (target === 'dir') {
   builderArgs = ['electron-builder', '--dir', '--x64']
 } else {
-  // all: 生成 MSI、NSIS、Portable
-  builderArgs = ['electron-builder', '--win', 'msi', 'nsis', 'portable', '--x64']
+  // all: 标准安装器 (NSIS/MSI) + 单文件便携版 (Portable) + 绿色目录版 (Zip)
+  builderArgs = ['electron-builder', '--win', 'msi', 'nsis', 'portable', 'zip', '--x64']
 }
 
 const builderResult = spawnSync('npx', builderArgs, {
