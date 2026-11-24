@@ -83,6 +83,6 @@ Write-Host "       Setup & Initialization Complete!" -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host "  * Desktop App: Launch via desktop shortcut or .\scripts\start-desktop.bat"
 Write-Host "  * Dev Mode:    npm run dev"
-Write-Host "  * LAN Service: http://<Your-IP>:9527/md-view"
+Write-Host "  * LAN Service: copy the share link from the workbench"
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host ""

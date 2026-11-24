@@ -1,147 +1,126 @@
-import { spawnSync } from 'child_process'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import { spawnSync } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const projectRoot = path.resolve(__dirname, '..')
-const pkgPath = path.join(projectRoot, 'package.json')
-const changelogPath = path.join(projectRoot, 'CHANGELOG.md')
-const releaseDir = path.join(projectRoot, 'release')
-
-// 与国内网络环境保持一致的镜像设置（构建产物时下载 WiX/NSIS/Electron 二进制用）
-process.env.ELECTRON_MIRROR = process.env.ELECTRON_MIRROR || 'https://npmmirror.com/mirrors/electron/'
-process.env.ELECTRON_BUILDER_BINARIES_MIRROR =
-  process.env.ELECTRON_BUILDER_BINARIES_MIRROR || 'https://npmmirror.com/mirrors/electron-builder-binaries/'
-
-// ---------- 解析参数 ----------
-const rawArgs = process.argv.slice(2)
-const dryRun = rawArgs.includes('--dry-run')
-const positional = rawArgs.filter((a) => !a.startsWith('--'))
-const version = (positional[0] || '').replace(/^v/i, '')
-
-if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
-  console.error('[Release] 用法: npm run release -- <版本号> [发布备注] [--dry-run]')
-  console.error('[Release] 示例: npm run release -- 1.1.0 "首个标准发行版"')
-  process.exit(1)
-}
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const manifests = ['package.json', 'package-lock.json']
+const args = process.argv.slice(2)
+const dryRun = args.includes('--dry-run')
+const [requestedVersion, customNotes] = args.filter(arg => arg !== '--dry-run')
+const current = readJson(root, 'package.json').version
+const [major, minor, patch] = current.split(/[.-]/).map(Number)
+const version = (requestedVersion ?? (dryRun ? `${major}.${minor}.${patch + 1}` : '')).replace(/^v/i, '')
 const tag = `v${version}`
-const noteFromArgs = positional[1]
 
-function run(cmd, args, opts = {}) {
-  console.log(`[Release] $ ${cmd} ${args.join(' ')}`)
-  const result = spawnSync(cmd, args, { cwd: projectRoot, stdio: 'inherit', shell: true, ...opts })
-  if (result.status !== 0) {
-    console.error(`[Release] 命令失败 (退出码 ${result.status}): ${cmd} ${args.join(' ')}`)
-    process.exit(result.status || 1)
+function readJson(directory, name) {
+  return JSON.parse(fs.readFileSync(path.join(directory, name), 'utf8'))
+}
+
+function run(command, arguments_, options = {}) {
+  // Only static npm commands need the Windows shell to resolve npm.cmd.
+  const result = spawnSync(command, arguments_, {
+    cwd: root,
+    encoding: 'utf8',
+    stdio: 'inherit',
+    shell: process.platform === 'win32' && command === 'npm',
+    ...options
+  })
+  if (result.error) throw result.error
+  if (result.status !== 0) throw new Error(`${command} ${arguments_.join(' ')} 失败`)
+  return result.stdout
+}
+
+function setVersion(directory) {
+  const pkg = readJson(directory, 'package.json')
+  const lock = readJson(directory, 'package-lock.json')
+  if (pkg.version === version && lock.version === version && lock.packages[''].version === version) return
+  pkg.version = version
+  lock.version = version
+  lock.packages[''].version = version
+  for (const [name, contents] of [['package.json', pkg], ['package-lock.json', lock]]) {
+    fs.writeFileSync(path.join(directory, name), JSON.stringify(contents, null, 2) + '\n', 'utf8')
   }
 }
 
-// ---------- 1. 前置校验 ----------
-console.log(`[Release] ========================================`)
-console.log(`[Release] 准备发布 ${tag}${dryRun ? ' (dry-run, 不会提交/推送/发布)' : ''}`)
-console.log(`[Release] ========================================`)
-
-const gitStatus = spawnSync('git', ['status', '--porcelain'], { cwd: projectRoot, shell: true, encoding: 'utf8' })
-if (gitStatus.stdout && gitStatus.stdout.trim().length > 0) {
-  console.error('[Release] 工作区不干净，请先提交或暂存 (stash) 全部变更后再发布。')
-  console.error(gitStatus.stdout)
-  process.exit(1)
+function getNotes() {
+  if (customNotes) return customNotes
+  const sections = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8').split(/^## /m)
+  const entry = sections.find(section => section.startsWith(`[${version}]`))
+  const notes = entry?.slice(entry.indexOf('\n') + 1).split(/^\[[^\]]+\]:/m)[0].trim()
+  if (!notes && !dryRun) throw new Error(`CHANGELOG.md 缺少 ${version} 的发布说明`)
+  return notes || `MD Preview Tool ${tag}`
 }
 
-const existingTag = spawnSync('git', ['rev-parse', '-q', '--verify', `refs/tags/${tag}`], {
-  cwd: projectRoot,
-  shell: true,
-  encoding: 'utf8',
-})
-if (existingTag.status === 0) {
-  console.error(`[Release] 标签 ${tag} 已存在，请更换版本号或先删除旧标签。`)
-  process.exit(1)
-}
+function buildCandidate(candidate) {
+  const files = run('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { stdio: 'pipe' })
+  for (const file of new Set(files.split('\0').filter(Boolean))) {
+    const source = path.join(root, file)
+    if (!fs.statSync(source, { throwIfNoEntry: false })?.isFile()) continue
+    const destination = path.join(candidate, file)
+    fs.mkdirSync(path.dirname(destination), { recursive: true })
+    fs.copyFileSync(source, destination)
+  }
+  setVersion(candidate)
 
-// ---------- 2. 更新 package.json 版本号 ----------
-const pkgRaw = fs.readFileSync(pkgPath, 'utf8')
-if (!new RegExp(`"version": "${version.replace(/\./g, '\\.')}"`).test(pkgRaw)) {
-  fs.writeFileSync(pkgPath, pkgRaw.replace(/"version": "[^"]+"/, `"version": "${version}"`), 'utf8')
-  console.log(`[Release] package.json 版本号已更新为 ${version}`)
-} else {
-  console.log(`[Release] package.json 版本号已是 ${version}`)
-}
+  run('npm', ['ci', '--prefer-offline', '--no-audit', '--no-fund'], { cwd: candidate })
+  run('npm', ['run', 'lint'], { cwd: candidate })
+  run('npm', ['run', 'dist:all'], { cwd: candidate })
 
-// ---------- 3. 从 CHANGELOG 提取发布说明 ----------
-function extractNotes() {
-  if (noteFromArgs) return noteFromArgs
-  if (!fs.existsSync(changelogPath)) return `MD Preview Tool ${tag} 发行版`
-  const content = fs.readFileSync(changelogPath, 'utf8')
-  const sectionRegex = new RegExp(`## \\[${version.replace(/\./g, '\\.')}\\][^\\n]*\\n([\\s\\S]*?)(?=\\n## \\[|$)`)
-  const match = content.match(sectionRegex)
-  return match ? match[1].trim() : `MD Preview Tool ${tag} 发行版`
-}
-
-// ---------- 4. 构建全部发行产物 (NSIS + MSI + Portable + Zip) ----------
-run('npm', ['run', 'dist:all'], { env: { ...process.env } })
-
-const artifacts = [
-  `MD Preview Tool-Setup-${version}-x64.exe`,
-  `MD Preview Tool-${version}-x64.msi`,
-  `MD Preview Tool-${version}-x64-portable.exe`,
-  `MD Preview Tool-${version}-x64.zip`,
-]
-  .map((f) => path.join(releaseDir, f))
-  .filter((p) => fs.existsSync(p))
-
-if (artifacts.length < 4) {
-  console.warn('[Release] 警告: 期望 4 个发行产物，实际仅找到:')
-  artifacts.forEach((p) => console.warn(`  - ${path.basename(p)}`))
-  if (artifacts.length === 0) {
-    console.error('[Release] 未找到任何发行产物，中止发布。')
-    process.exit(1)
+  for (const name of [
+    `MD Preview Tool-Setup-${version}-x64.exe`,
+    `MD Preview Tool-${version}-x64.msi`,
+    `MD Preview Tool-${version}-x64-portable.exe`,
+    `MD Preview Tool-${version}-x64.zip`
+  ]) {
+    const artifact = fs.statSync(path.join(candidate, 'release', name), { throwIfNoEntry: false })
+    if (!artifact?.isFile() || artifact.size === 0) throw new Error(`缺少发行包 ${name}`)
+    console.log(`[Release] ${name} ${(artifact.size / (1024 * 1024)).toFixed(1)} MiB`)
   }
 }
 
-console.log(`[Release] ========================================`)
-console.log(`[Release] 构建完成，发行产物:`)
-artifacts.forEach((p) => {
-  const sizeMb = (fs.statSync(p).size / (1024 * 1024)).toFixed(2)
-  console.log(`[Release]  📦 ${path.basename(p)} (${sizeMb} MB)`)
-})
-console.log(`[Release] ========================================`)
-
-if (dryRun) {
-  console.log('[Release] dry-run 结束：未修改 git 历史，未推送，未创建 Release。')
-  process.exit(0)
+function validateRelease() {
+  if (run('git', ['status', '--porcelain'], { stdio: 'pipe' }).trim()) {
+    throw new Error('请先提交发版改动，确保工作区干净')
+  }
+  if (run('git', ['branch', '--show-current'], { stdio: 'pipe' }).trim() !== 'main') {
+    throw new Error('正式发布须在 main 分支执行')
+  }
+  if (run('git', ['tag', '--list', tag], { stdio: 'pipe' }).trim()
+    || run('git', ['ls-remote', '--tags', 'origin', `refs/tags/${tag}`], { stdio: 'pipe' }).trim()) {
+    throw new Error(`标签 ${tag} 已存在`)
+  }
 }
 
-// ---------- 5. 提交版本号变更并推送标签（触发 CI 构建并发布） ----------
-run('git', ['add', 'package.json', 'package-lock.json', 'CHANGELOG.md'])
-run('git', ['commit', '-m', `chore(release): ${tag}`])
-run('git', ['tag', '-a', tag, '-m', `MD Preview Tool ${tag}`])
-run('git', ['push', 'origin', 'main'])
-run('git', ['push', 'origin', tag])
-
-// ---------- 6. 预先创建 Release 并写入发布说明 ----------
-// 产物由 GitHub Actions（.github/workflows/release.yml，监听 v* 标签）自动构建
-// 并上传到该 Release；本地在第 4 步完成的全量构建仅作发布前验证。
-const notesFile = path.join(projectRoot, 'tmp', `release-notes-${version}.md`)
-fs.mkdirSync(path.dirname(notesFile), { recursive: true })
-fs.writeFileSync(notesFile, extractNotes(), 'utf8')
-
-run('gh', [
-  'release',
-  'create',
-  tag,
-  '--verify-tag',
-  '--title',
-  `MD Preview Tool ${tag}`,
-  '--notes-file',
-  notesFile,
-])
-
-console.log(`[Release] ========================================`)
-console.log(`[Release] 🎉 ${tag} 标签已推送，CI 正在构建并上传发行产物。`)
-console.log(`[Release] 进度查看: https://github.com/JHJ1848/my-tools-api-tool-service/actions`)
-console.log(`[Release] 发布页: https://github.com/JHJ1848/my-tools-api-tool-service/releases/tag/${tag}`)
-console.log(`[Release] 若 CI 不可用，可手动上传:`)
-artifacts.forEach((p) => console.log(`[Release]   gh release upload ${tag} "${path.basename(p)}" --clobber`))
-console.log(`[Release] ========================================`)
+try {
+  if (!/^\d+\.\d+\.\d+(?:-[\w.]+)?$/.test(version)) {
+    throw new Error('用法: npm run release -- <版本号> [发布备注]，或 npm run release:dry -- [版本号]')
+  }
+  if (!dryRun) validateRelease()
+  const notes = getNotes()
+  const candidate = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'md-preview-release-'))
+  try {
+    console.log(`[Release] ${tag} 发版预检`)
+    buildCandidate(candidate)
+    if (dryRun) {
+      console.log('[Release] 预检完成，工作区和远端保持原样。')
+    } else {
+      setVersion(root)
+      run('git', ['add', ...manifests])
+      if (run('git', ['diff', '--cached', '--name-only'], { stdio: 'pipe' }).trim()) {
+        run('git', ['commit', '-m', `chore(release): ${tag}`])
+      }
+      const notesFile = path.join(candidate, 'release-notes.md')
+      fs.writeFileSync(notesFile, notes + '\n', 'utf8')
+      run('git', ['tag', '-a', tag, '--cleanup=verbatim', '-F', notesFile])
+      run('git', ['push', '--atomic', 'origin', 'main', `refs/tags/${tag}`])
+      console.log(`[Release] ${tag} 已推送，GitHub Actions 将构建并发布发行包。`)
+    }
+  } finally {
+    fs.rmSync(candidate, { recursive: true, force: true, maxRetries: 3 })
+  }
+} catch (error) {
+  console.error(`[Release] ${error.message}`)
+  process.exitCode = 1
+}

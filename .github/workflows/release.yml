@@ -25,17 +25,39 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build renderer & electron main
-        run: npx vite build
+      - name: Lint
+        run: npm run lint
 
-      # 逐个目标顺序构建并发布（合并到一次调用曾出现产物名串扰问题）
-      # 产物: NSIS 安装器 / MSI / 单文件便携版 exe / 绿色目录版 zip
-      - name: Package & publish
+      - name: Build Windows packages
+        run: npm run dist:all
+
+      - name: Publish verified packages
         shell: pwsh
         run: |
-          npx electron-builder --win nsis --x64 --publish always
-          npx electron-builder --win msi --x64 --publish always
-          npx electron-builder --win portable --x64 --publish always
-          npx electron-builder --win zip --x64 --publish always
+          $version = (Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json).version
+          $tag = $env:GITHUB_REF_NAME
+          if ($tag -cne "v$version") { throw "Tag $tag does not match package version $version" }
+          $installer = "MD Preview Tool-Setup-$version-x64.exe"
+          $updateName = "MD-Preview-Tool-Setup-$version-x64.exe"
+          # Preserve the installer filename referenced by latest.yml.
+          Rename-Item -LiteralPath "release/$installer" -NewName $updateName
+          Rename-Item -LiteralPath "release/$installer.blockmap" -NewName "$updateName.blockmap"
+          $assets = @(
+            "release/$updateName"
+            "release/MD Preview Tool-$version-x64.msi"
+            "release/MD Preview Tool-$version-x64-portable.exe"
+            "release/MD Preview Tool-$version-x64.zip"
+            "release/$updateName.blockmap"
+            'release/latest.yml'
+          )
+          foreach ($asset in $assets) {
+            if ((Get-Item -LiteralPath $asset -ErrorAction Stop).Length -le 0) {
+              throw "Empty release asset: $asset"
+            }
+          }
+          $flags = @('--verify-tag', '--notes-from-tag', '--title', "MD Preview Tool $tag")
+          if ($version.Contains('-')) { $flags += '--prerelease' }
+          gh release create $tag @flags @assets
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

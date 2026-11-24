@@ -10,6 +10,14 @@
 ### 计划
 - 应用内自动更新（electron-updater，基于 latest.yml）
 
+## [1.1.1] - 2026-11-24
+
+### 修复
+- 局域网服务遇到端口占用会自动换用可用端口，已占用端口的进程可以继续运行。桌面窗口及分享链接使用实际监听端口。
+- 修复 Electron 工作台的原生通信桥加载问题。
+- Windows 开发启动改用 Node.js，绿色版打包使用项目当前版本号。
+- 打包菜单可直接运行发布预检。预检在临时目录构建，正式发布会先验证四种 Windows 发行包。
+
 ## [1.1.0] - 2026-09-04
 
 ### 新增
@@ -40,6 +48,7 @@
   局域网用户浏览器访问 `http://<IP>:9527/md-view` 直接预览
 - 关闭拦截：最小化到系统托盘保持共享，或彻底退出，支持记住选择
 
-[未发布]: https://github.com/JHJ1848/my-tools-api-tool-service/compare/v1.1.0...HEAD
+[未发布]: https://github.com/JHJ1848/my-tools-api-tool-service/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/JHJ1848/my-tools-api-tool-service/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/JHJ1848/my-tools-api-tool-service/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/JHJ1848/my-tools-api-tool-service/releases/tag/v1.0.0

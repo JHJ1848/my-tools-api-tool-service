@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 import fs from 'fs'
 import os from 'os'
 import chokidar, { FSWatcher } from 'chokidar'
-import { startHttpServer, stopHttpServer, isHttpServerRunning, getServerStatus, setServerOptions, getLanIpAddress, getWorkspaceConfig, saveWorkspacePath, isLanSharingEnabled, setLanSharing, clearAllCache } from './server'
+import { startHttpServer, stopHttpServer, isHttpServerRunning, getServerStatus, setServerOptions, getWorkspaceConfig, saveWorkspacePath, isLanSharingEnabled, setLanSharing, clearAllCache } from './server'
 
 const _currentFilename = fileURLToPath(import.meta.url)
 const _currentDirname = dirname(_currentFilename)
@@ -120,7 +120,8 @@ function showMainWindow() {
  * 复制内网分享链接并提示
  */
 function copyLanShareUrl() {
-  if (!isLanSharingEnabled()) {
+  const { running, lanUrl } = getServerStatus()
+  if (!running) {
     if (Notification.isSupported()) {
       new Notification({
         title: '内网共享已暂停',
@@ -130,9 +131,6 @@ function copyLanShareUrl() {
     }
     return
   }
-  const lanIp = getLanIpAddress()
-  const port = 9527
-  const lanUrl = `http://${lanIp}:${port}/md-view`
   clipboard.writeText(lanUrl)
 
   if (Notification.isSupported()) {
@@ -231,7 +229,7 @@ function createWindow(pathParam?: string): BrowserWindow {
     backgroundColor: '#0d0e11',
     show: false,
     webPreferences: {
-      preload: path.join(_currentDirname, 'preload.js'),
+      preload: path.join(_currentDirname, 'preload.mjs'),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
@@ -309,24 +307,22 @@ function createWindow(pathParam?: string): BrowserWindow {
     }
   })
 
-  // 统一加载嵌入式 HTTP 服务工作台 (http://127.0.0.1:9527/md-view)
-  // 保证开发环境 (npm run dev) 与打包 exe 保持完全同源与等效体验
-  const targetUrl = pathParam
-    ? `http://127.0.0.1:9527/md-view?path=${encodeURIComponent(pathParam)}`
-    : 'http://127.0.0.1:9527/md-view'
+  startHttpServer()
+    .then(() => {
+      if (win.isDestroyed()) return
+      const { port } = getServerStatus()
+      const url = new URL(`http://127.0.0.1:${port}/md-view`)
+      if (pathParam) url.searchParams.set('path', pathParam)
+      return win.loadURL(url.href)
+    })
+    .catch((err: unknown) => {
+      console.error('Failed to load the workbench:', err)
+      if (win.isDestroyed()) return
+      dialog.showErrorBox('无法打开工作台', err instanceof Error ? err.message : String(err))
+      win.destroy()
+    })
 
-  if (!isHttpServerRunning()) {
-    startHttpServer()
-      .then(() => {
-        win.loadURL(targetUrl)
-      })
-      .catch((err) => {
-        console.error('Failed to start embedded server before loadURL:', err)
-        win.loadURL(targetUrl)
-      })
-  } else {
-    win.loadURL(targetUrl)
-  }
+  return win
 }
 
 // ---------------- IPC HANDLERS ----------------
@@ -591,7 +587,7 @@ ipcMain.handle('fs:watchWorkspace', async (_, dirPath: string) => {
 
   try {
     currentWatcher = chokidar.watch(dirPath, {
-      ignored: /(^|[\/\\])\..|node_modules|dist|dist-electron|target|\.git/,
+      ignored: /(^|[/\\])\..|node_modules|dist|dist-electron|target|\.git/,
       persistent: true,
       ignoreInitial: true,
       depth: 5,
@@ -744,12 +740,8 @@ ipcMain.handle('app:performCloseAction', (_, { action, remember }: { action: 'mi
 })
 
 ipcMain.handle('server:getLanInfo', () => {
-  const lanIp = getLanIpAddress()
-  return {
-    lanIp,
-    port: 9527,
-    lanUrl: `http://${lanIp}:9527/md-view`,
-  }
+  const { lanIp, port, lanUrl } = getServerStatus()
+  return { lanIp, port, lanUrl }
 })
 
 ipcMain.handle('server:getWorkspaceConfig', () => {
@@ -805,10 +797,9 @@ ipcMain.handle('server:toggle', async (_, targetState?: boolean) => {
 })
 
 // App Lifecycle
-app.whenReady().then(async () => {
+app.whenReady().then(() => {
   // Register callbacks for embedded server
   setServerOptions({
-    port: 9527,
     onDirectoryPick: async () => {
       if (!mainWindow) return null
       const result = await dialog.showOpenDialog(mainWindow, {
@@ -858,14 +849,8 @@ app.whenReady().then(async () => {
     },
   })
 
-  // Start embedded LAN HTTP sharing server (port 9527) and apply sharing preference
   const lanServerEnabled = inMemoryConfig['lanServerEnabled'] !== false
   setLanSharing(lanServerEnabled)
-  try {
-    await startHttpServer()
-  } catch (err) {
-    console.error('Failed to start HTTP server on launch:', err)
-  }
 
   createTray()
   createWindow()

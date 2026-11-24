@@ -2,6 +2,8 @@ import http from 'http'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import { once } from 'events'
+import type { AddressInfo } from 'net'
 import { fileURLToPath } from 'url'
 
 const _currentFilename = typeof import.meta !== 'undefined' && import.meta.url ? fileURLToPath(import.meta.url) : (typeof __filename !== 'undefined' ? __filename : '')
@@ -79,7 +81,8 @@ export interface ServerStatus {
 
 const WORKSPACE_CONFIG_KEY = 'markdown.workspace.path'
 const DEFAULT_BASE_PATH = path.normalize(path.join(os.homedir(), 'Desktop'))
-const SERVER_PORT = 9527
+const DEFAULT_SERVER_PORT = 9527
+const SERVER_PORT_ATTEMPTS = 10
 
 const FOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" fill="none"></path></svg>`
 const FILE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`
@@ -475,11 +478,13 @@ function processInline(text: string): string {
   // 8. 将转义的下划线 &#95; 还原为字面量 _
   res = res.replace(/&#95;/g, '_')
 
-  // 9. 还原所有受保护的 Token
+  // 9. 还原用 NUL 字符标记的内部占位符。
+  /* eslint-disable no-control-regex */
   res = res.replace(/\x00IDENT_(\d+)\x00/g, (_, idx) => identSpans[parseInt(idx, 10)] || '')
   res = res.replace(/\x00URL_(\d+)\x00/g, (_, idx) => urlSpans[parseInt(idx, 10)] || '')
   res = res.replace(/\x00LINK_(\d+)\x00/g, (_, idx) => linkSpans[parseInt(idx, 10)] || '')
   res = res.replace(/\x00CODE_(\d+)\x00/g, (_, idx) => codeSpans[parseInt(idx, 10)] || '')
+  /* eslint-enable no-control-regex */
 
   return res
 }
@@ -592,7 +597,7 @@ function isTableAlignmentLine(line: string): boolean {
   const parts = trimmed.split('|')
   for (const part of parts) {
     const p = part.trim()
-    if (p && !/^[:\-]+$/.test(p)) return false
+    if (p && !/^[:-]+$/.test(p)) return false
   }
   return true
 }
@@ -1075,7 +1080,7 @@ function cleanTableRows(rows: string[][]): string[][] {
     for (const cell of row) {
       const val = cell.trim()
       if (!val) continue
-      if (!/^[:\-]+$/.test(val)) {
+      if (!/^[:-]+$/.test(val)) {
         allAlignChars = false
         break
       }
@@ -1341,7 +1346,7 @@ export function buildTreeHtml(files: string[], currentPath: string, currentScope
   }
 
   const lanIp = getLanIpAddress()
-  const lanPort = currentPort || SERVER_PORT
+  const lanPort = currentPort
 
   let sb = ''
   sb += `<div class="sidebar-header"><div class="directory-switcher" id="directory-switcher" data-scope="${escapeHtml(currentScope)}"></div>`
@@ -1502,7 +1507,8 @@ export interface ServerOptions {
 }
 
 let runningServer: http.Server | null = null
-let currentPort = SERVER_PORT
+let startingServer: Promise<http.Server> | null = null
+let currentPort = 0
 let serverStartTime = 0
 let savedOptions: ServerOptions = {}
 let isLanSharingState = true
@@ -1543,14 +1549,14 @@ export function isHttpServerRunning(): boolean {
 export function getServerStatus(): ServerStatus {
   const serverRunning = isHttpServerRunning()
   const running = serverRunning && isLanSharingState
-  const port = currentPort || SERVER_PORT
+  const port = currentPort
   const lanIp = getLanIpAddress()
   return {
     running,
     lanSharing: isLanSharingState,
     port,
     lanIp,
-    lanUrl: `http://${lanIp}:${port}/md-view`,
+    lanUrl: port ? `http://${lanIp}:${port}/md-view` : '',
     workspace: getWorkspaceConfig(),
     timestamp: new Date().toISOString(),
     uptime: serverRunning && serverStartTime > 0 ? Math.floor((Date.now() - serverStartTime) / 1000) : 0,
@@ -1562,30 +1568,36 @@ export function getServerStatus(): ServerStatus {
  */
 export function setServerOptions(options: ServerOptions): void {
   savedOptions = { ...savedOptions, ...options }
-  if (options.port) {
-    currentPort = options.port
+}
+
+async function listenOnAvailablePort(server: http.Server, preferredPort: number): Promise<void> {
+  const lastPort = Math.min(preferredPort + SERVER_PORT_ATTEMPTS - 1, 65535)
+  for (let port = preferredPort; ; port = port < lastPort ? port + 1 : 0) {
+    try {
+      server.listen(port, '0.0.0.0')
+      await once(server, 'listening')
+      return
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      // Windows can report EACCES for a port reserved by another process.
+      if (port === 0 || (code !== 'EADDRINUSE' && code !== 'EACCES')) throw error
+    }
   }
 }
 
 /**
- * 启动内网 HTTP 共享服务 (端口 9527)
+ * 优先使用配置端口，依次尝试相邻端口，最后由系统分配端口。
  */
 export function startHttpServer(options: ServerOptions = {}): Promise<http.Server> {
-  if (options && (options.port || options.onDirectoryPick)) {
-    savedOptions = { ...savedOptions, ...options }
-  }
-  if (savedOptions.port) {
-    currentPort = savedOptions.port
-  }
-
+  setServerOptions(options)
   if (runningServer && runningServer.listening) {
     return Promise.resolve(runningServer)
   }
+  if (startingServer) return startingServer
 
-  const port = currentPort || SERVER_PORT
-  const lanIp = getLanIpAddress()
+  const preferredPort = savedOptions.port ?? DEFAULT_SERVER_PORT
 
-  return new Promise((resolve, reject) => {
+  const start = async () => {
     const server = http.createServer(async (req, res) => {
       // CORS Headers
       res.setHeader('Access-Control-Allow-Origin', '*')
@@ -1657,7 +1669,7 @@ export function startHttpServer(options: ServerOptions = {}): Promise<http.Serve
               running: false,
               lanSharing: false,
               message: '内网共享服务已由主机管理员暂停',
-              port,
+              port: currentPort,
               timestamp: new Date().toISOString(),
             })
             return
@@ -1903,6 +1915,7 @@ export function startHttpServer(options: ServerOptions = {}): Promise<http.Serve
 
         // 13. Health Check & LAN IP Reporting API
         if (pathname === '/api/health') {
+          const { lanIp, port, lanUrl, workspace, timestamp } = getServerStatus()
           sendJson(200, {
             status: 'ok',
             running: isLanSharingState,
@@ -1910,9 +1923,9 @@ export function startHttpServer(options: ServerOptions = {}): Promise<http.Serve
             serverRunning: isHttpServerRunning(),
             lanIp,
             port,
-            lanUrl: `http://${lanIp}:${port}/md-view`,
-            workspace: getWorkspaceConfig(),
-            timestamp: new Date().toISOString(),
+            lanUrl,
+            workspace,
+            timestamp,
             uptime: serverStartTime > 0 ? (Date.now() - serverStartTime) / 1000 : process.uptime(),
           })
           return
@@ -2077,24 +2090,21 @@ export function startHttpServer(options: ServerOptions = {}): Promise<http.Serve
       }
     })
 
-    server.on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        console.warn(`[HTTP Server] Port ${port} is already in use. Retrying or sharing service.`)
-      } else {
-        console.error('[HTTP Server] Error:', err)
-      }
-      reject(err)
-    })
+    await listenOnAvailablePort(server, preferredPort)
+    currentPort = (server.address() as AddressInfo).port
+    serverStartTime = Date.now()
+    runningServer = server
+    server.on('error', (err) => console.error('[HTTP Server] Error:', err))
+    console.log('[HTTP Server] Markdown Preview service is running at:')
+    console.log(`  > Local:   http://127.0.0.1:${currentPort}/md-view`)
+    console.log(`  > Network: http://${getLanIpAddress()}:${currentPort}/md-view`)
+    return server
+  }
 
-    server.listen(port, '0.0.0.0', () => {
-      serverStartTime = Date.now()
-      runningServer = server
-      console.log(`[HTTP Server] Markdown Preview service is running at:`)
-      console.log(`  > Local:   http://127.0.0.1:${port}/md-view`)
-      console.log(`  > Network: http://${lanIp}:${port}/md-view`)
-      resolve(server)
-    })
+  startingServer = start().finally(() => {
+    startingServer = null
   })
+  return startingServer
 }
 
 /**
@@ -2108,6 +2118,7 @@ export function stopHttpServer(): Promise<boolean> {
     }
     const s = runningServer
     runningServer = null
+    currentPort = 0
     serverStartTime = 0
 
     try {

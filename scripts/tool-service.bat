@@ -1,87 +1,58 @@
 @echo off
+chcp 65001 >nul
 setlocal EnableExtensions
 
-title tool-service
+title MD Preview Tool - 桌面端应用启动器
 pushd "%~dp0.." || (
-  echo [ERROR] Cannot enter project directory.
-  pause
-  exit /b 1
+    echo [ERROR] 无法进入项目目录。
+    pause
+    exit /b 1
 )
 
-set "PROJECT_JAVA_HOME=D:\Driver\JDK\jdk-17.0.17"
-if not exist "%PROJECT_JAVA_HOME%\bin\java.exe" (
-  echo [ERROR] Required JDK 17 was not found: %PROJECT_JAVA_HOME%
-  pause
-  exit /b 1
-)
-if not exist "%PROJECT_JAVA_HOME%\bin\javac.exe" (
-  echo [ERROR] Required JDK 17 compiler was not found: %PROJECT_JAVA_HOME%
-  pause
-  exit /b 1
-)
-set "JAVA_HOME=%PROJECT_JAVA_HOME%"
-set "PATH=%JAVA_HOME%\bin;%PATH%"
+echo ===================================================
+echo   MD Preview Tool - 桌面应用启动器
+echo ===================================================
 
-echo [1/3] Stopping old service if port 9527 is in use...
-if exist "%~dp0port.bat" (
-  call "%~dp0port.bat"
+echo.
+echo [1/3] 检查 Node.js 运行环境...
+where node >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] 未检测到 Node.js 环境，请先安装 Node.js (推荐 v18 或 v20 及以上版本)。
+    pause
+    popd
+    exit /b 1
+)
+for /f "tokens=*" %%v in ('node -v 2^>nul') do set "NODE_VERSION=%%v"
+echo [OK] 检测到 Node.js 版本: %NODE_VERSION%
+
+echo.
+echo [2/3] 检查项目依赖 (node_modules)...
+if not exist "node_modules" (
+    echo [INFO] 首次运行或未检测到依赖，正在执行 npm install...
+    call npm install
+    if errorlevel 1 (
+        echo [ERROR] 依赖安装失败，请检查网络或配置。
+        pause
+        popd
+        exit /b 1
+    )
 ) else (
-  echo [INFO] port.bat not found, skip stop step.
-)
-if errorlevel 1 (
-  echo [WARN] Stop step returned a non-zero exit code. Continue.
-)
-
-set "GIT_REMOTE=origin"
-set "GIT_BRANCH="
-set "SKIP_GIT_PULL="
-
-git rev-parse --is-inside-work-tree >nul 2>nul
-if errorlevel 1 (
-  set "SKIP_GIT_PULL=1"
-  echo.
-  echo [WARN] Current directory is not a git repository. Skip git pull.
-  goto start_project
-)
-
-for /f "delims=" %%i in ('git remote 2^>nul') do (
-  set "GIT_REMOTE=%%i"
-  goto git_remote_found
-)
-:git_remote_found
-
-for /f "delims=" %%i in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set "GIT_BRANCH=%%i"
-if not defined GIT_BRANCH (
-  echo.
-  echo [WARN] Cannot determine current git branch. Skip git pull.
-  set "SKIP_GIT_PULL=1"
-  goto start_project
-)
-if /i "%GIT_BRANCH%"=="HEAD" (
-  echo.
-  echo [WARN] Detached HEAD detected. Skip git pull.
-  set "SKIP_GIT_PULL=1"
-  goto start_project
+    echo [OK] 项目依赖已就绪。
 )
 
 echo.
-echo [2/3] Pulling latest code from %GIT_REMOTE%/%GIT_BRANCH%...
-call git pull %GIT_REMOTE% %GIT_BRANCH%
-if errorlevel 1 (
-  echo.
-  echo [WARN] git pull failed. Continue starting with local code.
+echo [3/3] 正在启动 MD Preview Tool 桌面端应用...
+echo ---------------------------------------------------
+echo [提示] 局域网访问地址可在工作台中查看
+echo ---------------------------------------------------
+call npm run dev
+set "APP_EXIT=%ERRORLEVEL%"
+
+if not "%APP_EXIT%"=="0" (
+    echo.
+    echo [WARN] 应用进程已退出，退出代码: %APP_EXIT%
+    pause
 )
 
-:start_project
-echo.
-echo [3/3] Starting project...
-call mvn clean spring-boot:run
-set "MVN_EXIT=%ERRORLEVEL%"
-
-echo.
-if not "%MVN_EXIT%"=="0" (
-  echo [WARN] Maven process ended with exit code %MVN_EXIT%.
-  pause
-)
-
-exit /b %MVN_EXIT%
+popd
+exit /b %APP_EXIT%

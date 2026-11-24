@@ -8,9 +8,10 @@ const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, '..')
 
 // 1. 设置构建环境镜像，防止国内网络环境下 WiX / NSIS / Electron 下载超时
-process.env.ELECTRON_MIRROR = process.env.ELECTRON_MIRROR || 'https://npmmirror.com/mirrors/electron/'
-process.env.ELECTRON_BUILDER_BINARIES_MIRROR =
-  process.env.ELECTRON_BUILDER_BINARIES_MIRROR || 'https://npmmirror.com/mirrors/electron-builder-binaries/'
+if (!process.env.CI) {
+  process.env.ELECTRON_MIRROR ||= 'https://npmmirror.com/mirrors/electron/'
+  process.env.ELECTRON_BUILDER_BINARIES_MIRROR ||= 'https://npmmirror.com/mirrors/electron-builder-binaries/'
+}
 
 // 2. 解析目标参数
 const args = process.argv.slice(2)
@@ -26,12 +27,12 @@ for (const arg of args) {
 console.log(`[BuildRelease] ========================================`)
 console.log(`[BuildRelease] 开始构建 MD Preview Tool 发行包`)
 console.log(`[BuildRelease] 目标格式: ${target.toUpperCase()}`)
-console.log(`[BuildRelease] 镜像源: ${process.env.ELECTRON_MIRROR}`)
+console.log(`[BuildRelease] Electron 下载源: ${process.env.ELECTRON_MIRROR || '默认'}`)
 console.log(`[BuildRelease] ========================================`)
 
 // 3. 执行 Vite 前端与 Electron TypeScript 编译
 console.log(`[BuildRelease] [1/3] 执行 Vite 与 TypeScript 编译...`)
-const buildResult = spawnSync('npx', ['vite', 'build'], {
+const buildResult = spawnSync('npm', ['run', 'build'], {
   cwd: projectRoot,
   stdio: 'inherit',
   shell: true,
@@ -74,7 +75,7 @@ if (builderArgs) {
 }
 
 function runBuilder(args) {
-  const result = spawnSync('npx', args, {
+  const result = spawnSync('npx', [...args, '--publish', 'never'], {
     cwd: projectRoot,
     stdio: 'inherit',
     shell: true,

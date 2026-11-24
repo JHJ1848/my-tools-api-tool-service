@@ -2873,7 +2873,7 @@
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>下载
                     </div>
                     <div style="width: 1px; height: 16px; background: #3e3e42; margin: 0 4px;"></div>
-                    <div class="lan-server-control" id="lan-server-control" title="内网 HTTP 共享服务 (端口 9527)">
+                    <div class="lan-server-control" id="lan-server-control" title="内网共享服务">
                         <div class="lan-status-indicator" id="lan-status-indicator">
                             <span class="lan-status-dot running" id="lan-status-dot"></span>
                             <span class="lan-status-text" id="lan-status-text">内网服务: 运行中</span>
@@ -4147,7 +4147,7 @@
                 ensureSidebarAndTocHeaderIcons();
                 const sidebarLanAddr = document.getElementById('sidebar-lan-address');
                 if (sidebarLanAddr) {
-                    sidebarLanAddr.textContent = `${currentLanIp || window.location.hostname || '127.0.0.1'}:${currentLanPort || 9527}`;
+                    sidebarLanAddr.textContent = `${currentLanIp}:${currentLanPort}`;
                 }
                 restoreSidebarScrollSnapshot(lastSidebarScrollSnapshot);
                 lastSidebarScrollSnapshot = null;
@@ -6045,8 +6045,10 @@
         function downloadFile() { if (currentFilePath) window.location.href = `/md-download?path=${encodeURIComponent(currentFilePath)}`; }
 
         let isLanServerRunning = true;
-        let currentLanIp = '';
-        let currentLanPort = 9527;
+        let currentLanIp = window.location.hostname || '127.0.0.1';
+        let currentLanPort = Number(window.location.port) || (window.location.protocol === 'https:' ? 443 : 80);
+        let targetLanIp = '';
+        let targetLanPort = '';
 
         function isLanVisitor() {
             if (window.electronAPI) return false;
@@ -6089,12 +6091,12 @@
                 text.textContent = isLanServerRunning ? '内网服务: 运行中' : '内网服务: 已暂停(仅本机)';
             }
             if (sidebarLanAddr) {
-                sidebarLanAddr.textContent = `${currentLanIp || window.location.hostname || '127.0.0.1'}:${currentLanPort || 9527}`;
+                sidebarLanAddr.textContent = `${currentLanIp}:${currentLanPort}`;
             }
             if (lanBtn) {
                 if (isLanServerRunning) {
                     lanBtn.classList.remove('disabled');
-                    lanBtn.title = `局域网地址: http://${currentLanIp || '127.0.0.1'}:${currentLanPort}/md-view (点击复制分享链接)`;
+                    lanBtn.title = `局域网地址: http://${currentLanIp}:${currentLanPort}/md-view (点击复制分享链接)`;
                 } else {
                     lanBtn.classList.add('disabled');
                     lanBtn.title = '内网服务已暂停 (仅限本机 127.0.0.1 访问)，请开启服务后再分享';
@@ -6131,9 +6133,9 @@
                     }
                 }
                 // Default fallback
-                updateLanServerUI(true, '', 9527);
+                updateLanServerUI(true);
             } catch (e) {
-                updateLanServerUI(true, '', 9527);
+                updateLanServerUI(true);
             }
         }
 
@@ -6177,7 +6179,7 @@
                         const isRunning = data.running !== undefined ? data.running : (data.status?.running ?? checked);
                         updateLanServerUI(isRunning, data.status?.lanIp, data.status?.port);
                         if (isRunning) {
-                            pushRequestMessage(`内网服务已启动: http://${data.status?.lanIp || '127.0.0.1'}:${data.status?.port || 9527}/md-view (服务已重载并刷新缓存)`, 'success');
+                            pushRequestMessage(`内网服务已启动: http://${currentLanIp}:${currentLanPort}/md-view (服务已重载并刷新缓存)`, 'success');
                             try {
                                 if (typeof loadShellData === 'function') loadShellData();
                                 if (currentFilePath && typeof loadDocumentData === 'function') {
@@ -6207,9 +6209,7 @@
                 pushRequestMessage('内网服务已暂停，无法复制分享链接。请先开启内网服务！', 'error');
                 return;
             }
-            const host = currentLanIp || window.location.hostname || '127.0.0.1';
-            const port = currentLanPort || window.location.port || 9527;
-            let shareUrl = `http://${host}:${port}/md-view`;
+            let shareUrl = `http://${currentLanIp}:${currentLanPort}/md-view`;
             if (currentFilePath) {
                 shareUrl += `?path=${encodeURIComponent(currentFilePath)}`;
             }
@@ -6241,7 +6241,7 @@
                         badge.innerHTML = origContent;
                         const sidebarLanAddr = document.getElementById('sidebar-lan-address');
                         if (sidebarLanAddr) {
-                            sidebarLanAddr.textContent = `${currentLanIp || window.location.hostname || '127.0.0.1'}:${currentLanPort || 9527}`;
+                            sidebarLanAddr.textContent = `${currentLanIp}:${currentLanPort}`;
                         }
                     }, 1400);
                 }
@@ -6349,9 +6349,11 @@
                     if (Array.isArray(parsed) && parsed.length > 0) return parsed;
                 }
             } catch (e) {}
-            const defaultIp = currentLanIp || '192.168.81.163';
-            const defaultPort = currentLanPort || 9527;
-            return [`http://${defaultIp}:${defaultPort}`, 'http://127.0.0.1:9527', 'http://localhost:9527'];
+            return Array.from(new Set([
+                `http://${currentLanIp}:${currentLanPort}`,
+                `http://127.0.0.1:${currentLanPort}`,
+                `http://localhost:${currentLanPort}`,
+            ]));
         }
 
         function saveSocketHistory(socketStr) {
@@ -6386,8 +6388,8 @@
          */
         function getFullDocumentUrl(filePath = currentFilePath, headingHash = window.location.hash) {
             if (!filePath) return '';
-            const ip = currentLanIp || window.location.hostname || '192.168.81.163';
-            const port = currentLanPort || window.location.port || 9527;
+            const ip = targetLanIp || currentLanIp;
+            const port = targetLanPort || currentLanPort;
             const encodedPath = encodeURIComponent(filePath).replace(/%2F/g, '/');
             let hashStr = headingHash ? String(headingHash).trim() : '';
             if (hashStr && !hashStr.startsWith('#')) {
@@ -6460,19 +6462,14 @@
                 try {
                     const urlObj = new URL(socketPrefix);
                     if (urlObj.hostname) {
-                        currentLanIp = urlObj.hostname;
-                        currentLanPort = urlObj.port ? Number(urlObj.port) : (urlObj.protocol === 'https:' ? 443 : 80);
-
-                        // 实时双向同步至侧边栏 IP 徽章
-                        const sidebarLanAddr = document.getElementById('sidebar-lan-address');
-                        if (sidebarLanAddr) {
-                            sidebarLanAddr.textContent = `${currentLanIp}:${currentLanPort}`;
-                        }
+                        const port = Number(urlObj.port) || (urlObj.protocol === 'https:' ? 443 : 80);
+                        targetLanIp = urlObj.hostname === currentLanIp ? '' : urlObj.hostname;
+                        targetLanPort = port === currentLanPort ? '' : String(port);
                         // 同步至设置弹窗
                         const inputIp = document.getElementById('settings-target-ip');
                         const inputPort = document.getElementById('settings-server-port');
-                        if (inputIp) inputIp.value = currentLanIp;
-                        if (inputPort) inputPort.value = currentLanPort;
+                        if (inputIp) inputIp.value = targetLanIp || currentLanIp;
+                        if (inputPort) inputPort.value = targetLanPort;
 
                         // 记录历史 socket 前缀
                         saveSocketHistory(socketPrefix);
@@ -6989,8 +6986,11 @@
             const inputPort = document.getElementById('settings-server-port');
             const inputDir = document.getElementById('settings-workspace-dir');
 
-            if (inputIp) inputIp.value = currentLanIp || window.location.hostname || '127.0.0.1';
-            if (inputPort) inputPort.value = currentLanPort || window.location.port || '9527';
+            if (inputIp) inputIp.value = targetLanIp || currentLanIp;
+            if (inputPort) {
+                inputPort.value = targetLanPort;
+                inputPort.placeholder = String(currentLanPort);
+            }
             if (inputDir) inputDir.value = currentWorkspaceConfig?.workspaceDirectory || '';
 
             switchSettingsTab(focusSection);
@@ -7028,12 +7028,13 @@
                 await window.electronAPI.setClosePreference(selectClose);
             }
 
-            if (inputIp) currentLanIp = inputIp;
-            if (inputPort && !isNaN(Number(inputPort))) currentLanPort = Number(inputPort);
+            targetLanIp = inputIp === currentLanIp ? '' : (inputIp || '');
+            targetLanPort = inputPort && Number.isInteger(Number(inputPort)) && Number(inputPort) >= 1 && Number(inputPort) <= 65535
+                ? String(Number(inputPort))
+                : '';
 
             hideSettingsModal();
             syncDesktopUrlBar();
-            updateLanBadgeDisplay();
             pushRequestMessage('首选项设置已保存并实时生效', 'success');
         }
 
@@ -7093,10 +7094,10 @@
                 try {
                     loadAppSettings();
                     initElectronWindowControls();
+                    await initLanInfo();
                     await loadShellData({ preserveSidebar: false, forceSidebarRefresh: true });
                     await loadDocumentData(currentFilePath, { skipHeadingLocation: false });
                     initBackToTop();
-                    initLanInfo();
                 } catch (error) {
                     document.getElementById('markdown-body').innerHTML = '错误: ' + (error instanceof Error ? error.message : String(error));
                 }
@@ -7187,7 +7188,7 @@
                     <div class="settings-field-group" style="flex-direction:row; align-items:center; justify-content:space-between; padding:4px 0;">
                         <div>
                             <div class="settings-label" style="font-size:13px; color:#f0f6fc;">启动时自动开启内网协同服务</div>
-                            <span class="settings-help">开启后应用启动时自动监听 0.0.0.0:9527，方便局域网用户直接访问</span>
+                            <span class="settings-help">开启后，局域网内的设备可通过分享链接访问工作台</span>
                         </div>
                         <label class="lan-switch" title="启动时自动开启内网服务">
                             <input type="checkbox" id="settings-lan-autostart" checked>
@@ -7201,12 +7202,12 @@
                     <div class="settings-field-group">
                         <label class="settings-label" for="settings-target-ip">目标局域网 IP 地址</label>
                         <input type="text" id="settings-target-ip" class="settings-input" placeholder="例如 192.168.81.163 或 127.0.0.1">
-                        <span class="settings-help">用于顶部完整 URL 地址拼接与内网文档链接分享</span>
+                        <span class="settings-help">用于顶部文档地址栏</span>
                     </div>
                     <div class="settings-field-group">
-                        <label class="settings-label" for="settings-server-port">服务运行端口</label>
-                        <input type="number" id="settings-server-port" class="settings-input" placeholder="默认 9527" value="9527">
-                        <span class="settings-help">本地嵌入式 HTTP 服务监听的端口号 (默认 9527)</span>
+                        <label class="settings-label" for="settings-server-port">文档链接端口</label>
+                        <input type="number" id="settings-server-port" class="settings-input" min="1" max="65535">
+                        <span class="settings-help">留空时使用当前服务端口</span>
                     </div>
                     <div class="settings-field-group">
                         <label class="settings-label" for="settings-workspace-dir">当前工作目录绝对路径</label>
