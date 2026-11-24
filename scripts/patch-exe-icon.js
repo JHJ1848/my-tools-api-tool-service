@@ -7,17 +7,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 async function patchExeIcon() {
-  const exePath = path.resolve(__dirname, '../dist-app/MD Preview Tool.exe')
+  const exePath = path.resolve(__dirname, '../dist-app/win-unpacked/MDPreviewTool.exe')
   const icoPath = path.resolve(__dirname, '../resources/icon.ico')
-
-  if (!fs.existsSync(exePath)) {
-    console.warn(`[PatchExeIcon] Target exe not found: ${exePath}`)
-    return
-  }
-  if (!fs.existsSync(icoPath)) {
-    console.warn(`[PatchExeIcon] Target ico not found: ${icoPath}`)
-    return
-  }
 
   console.log(`[PatchExeIcon] Reading exe from: ${exePath}`)
   const exeBuffer = fs.readFileSync(exePath)
@@ -42,4 +33,5 @@ async function patchExeIcon() {
 
 patchExeIcon().catch((err) => {
   console.error('[PatchExeIcon] Error:', err)
+  process.exitCode = 1
 })

@@ -1,5 +1,5 @@
 ﻿# ========================================================
-# MD Preview Tool - Windows Setup & Initialization Script
+# MDPreviewTool - Windows Setup & Initialization Script
 # ========================================================
 
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -7,7 +7,7 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host ""
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host "     MD Preview Tool - Environment & Setup Wizard" -ForegroundColor Cyan
+Write-Host "     MDPreviewTool - Environment & Setup Wizard" -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -51,23 +51,23 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "  [ERROR] Desktop package build failed!" -ForegroundColor Red
     exit 1
 }
-Write-Host "  [OK] Desktop executable generated: dist-app\MD Preview Tool.exe" -ForegroundColor Green
+Write-Host "  [OK] Desktop executable generated: dist-app\win-unpacked\MDPreviewTool.exe" -ForegroundColor Green
 
 # [4/4] Create Desktop Shortcut
 Write-Host ""
 Write-Host "== [4/4] Creating Desktop Shortcut..." -ForegroundColor Yellow
 try {
     $root = Split-Path $PSScriptRoot -Parent
-    $targetExe = Join-Path $root "dist-app\MD Preview Tool.exe"
+    $targetExe = Join-Path $root "dist-app\win-unpacked\MDPreviewTool.exe"
     $iconPath = Join-Path $root "resources\icon.ico"
     $desktop = [System.Environment]::GetFolderPath('Desktop')
-    $shortcutPath = Join-Path $desktop "MD Preview Tool.lnk"
+    $shortcutPath = Join-Path $desktop "MDPreviewTool.lnk"
 
     $WshShell = New-Object -ComObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut($shortcutPath)
     $Shortcut.TargetPath = $targetExe
-    $Shortcut.WorkingDirectory = Join-Path $root "dist-app"
-    $Shortcut.Description = "MD Preview Tool - Markdown Workspace"
+    $Shortcut.WorkingDirectory = Split-Path $targetExe -Parent
+    $Shortcut.Description = "MDPreviewTool - Markdown Workspace"
     if (Test-Path $iconPath) {
         $Shortcut.IconLocation = "$iconPath,0"
     }

@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
-title MD Preview Tool - 桌面端应用
+title MDPreviewTool - 桌面端应用
 
 echo ===================================================
-echo 🚀 正在启动 MD Preview 桌面端应用 (类似 Codex)...
+echo 正在启动 MDPreviewTool...
 echo [提示] 局域网访问地址可在工作台中查看
 echo ===================================================
 

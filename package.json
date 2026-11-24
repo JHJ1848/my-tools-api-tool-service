@@ -1,7 +1,7 @@
 {
   "name": "md-preview-tool",
   "private": true,
-  "version": "1.1.1",
+  "version": "1.1.2",
   "type": "module",
   "main": "dist-electron/main.js",
   "description": "现代化纯前端与内网协同 Markdown 实时预览及 API 调试桌面工具",
@@ -19,7 +19,7 @@
     "preview": "vite preview",
     "electron:dev": "vite",
     "electron:build": "tsc && vite build",
-    "dist:app": "vite build && powershell -ExecutionPolicy Bypass -Command \"$root = (Get-Item .).FullName; $targetDir = Join-Path $root 'dist-app'; $appDir = Join-Path $targetDir 'resources\\app'; if (Test-Path (Join-Path $appDir 'dist')) { Remove-Item -Recurse -Force (Join-Path $appDir 'dist') }; if (Test-Path (Join-Path $appDir 'dist-electron')) { Remove-Item -Recurse -Force (Join-Path $appDir 'dist-electron') }; if (Test-Path (Join-Path $appDir 'resources')) { Remove-Item -Recurse -Force (Join-Path $appDir 'resources') }; Copy-Item -Recurse -Force (Join-Path $root 'dist') (Join-Path $appDir 'dist'); Copy-Item -Recurse -Force (Join-Path $root 'dist-electron') (Join-Path $appDir 'dist-electron'); Copy-Item -Recurse -Force (Join-Path $root 'resources') (Join-Path $appDir 'resources'); $ver = (Get-Content (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version; $pkgJson = '{\\\"name\\\":\\\"md-preview-tool\\\",\\\"version\\\":\\\"' + $ver + '\\\",\\\"type\\\":\\\"module\\\",\\\"main\\\":\\\"dist-electron/main.js\\\"}'; [System.IO.File]::WriteAllText((Join-Path $appDir 'package.json'), $pkgJson, [System.Text.Encoding]::UTF8);\" && node scripts/patch-exe-icon.js",
+    "dist:app": "node scripts/build-dist.js --target=app && node scripts/patch-exe-icon.js",
     "dist:msi": "node scripts/build-dist.js --target=msi",
     "dist:nsis": "node scripts/build-dist.js --target=nsis",
     "dist:portable": "node scripts/build-dist.js --target=portable",
@@ -32,8 +32,9 @@
   },
   "build": {
     "appId": "com.toolservice.mdpreview",
-    "productName": "MD Preview Tool",
-    "copyright": "Copyright © 2026 MD Preview Tool. All rights reserved.",
+    "productName": "MDPreviewTool",
+    "copyright": "Copyright © 2026 MDPreviewTool. All rights reserved.",
+    "msiProjectCreated": "./scripts/customize-msi.js",
     "directories": {
       "output": "release"
     },
@@ -66,7 +67,7 @@
     ],
     "win": {
       "icon": "resources/icon.ico",
-      "legalTrademarks": "MD Preview Tool",
+      "legalTrademarks": "MDPreviewTool",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "nsis": {
@@ -76,7 +77,7 @@
       "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "MD Preview Tool",
+      "shortcutName": "MDPreviewTool",
       "installerIcon": "resources/icon.ico",
       "uninstallerIcon": "resources/icon.ico",
       "installerHeaderIcon": "resources/icon.ico",
@@ -85,7 +86,7 @@
     "msi": {
       "oneClick": false,
       "perMachine": true,
-      "shortcutName": "MD Preview Tool",
+      "shortcutName": "MDPreviewTool",
       "artifactName": "${productName}-${version}-${arch}.msi"
     },
     "portable": {

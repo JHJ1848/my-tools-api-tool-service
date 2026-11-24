@@ -9,7 +9,7 @@ const manifests = ['package.json', 'package-lock.json']
 const args = process.argv.slice(2)
 const dryRun = args.includes('--dry-run')
 const [requestedVersion, customNotes] = args.filter(arg => arg !== '--dry-run')
-const current = readJson(root, 'package.json').version
+const { version: current, build: { productName } } = readJson(root, 'package.json')
 const [major, minor, patch] = current.split(/[.-]/).map(Number)
 const version = (requestedVersion ?? (dryRun ? `${major}.${minor}.${patch + 1}` : '')).replace(/^v/i, '')
 const tag = `v${version}`
@@ -50,7 +50,7 @@ function getNotes() {
   const entry = sections.find(section => section.startsWith(`[${version}]`))
   const notes = entry?.slice(entry.indexOf('\n') + 1).split(/^\[[^\]]+\]:/m)[0].trim()
   if (!notes && !dryRun) throw new Error(`CHANGELOG.md 缺少 ${version} 的发布说明`)
-  return notes || `MD Preview Tool ${tag}`
+  return notes || `${productName} ${tag}`
 }
 
 function buildCandidate(candidate) {
@@ -69,10 +69,10 @@ function buildCandidate(candidate) {
   run('npm', ['run', 'dist:all'], { cwd: candidate })
 
   for (const name of [
-    `MD Preview Tool-Setup-${version}-x64.exe`,
-    `MD Preview Tool-${version}-x64.msi`,
-    `MD Preview Tool-${version}-x64-portable.exe`,
-    `MD Preview Tool-${version}-x64.zip`
+    `${productName}-Setup-${version}-x64.exe`,
+    `${productName}-${version}-x64.msi`,
+    `${productName}-${version}-x64-portable.exe`,
+    `${productName}-${version}-x64.zip`
   ]) {
     const artifact = fs.statSync(path.join(candidate, 'release', name), { throwIfNoEntry: false })
     if (!artifact?.isFile() || artifact.size === 0) throw new Error(`缺少发行包 ${name}`)

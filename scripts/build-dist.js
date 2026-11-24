@@ -19,13 +19,13 @@ let target = 'all' // 默认全部生成
 for (const arg of args) {
   if (arg.startsWith('--target=')) {
     target = arg.split('=')[1].toLowerCase()
-  } else if (['msi', 'nsis', 'portable', 'zip', 'all', 'dir'].includes(arg)) {
+  } else if (['msi', 'nsis', 'portable', 'zip', 'all', 'dir', 'app'].includes(arg)) {
     target = arg
   }
 }
 
 console.log(`[BuildRelease] ========================================`)
-console.log(`[BuildRelease] 开始构建 MD Preview Tool 发行包`)
+console.log(`[BuildRelease] 开始构建 MDPreviewTool 发行包`)
 console.log(`[BuildRelease] 目标格式: ${target.toUpperCase()}`)
 console.log(`[BuildRelease] Electron 下载源: ${process.env.ELECTRON_MIRROR || '默认'}`)
 console.log(`[BuildRelease] ========================================`)
@@ -56,6 +56,8 @@ if (target === 'msi') {
 } else if (target === 'zip') {
   // 绿色目录版：zip 内为完整应用目录，解压后直接运行 exe，无需安装
   builderArgs = ['electron-builder', '--win', 'zip', '--x64']
+} else if (target === 'app') {
+  builderArgs = ['electron-builder', '--dir', '--x64', '--config.directories.output=dist-app']
 } else if (target === 'dir') {
   builderArgs = ['electron-builder', '--dir', '--x64']
 } else {
@@ -92,7 +94,7 @@ function runBuilder(args) {
 
 // 5. 检查输出文件并生成发布报告
 console.log(`[BuildRelease] [3/3] 检查并汇总生成发行物清单...`)
-const releaseDir = path.join(projectRoot, 'release')
+const releaseDir = path.join(projectRoot, target === 'app' ? 'dist-app' : 'release')
 if (fs.existsSync(releaseDir)) {
   const files = fs.readdirSync(releaseDir)
   console.log(`[BuildRelease] 成功输出至目录: ${releaseDir}`)
@@ -107,5 +109,5 @@ if (fs.existsSync(releaseDir)) {
 }
 
 console.log(`[BuildRelease] ========================================`)
-console.log(`[BuildRelease] MD Preview Tool 发布包构建完成！`)
+console.log(`[BuildRelease] MDPreviewTool 发布包构建完成！`)
 console.log(`[BuildRelease] ========================================`)

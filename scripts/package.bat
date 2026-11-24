@@ -2,7 +2,7 @@
 chcp 65001 >nul
 setlocal EnableExtensions
 
-title MD Preview Tool - 打包构建管理
+title MDPreviewTool - 打包构建管理
 pushd "%~dp0.." || (
     echo [ERROR] 无法进入项目目录。
     pause
@@ -12,7 +12,7 @@ pushd "%~dp0.." || (
 :menu
 cls
 echo ===================================================
-echo   📦 MD Preview Tool 打包构建管理
+echo   MDPreviewTool 打包构建管理
 echo ===================================================
 echo.
 echo   [1] 本地绿色版 (npm run dist:app - 生成 dist-app 目录并注入 PE 图标)

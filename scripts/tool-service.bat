@@ -2,7 +2,7 @@
 chcp 65001 >nul
 setlocal EnableExtensions
 
-title MD Preview Tool - 桌面端应用启动器
+title MDPreviewTool - 桌面端应用启动器
 pushd "%~dp0.." || (
     echo [ERROR] 无法进入项目目录。
     pause
@@ -10,7 +10,7 @@ pushd "%~dp0.." || (
 )
 
 echo ===================================================
-echo   MD Preview Tool - 桌面应用启动器
+echo   MDPreviewTool - 桌面应用启动器
 echo ===================================================
 
 echo.
@@ -41,7 +41,7 @@ if not exist "node_modules" (
 )
 
 echo.
-echo [3/3] 正在启动 MD Preview Tool 桌面端应用...
+echo [3/3] 正在启动 MDPreviewTool 桌面端应用...
 echo ---------------------------------------------------
 echo [提示] 局域网访问地址可在工作台中查看
 echo ---------------------------------------------------

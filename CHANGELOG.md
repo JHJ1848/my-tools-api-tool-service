@@ -10,6 +10,13 @@
 ### 计划
 - 应用内自动更新（electron-updater，基于 latest.yml）
 
+## [1.1.2] - 2026-11-24
+
+### 变更
+- 换用全新的极简应用图标，并统一 MSI 欢迎页、完成页和顶部横幅的标志。
+- 软件名称、快捷方式、可执行文件和 Windows 发行文件统一使用无空格的 `MDPreviewTool`。
+- MSI 默认安装到系统盘的 `Apps\MDPreviewTool`，安装向导仍可选择其他位置。
+
 ## [1.1.1] - 2026-11-24
 
 ### 修复
@@ -48,7 +55,8 @@
   局域网用户浏览器访问 `http://<IP>:9527/md-view` 直接预览
 - 关闭拦截：最小化到系统托盘保持共享，或彻底退出，支持记住选择
 
-[未发布]: https://github.com/JHJ1848/my-tools-api-tool-service/compare/v1.1.1...HEAD
+[未发布]: https://github.com/JHJ1848/my-tools-api-tool-service/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/JHJ1848/my-tools-api-tool-service/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/JHJ1848/my-tools-api-tool-service/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/JHJ1848/my-tools-api-tool-service/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/JHJ1848/my-tools-api-tool-service/releases/tag/v1.0.0

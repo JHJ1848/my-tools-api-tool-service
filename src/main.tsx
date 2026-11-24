@@ -4,6 +4,6 @@ import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <div>MD Preview Tool</div>
+    <div>MDPreviewTool</div>
   </React.StrictMode>
 )

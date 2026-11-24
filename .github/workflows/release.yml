@@ -36,20 +36,18 @@ jobs:
       - name: Publish verified packages
         shell: pwsh
         run: |
-          $version = (Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json).version
+          $package = Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json
+          $version = $package.version
+          $name = $package.build.productName
           $tag = $env:GITHUB_REF_NAME
           if ($tag -cne "v$version") { throw "Tag $tag does not match package version $version" }
-          $installer = "MD Preview Tool-Setup-$version-x64.exe"
-          $updateName = "MD-Preview-Tool-Setup-$version-x64.exe"
-          # Preserve the installer filename referenced by latest.yml.
-          Rename-Item -LiteralPath "release/$installer" -NewName $updateName
-          Rename-Item -LiteralPath "release/$installer.blockmap" -NewName "$updateName.blockmap"
+          $installer = "$name-Setup-$version-x64.exe"
           $assets = @(
-            "release/$updateName"
-            "release/MD Preview Tool-$version-x64.msi"
-            "release/MD Preview Tool-$version-x64-portable.exe"
-            "release/MD Preview Tool-$version-x64.zip"
-            "release/$updateName.blockmap"
+            "release/$installer"
+            "release/$name-$version-x64.msi"
+            "release/$name-$version-x64-portable.exe"
+            "release/$name-$version-x64.zip"
+            "release/$installer.blockmap"
             'release/latest.yml'
           )
           foreach ($asset in $assets) {
@@ -57,7 +55,7 @@ jobs:
               throw "Empty release asset: $asset"
             }
           }
-          $flags = @('--verify-tag', '--notes-from-tag', '--title', "MD Preview Tool $tag")
+          $flags = @('--verify-tag', '--notes-from-tag', '--title', "$name $tag")
           if ($version.Contains('-')) { $flags += '--prerelease' }
           gh release create $tag @flags @assets
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

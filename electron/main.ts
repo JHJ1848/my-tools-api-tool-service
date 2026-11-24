@@ -178,7 +178,7 @@ function createTray() {
   }
 
   tray = new Tray(trayIcon)
-  tray.setToolTip('MD Preview Tool')
+  tray.setToolTip('MDPreviewTool')
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -221,7 +221,7 @@ function createWindow(pathParam?: string): BrowserWindow {
     height: 800,
     minWidth: 960,
     minHeight: 600,
-    title: 'MD Preview Tool',
+    title: 'MDPreviewTool',
     icon: iconPath && fs.existsSync(iconPath) ? iconPath : undefined,
     frame: false,
     titleBarStyle: 'hidden',

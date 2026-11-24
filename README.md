@@ -1,4 +1,4 @@
-# MD Preview Tool (Windows 桌面端与内网 Markdown 协同工作台)
+# MDPreviewTool (Windows 桌面端与内网 Markdown 协同工作台)
 
 > 🚀 专为 Windows 系统打造的轻量级 Markdown 预览工作台，支持原生桌面客户端运行、局域网一键协同共享与原生文件选择。
 
@@ -12,13 +12,12 @@
 
 | 产物 | 适用场景 | 使用方式 |
 | :--- | :--- | :--- |
-| **`MD Preview Tool-Setup-vX.Y.Z-x64.exe`** | 标准安装（推荐） | 双击安装向导，可选安装目录，自动创建桌面/开始菜单快捷方式，带卸载程序 |
-| **`MD Preview Tool-vX.Y.Z-x64.zip`** | 绿色目录版 / 轻量安装 | **下载整个 zip 解压到任意目录，直接双击其中的 `MD Preview Tool.exe` 即可运行**，不写注册表，删目录即卸载 |
-| **`MD Preview Tool-vX.Y.Z-x64-portable.exe`** | 单文件便携版 | 双击即用的单文件，适合 U 盘/临时使用 |
-| **`MD Preview Tool-vX.Y.Z-x64.msi`** | 企业/域环境集中部署 | 支持 MSI 静默部署（`msiexec /i xxx.msi /qn`） |
+| **`MDPreviewTool-Setup-X.Y.Z-x64.exe`** | 标准安装（推荐） | 双击安装向导，可选安装目录，自动创建桌面和开始菜单快捷方式 |
+| **`MDPreviewTool-X.Y.Z-x64.zip`** | 绿色目录版 | 解压后双击其中的 `MDPreviewTool.exe` 即可运行 |
+| **`MDPreviewTool-X.Y.Z-x64-portable.exe`** | 单文件便携版 | 双击即用，适合 U 盘或临时使用 |
+| **`MDPreviewTool-X.Y.Z-x64.msi`** | 企业或域环境部署 | 默认安装到系统盘的 `Apps\MDPreviewTool`，支持集中部署和自选目录 |
 
-> 💡 **免安装轻量用法**：只需要 `*-portable.zip` 这一个文件 —— 整个目录下载（解压）后，
-> 进入目录运行 `MD Preview Tool.exe` 即可，无需任何安装步骤。
+> 免安装使用时可选择 ZIP 解压版或单文件便携版。
 
 ### 版本与更新
 
@@ -54,8 +53,8 @@
 > **脚本自动完成的工作**：
 > 1. ✅ **环境依赖检查**：自动检测 Node.js 与 npm 是否就绪；
 > 2. ✅ **安装全量依赖**：自动执行 `npm install` 还原 `node_modules`；
-> 3. ✅ **编译打包发包**：自动执行 `npm run dist:app` 编译 Vite 前端与 Electron 主进程，生成独立绿色的 `dist-app\MD Preview Tool.exe`；
-> 4. ✅ **创建桌面图标**：自动在您的 Windows 桌面上生成专属的 **`MD Preview Tool`** 快捷启动方式。
+> 3. ✅ **编译打包发包**：自动执行 `npm run dist:app`，生成 `dist-app\win-unpacked\MDPreviewTool.exe`。
+> 4. ✅ **创建桌面图标**：在 Windows 桌面创建 **`MDPreviewTool`** 快捷方式。
 
 ---
 
@@ -90,7 +89,7 @@ npm run release:dry                 # 在临时目录预检下一个补丁版本
 ## 🌐 核心功能特性
 
 1. **原生 Windows 桌面体验**：
-   - 独立运行进程 `MD Preview Tool.exe`，带高分辨率 Markdown 专属 ICON；
+   - 独立运行进程 `MDPreviewTool.exe`，带多尺寸应用图标。
    - 标题栏支持鼠标左键长按拖拽；
    - 支持最小化、最大化与关闭；
    - **智能关闭拦截**：关闭时可选择“最小化到系统托盘（保持后台共享）”或“彻底退出”，支持“记住我的选择”；

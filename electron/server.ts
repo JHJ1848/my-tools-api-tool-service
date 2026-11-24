@@ -1690,7 +1690,7 @@ export function startHttpServer(options: ServerOptions = {}): Promise<http.Serve
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>内网共享已暂停 - MD Preview Tool</title>
+<title>内网共享已暂停 - MDPreviewTool</title>
 <style>
   * { box-sizing: border-box; }
   body { background: #121316; color: #d4d4d4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
