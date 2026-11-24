@@ -15,8 +15,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -55,7 +53,18 @@ jobs:
               throw "Empty release asset: $asset"
             }
           }
-          $flags = @('--verify-tag', '--notes-from-tag', '--title', "$name $tag")
+          $ref = gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/$tag" --jq .object | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($ref.type -eq 'tag') {
+            $notes = gh api "repos/$env:GITHUB_REPOSITORY/git/tags/$($ref.sha)" --jq .message | Out-String
+          } else {
+            $notes = git log -1 --format=%B | Out-String
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ([string]::IsNullOrWhiteSpace($notes)) { throw "Missing release notes for $tag" }
+          $notesPath = Join-Path $env:RUNNER_TEMP "$tag-notes.md"
+          [System.IO.File]::WriteAllText($notesPath, $notes)
+          $flags = @('--verify-tag', '--notes-file', $notesPath, '--title', "$name $tag")
           if ($version.Contains('-')) { $flags += '--prerelease' }
           gh release create $tag @flags @assets
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
