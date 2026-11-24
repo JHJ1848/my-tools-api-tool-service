@@ -11,8 +11,7 @@ function xmlAttribute(value) {
 export default async function customizeMsi(projectFile) {
   const source = await fs.readFile(projectFile, 'utf8')
   const ui = '<UIRef Id="WixUI_InstallDir"/>'
-  const programFiles = /<Directory Id="ProgramFiles(?:64)?Folder">/
-  if (!source.includes(ui) || !programFiles.test(source)) {
+  if (!source.includes(ui)) {
     throw new Error('The electron-builder MSI template has changed')
   }
 
@@ -23,9 +22,8 @@ export default async function customizeMsi(projectFile) {
       `<WixVariable Id="WixUIBannerBmp" Value="${banner}"/>`,
       `<WixVariable Id="WixUIDialogBmp" Value="${dialog}"/>`,
       '<Property Id="APPLICATIONFOLDER" Secure="yes"/>',
-      '<SetDirectory Id="MDPREVIEWROOT" Value="[WindowsVolume]Apps\\" Sequence="both">NOT Installed AND NOT MDPREVIEWROOT</SetDirectory>',
+      '<SetDirectory Id="APPLICATIONFOLDER" Value="[WindowsVolume]Apps\\[ApplicationFolderName]\\" Sequence="both">NOT Installed AND NOT APPLICATIONFOLDER</SetDirectory>',
       ui
     ].join('\n      '))
-    .replace(programFiles, '<Directory Id="MDPREVIEWROOT" Name="Apps">')
   await fs.writeFile(projectFile, updated, 'utf8')
 }
